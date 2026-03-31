@@ -1,0 +1,199 @@
+---
+import Base from '../layouts/Base.astro';
+import NewsFeed from '../components/NewsFeed.tsx';
+import { getCollection } from 'astro:content';
+
+const projects = await getCollection('projects');
+---
+
+<Base>
+  <!-- Hero Section -->
+  <section class="min-h-dvh flex items-center justify-center relative overflow-hidden">
+    <!-- Animated gradient mesh background -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full opacity-20 blur-[140px]" style="background: radial-gradient(circle, var(--accent-orange), transparent 70%); animation: float 8s ease-in-out infinite;"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full opacity-15 blur-[120px]" style="background: radial-gradient(circle, var(--accent-cyan), transparent 70%); animation: float 10s ease-in-out infinite 2s;"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.07] blur-[160px]" style="background: radial-gradient(circle, var(--accent-orange), var(--accent-cyan), transparent 70%);"></div>
+    </div>
+
+    <!-- Grid pattern overlay -->
+    <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image: linear-gradient(var(--text-primary) 1px, transparent 1px), linear-gradient(90deg, var(--text-primary) 1px, transparent 1px); background-size: 60px 60px;"></div>
+
+    <div class="relative z-10 text-center max-w-4xl mx-auto px-4 animate-fade-in">
+      <!-- Status badge -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] mb-8">
+        <span class="w-2 h-2 rounded-full bg-[var(--accent-green)]" style="animation: pulse 2s ease-in-out infinite;"></span>
+        <span class="text-xs font-medium tracking-wide" style="color: var(--text-secondary);">Disponible para proyectos</span>
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl md:text-8xl font-bold tracking-tighter leading-none">
+        <span class="block" style="color: var(--text-primary);">Mario</span>
+        <span class="text-gradient">Inostroza</span>
+      </h1>
+
+      <p class="text-lg sm:text-xl md:text-2xl mt-6 max-w-2xl mx-auto leading-relaxed" style="color: var(--text-secondary);">
+        Software Engineer & AI Builder
+        <br />
+        <span style="color: var(--text-muted);">desde Puerto Natales, Patagonia</span>
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-3 mt-10">
+        <a href="#proyectos"
+          class="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-xl cursor-pointer"
+          style="background: linear-gradient(135deg, var(--accent-orange), var(--accent-cyan)); color: var(--bg-deep); transition: opacity 200ms ease, transform 200ms ease;"
+          onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
+          onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Ver proyectos
+        </a>
+        <a href="#contacto"
+          class="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-medium rounded-xl cursor-pointer"
+          style="border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-elevated); transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease;"
+          onmouseover="this.style.borderColor='var(--border-strong)'; this.style.color='var(--text-primary)'; this.style.background='var(--bg-surface)';"
+          onmouseout="this.style.borderColor='var(--border-default)'; this.style.color='var(--text-secondary)'; this.style.background='var(--bg-elevated)';"
+        >
+          Contactar
+        </a>
+      </div>
+
+      <!-- Scroll indicator -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-faint);"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Projects Section -->
+  <section id="proyectos" class="py-24 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-12">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">Portafolio</p>
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight">Proyectos</h2>
+        <p class="mt-3 text-lg" style="color: var(--text-muted);">Cosas que he construido con IA y código</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects.map((project, i) => {
+          const href = project.data.demoUrl && !project.data.githubUrl
+            ? project.data.demoUrl
+            : `/projects/${project.id}`;
+          const isExternal = href.startsWith('http');
+
+          return (
+            <a
+              href={href}
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
+              class="glass-card group block overflow-hidden cursor-pointer"
+              style={`animation-delay: ${i * 100}ms;`}
+            >
+              {/* Card header with gradient accent */}
+              <div class="relative h-40 flex items-center justify-center overflow-hidden" style="background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));">
+                <span class="text-5xl transition-transform duration-300 group-hover:scale-110">{project.data.emoji}</span>
+                {/* Subtle gradient line at bottom */}
+                <div class="absolute bottom-0 left-0 right-0 h-[2px]" style="background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan)); opacity: 0.5;"></div>
+              </div>
+
+              <div class="p-5">
+                <h3 class="text-lg font-semibold mb-1.5" style="color: var(--text-primary);">{project.data.title}</h3>
+                <p class="text-sm mb-4 line-clamp-2" style="color: var(--text-muted);">{project.data.description}</p>
+                <div class="flex flex-wrap gap-1.5">
+                  {project.data.techStack.slice(0, 4).map((tech: string) => (
+                    <span class="px-2.5 py-1 text-xs rounded-md font-medium" style="background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-subtle);">{tech}</span>
+                  ))}
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack Section -->
+  <section id="stack" class="py-24 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">Herramientas</p>
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight">Stack Técnico</h2>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+        {[
+          'TypeScript', 'React', 'Next.js', 'Astro',
+          'Node.js', 'Tailwind CSS', 'Anthropic Claude',
+          'WhatsApp API', 'Drizzle ORM', 'PostgreSQL', 'Git'
+        ].map((tech) => (
+          <span class="px-5 py-2.5 text-sm font-medium rounded-xl cursor-default"
+            style="background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease;"
+            onmouseover="this.style.borderColor='var(--border-default)'; this.style.color='var(--text-primary)';"
+            onmouseout="this.style.borderColor='var(--border-subtle)'; this.style.color='var(--text-secondary)';"
+          >{tech}</span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- AI News Feed -->
+  <section class="py-24 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">Feed</p>
+          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight">Noticias de IA</h2>
+          <p class="mt-2" style="color: var(--text-muted);">Últimas novedades en inteligencia artificial</p>
+        </div>
+        <a href="/news" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer"
+          style="color: var(--accent-orange); border: 1px solid var(--accent-orange-glow); background: var(--accent-orange-glow); transition: background-color 200ms ease;"
+          onmouseover="this.style.background='rgba(249,115,22,0.25)';"
+          onmouseout="this.style.background='var(--accent-orange-glow)';"
+        >
+          Ver todas
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <NewsFeed client:load limit={6} />
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contacto" class="py-24 px-4">
+    <div class="max-w-3xl mx-auto text-center">
+      <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">Contacto</p>
+      <h2 class="text-3xl sm:text-4xl font-bold tracking-tight mb-4">¿Trabajamos juntos?</h2>
+      <p class="text-lg mb-10" style="color: var(--text-muted);">Si tenés un proyecto en mente, charlemos.</p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="mailto:mario@example.com"
+          class="inline-flex items-center gap-3 px-6 py-3.5 text-sm font-medium rounded-xl cursor-pointer"
+          style="border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-elevated); transition: border-color 200ms ease, color 200ms ease;"
+          onmouseover="this.style.borderColor='var(--border-strong)'; this.style.color='var(--text-primary)';"
+          onmouseout="this.style.borderColor='var(--border-default)'; this.style.color='var(--text-secondary)';"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          Email
+        </a>
+        <a href="https://github.com/marioinostroza" target="_blank" rel="noopener noreferrer"
+          class="inline-flex items-center gap-3 px-6 py-3.5 text-sm font-medium rounded-xl cursor-pointer"
+          style="border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-elevated); transition: border-color 200ms ease, color 200ms ease;"
+          onmouseover="this.style.borderColor='var(--border-strong)'; this.style.color='var(--text-primary)';"
+          onmouseout="this.style.borderColor='var(--border-default)'; this.style.color='var(--text-secondary)';"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="https://linkedin.com/in/marioinostroza" target="_blank" rel="noopener noreferrer"
+          class="inline-flex items-center gap-3 px-6 py-3.5 text-sm font-medium rounded-xl cursor-pointer"
+          style="border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-elevated); transition: border-color 200ms ease, color 200ms ease;"
+          onmouseover="this.style.borderColor='var(--border-strong)'; this.style.color='var(--text-primary)';"
+          onmouseout="this.style.borderColor='var(--border-default)'; this.style.color='var(--text-secondary)';"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </a>
+      </div>
+    </div>
+  </section>
+</Base>
