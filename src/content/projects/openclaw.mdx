@@ -1,28 +1,33 @@
 ---
-title: OpenClaw
-description: "Asistente personal AI open-source que funciona desde WhatsApp, Telegram y cualquier chat. Gestiona emails, calendarios, tareas y tiene memoria persistente."
-emoji: "🦞"
+title: Cotocha
+description: "Orquestador de agentes IA que automatiza operaciones diarias: guardia de Telegram, health checks de infraestructura, campañas WhatsApp, automatización de GitHub y delegación a agentes de coding."
+emoji: "🐙"
 techStack:
-  - TypeScript
   - Node.js
-  - LLMs
-  - WhatsApp
+  - PostgreSQL
+  - pgvector
   - Telegram
-  - iCal
-  - Open Source
-featured: false
-demoUrl: "https://openclaw.ai"
+  - Anthropic Claude
+  - GLM
+featured: true
+image: "/img/projects/cotocha.png"
 ---
 
-[OpenClaw](https://openclaw.ai) es un asistente personal AI open-source creado por [steipete](https://github.com/steipete). Corre en tu propia computadora y se conecta a WhatsApp, Telegram y otras apps de chat.
+**Cotocha** es mi agente personal de operaciones, construido sobre OpenClaw (self-hosted AI agent gateway) y corriendo en un VPS en Contabo. La interacción es 100% por Telegram — canal directo y el grupo "Centro de Mando" — y Slack.
 
-## Qué hace
+## Qué automatiza
 
-- **Gestión de emails y calendarios**: Lee, responde y organiza tu correo. Sincroniza con iCal.
-- **Tareas y recordatorios**: Mantiene lista de tareas con memoria persistente entre sesiones.
-- **Skills extensibles**: Puedes agregar capacidades mediante plugins y herramientas personalizadas.
-- **Privacidad total**: Todo corre localmente en tu máquina. Tus datos no salen de tu computadora.
+- **Guardia de grupos Telegram** — monitorea miembros del grupo cada 12 horas, detecta intrusos y alerta automáticamente.
+- **Health checks de infraestructura** — cada 3 horas revisa memoria, disco, sesiones activas y cron jobs del VPS. Reporta en `#infra-vps` de Slack.
+- **Calendar triggers** — gestiona follow-ups automáticos, recordatorios y detección de no-shows desde el calendario.
+- **GitHub issue automation** — detecta bugs en los repos, abre issues y genera PRs automáticamente.
+- **Campañas WhatsApp** — envío de mensajes masivos a leads de Examya con targeting y seguimiento.
+- **Coding delegation** — spawna agentes de desarrollo (Codex, Claude Code, OpenCode, Gemini) para tareas de código y los supervisa.
 
-## Por qué me interesa
+## Memoria semántica
 
-Sigo el proyecto con mucho interés por todo lo relacionado con **AI agents** y la automatización de tareas cotidianas. Lo uso para automatizar flujos de trabajo, conversar con mis bots y experimentar con nuevas capacidades de agentes de IA.
+Usa **PostgreSQL + pgvector** para almacenamiento vectorial: cada conversación y evento queda embeddeado y es recuperable mediante búsqueda semántica. Cada agente tiene además su propio SQLite local para memoria de sesión.
+
+## Stack técnico
+
+**Runtime**: Node.js 22 sobre Linux (VPS Contabo). **LLMs**: multi-modelo — GLM-5/5.1 (ZAI), Kimi K2.5, Anthropic Claude y Gemini según la tarea. **Skills instaladas**: ~65, incluyendo `coding-agent`, `healthcheck`, `gh-issues`, `slack`, entre otras. **Canales**: Telegram (DM + grupo Centro de Mando) y Slack (workspace Examya — `#alertas`, `#infra-vps`).

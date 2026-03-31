@@ -9,6 +9,7 @@ const projects = defineCollection({
     emoji: z.string(),
     techStack: z.array(z.string()),
     featured: z.boolean().default(false),
+    image: z.string().optional(),
     githubUrl: z.string().optional(),
     demoUrl: z.string().optional(),
   }),

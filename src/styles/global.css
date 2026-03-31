@@ -177,32 +177,39 @@ button:focus-visible,
 /* ── Hero image ── */
 .hero-image-wrapper {
   position: relative;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  padding: 4px;
-  background: linear-gradient(135deg, var(--accent-orange), var(--accent-cyan));
-  box-shadow: 0 0 60px -10px rgba(249, 115, 22, 0.3), 0 0 60px -10px rgba(6, 182, 212, 0.3);
+  width: 260px;
+  height: 320px;
+  border-radius: 28px;
+  padding: 3px;
+  background: linear-gradient(160deg, var(--accent-orange), var(--accent-cyan));
+  box-shadow:
+    0 0 70px -10px rgba(249, 115, 22, 0.4),
+    0 0 70px -10px rgba(6, 182, 212, 0.3),
+    0 24px 60px -12px rgba(0, 0, 0, 0.7);
   transition: box-shadow 400ms ease, transform 400ms ease;
 }
 
 .hero-image-wrapper:hover {
-  box-shadow: 0 0 80px -5px rgba(249, 115, 22, 0.4), 0 0 80px -5px rgba(6, 182, 212, 0.4);
-  transform: scale(1.03);
+  box-shadow:
+    0 0 100px -5px rgba(249, 115, 22, 0.55),
+    0 0 100px -5px rgba(6, 182, 212, 0.4),
+    0 32px 72px -12px rgba(0, 0, 0, 0.8);
+  transform: translateY(-6px);
 }
 
 .hero-image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
+  object-position: center 12%;
+  border-radius: 25px;
   display: block;
 }
 
 @media (min-width: 768px) {
   .hero-image-wrapper {
-    width: 360px;
-    height: 360px;
+    width: 320px;
+    height: 400px;
   }
 }
 

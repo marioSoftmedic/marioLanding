@@ -11,6 +11,14 @@
     "preview": "astro preview",
     "astro": "astro"
   },
+  "overrides": {
+    "vite": "^7"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "^7"
+    }
+  },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",
     "@astrojs/react": "^5.0.2",

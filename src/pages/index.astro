@@ -9,9 +9,9 @@ const projects = await getCollection('projects');
 <Base>
   <section class="min-h-dvh flex items-center justify-center relative overflow-hidden" aria-label="Presentación">
     <div class="absolute inset-0 pointer-events-none">
-      <div class="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full opacity-20 blur-[140px]" style="background: radial-gradient(circle, var(--accent-orange), transparent 70%); animation: float 8s ease-in-out infinite;"></div>
-      <div class="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full opacity-15 blur-[120px]" style="background: radial-gradient(circle, var(--accent-cyan), transparent 70%); animation: float 10s ease-in-out infinite 2s;"></div>
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.07] blur-[160px]" style="background: radial-gradient(circle, var(--accent-orange), var(--accent-cyan), transparent 70%);"></div>
+      <div class="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full opacity-25 blur-[140px]" style="background: radial-gradient(circle, var(--accent-orange), transparent 70%); animation: float 8s ease-in-out infinite;"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full opacity-20 blur-[120px]" style="background: radial-gradient(circle, var(--accent-cyan), transparent 70%); animation: float 10s ease-in-out infinite 2s;"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.1] blur-[160px]" style="background: radial-gradient(circle, var(--accent-orange), var(--accent-cyan), transparent 70%);"></div>
     </div>
 
     <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image: linear-gradient(var(--text-primary) 1px, transparent 1px), linear-gradient(90deg, var(--text-primary) 1px, transparent 1px); background-size: 60px 60px;"></div>
@@ -54,9 +54,9 @@ const projects = await getCollection('projects');
         <div class="relative flex-shrink-0">
           <div class="hero-image-wrapper">
             <img
-              src="/img/mario.webp"
+              src="/img/marioHealthBits4.png"
               alt="Mario Inostroza — Software Engineer & AI Builder"
-              width="400"
+              width="320"
               height="400"
               loading="eager"
               decoding="async"
@@ -82,26 +82,32 @@ const projects = await getCollection('projects');
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((project) => {
-          const href = project.data.demoUrl && !project.data.githubUrl
-            ? project.data.demoUrl
-            : `/projects/${project.id}`;
-          const isExternal = href.startsWith('http');
+          const href = `/projects/${project.id}`;
           const initials = project.data.title.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
           return (
             <a
               href={href}
-              target={isExternal ? '_blank' : undefined}
-              rel={isExternal ? 'noopener noreferrer' : undefined}
-              aria-label={isExternal ? `${project.data.title} (se abre en nueva pestaña)` : project.data.title}
+              aria-label={project.data.title}
               class="glass-card group block overflow-hidden cursor-pointer"
             >
               <div class="relative h-40 flex items-center justify-center overflow-hidden" style="background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));">
-                <span class="text-3xl font-bold tracking-tight transition-transform duration-300 group-hover:scale-110 text-gradient" style="font-family: var(--font-heading);">{initials}</span>
-                <div class="absolute bottom-0 left-0 right-0 h-[2px]" style="background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan)); opacity: 0.5;"></div>
-                {isExternal && (
-                  <svg class="absolute top-3 right-3 opacity-40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                {project.data.image ? (
+                  <>
+                    <img
+                      src={project.data.image}
+                      alt=""
+                      aria-hidden="true"
+                      class="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                      style="opacity: 0.55;"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(10,10,15,0.1) 0%, rgba(10,10,15,0.7) 100%);"></div>
+                  </>
+                ) : (
+                  <span class="text-3xl font-bold tracking-tight transition-transform duration-300 group-hover:scale-110 text-gradient" style="font-family: var(--font-heading);">{initials}</span>
                 )}
+                <div class="absolute bottom-0 left-0 right-0 h-[2px]" style="background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan)); opacity: 0.5;"></div>
               </div>
 
               <div class="p-5">
