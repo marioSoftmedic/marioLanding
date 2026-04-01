@@ -4,6 +4,13 @@ import NewsFeed from '../components/NewsFeed.tsx';
 import { getCollection } from 'astro:content';
 
 const projects = await getCollection('projects');
+const allPosts = await getCollection('blog');
+const latestPosts = allPosts
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 2);
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: 'numeric' });
 ---
 
 <Base>
@@ -49,6 +56,11 @@ const projects = await getCollection('projects');
               Contactar
             </a>
           </div>
+          <a href="/blog" class="inline-flex items-center gap-1.5 mt-5 text-sm transition-colors duration-200" style="color: var(--text-faint);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            También escribo sobre IA y agentes
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
         </div>
 
         <div class="relative flex-shrink-0">
@@ -194,6 +206,55 @@ const projects = await getCollection('projects');
       </div>
     </div>
   </section>
+
+  {latestPosts.length > 0 && (
+  <section id="blog" class="py-24 px-4" aria-labelledby="blog-title">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">Escritura</p>
+          <h2 id="blog-title" class="text-3xl sm:text-4xl font-bold tracking-tight">Últimas notas</h2>
+          <p class="mt-2" style="color: var(--text-muted);">Lo que aprendo construyendo desde la Patagonia</p>
+        </div>
+        <a href="/blog" class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0"
+          style="color: var(--accent-cyan); border-color: color-mix(in srgb, var(--accent-cyan) 20%, transparent); background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);"
+        >
+          Ver blog
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="flex flex-col divide-y" style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); divide-color: var(--border-subtle);">
+        {latestPosts.map((post) => (
+          <a
+            href={`/blog/${post.id}`}
+            class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8 py-6 hover:opacity-80 transition-opacity duration-200"
+          >
+            <time
+              datetime={post.data.date.toISOString()}
+              class="text-xs tabular-nums shrink-0"
+              style="color: var(--text-faint); min-width: 6rem;"
+            >
+              {formatDate(post.data.date)}
+            </time>
+            <div class="flex-1 min-w-0">
+              <p class="text-base font-semibold mb-1 group-hover:text-gradient transition-colors duration-200 truncate" style="color: var(--text-primary);">
+                {post.data.title}
+              </p>
+              <p class="text-sm line-clamp-1" style="color: var(--text-muted);">{post.data.description}</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block"
+              style="color: var(--accent-cyan);"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+  )}
 
   <section class="py-24 px-4" aria-labelledby="news-title">
     <div class="max-w-6xl mx-auto">
