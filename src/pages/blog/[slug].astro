@@ -1,0 +1,174 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description}>
+  <article class="py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="mb-4">
+        <a
+          href="/blog"
+          class="inline-flex items-center gap-2 text-sm transition-colors duration-200"
+          style="color: var(--text-faint);"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Blog
+        </a>
+      </div>
+
+      {post.data.image && (
+        <div class="mb-10 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle);">
+          <img
+            src={post.data.image}
+            alt={post.data.title}
+            width="800"
+            height="400"
+            class="w-full object-cover"
+            style="max-height: 400px;"
+            loading="eager"
+          />
+        </div>
+      )}
+
+      <header class="mb-10">
+        {post.data.tags.length > 0 && (
+          <div class="flex flex-wrap gap-2 mb-4">
+            {post.data.tags.map((tag) => (
+              <span
+                class="px-2.5 py-1 text-xs rounded-md font-medium"
+                style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4" style="color: var(--text-primary);">
+          {post.data.title}
+        </h1>
+
+        <p class="text-lg mb-6" style="color: var(--text-muted);">{post.data.description}</p>
+
+        <div class="flex items-center gap-3 pb-8 border-b border-[var(--border-subtle)]">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--accent-orange-glow); color: var(--accent-orange);">MI</div>
+          <div>
+            <p class="text-sm font-medium" style="color: var(--text-primary);">Mario Inostroza</p>
+            <time datetime={post.data.date.toISOString()} class="text-xs" style="color: var(--text-faint);">
+              {formatDate(post.data.date)}
+            </time>
+          </div>
+        </div>
+      </header>
+
+      <div class="prose-blog">
+        <Content />
+      </div>
+
+    </div>
+  </article>
+</Base>
+
+<style>
+  .prose-blog :global(h2) {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+    font-family: var(--font-heading);
+  }
+  .prose-blog :global(h3) {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    font-family: var(--font-heading);
+  }
+  .prose-blog :global(p) {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 1.25rem;
+    font-size: 1.05rem;
+  }
+  .prose-blog :global(a) {
+    color: var(--accent-orange);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent-orange) 40%, transparent);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 200ms;
+  }
+  .prose-blog :global(a:hover) {
+    text-decoration-color: var(--accent-orange);
+  }
+  .prose-blog :global(code) {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    color: var(--accent-cyan);
+  }
+  .prose-blog :global(pre) {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+  .prose-blog :global(pre code) {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  .prose-blog :global(ul), .prose-blog :global(ol) {
+    color: var(--text-secondary);
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.8;
+  }
+  .prose-blog :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  .prose-blog :global(blockquote) {
+    border-left: 3px solid var(--accent-orange);
+    padding-left: 1.25rem;
+    margin: 1.5rem 0;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .prose-blog :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: 2.5rem 0;
+  }
+  .prose-blog :global(img) {
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    margin: 1.5rem auto;
+    max-width: 100%;
+  }
+  .prose-blog :global(strong) {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+</style>
