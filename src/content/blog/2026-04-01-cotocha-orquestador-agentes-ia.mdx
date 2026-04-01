@@ -1,0 +1,73 @@
+---
+title: "Cotocha: el orquestador de agentes que corre mi vida desde un VPS"
+date: 2026-04-01
+description: "Cómo construí un sistema de agentes IA que maneja infraestructura, alertas, base de datos y blogging desde un servidor en Alemania. Sin intermediarios, sin dashboards bonitos."
+tags: [IA, Agentes, OpenClaw, Automatización, Patagonia]
+image: "/img/blog/cotocha-orquestador.webp"
+draft: true
+---
+
+Tengo un VPS en Alemania que cuesta menos que un café al mes. Ahí corre Cotocha, un orquestador de agentes IA que se despierta solo, revisa que todo funcione, me alerta si algo falla y hasta escribe borradores de blog.
+
+No es un toy project. Es la columna vertebral de cómo opero tres productos de IA desde Puerto Natales, Patagonia.
+
+## El problema con los dashboards
+
+Antes de Cotocha, mi mañana se veía así: abrir Telegram, abrir Slack, abrir GitHub, abrir Railway, abrir la consola de Contabo. Cinco pestañas antes de las 9am solo para saber si algo se había roto durante la noche.
+
+Los dashboards de monitoreo te muestran métricas. No te dicen qué hacer. No resuelven el problema. Te obligan a ser el orquestador.
+
+Yo no quería ser el orquestador. Quería que algo más lo fuera.
+
+## Qué es Cotocha exactamente
+
+Cotocha es un agente principal que coordina un squad de especialistas. Cada uno tiene un rol claro:
+
+- **Stark** vigila infraestructura y ejecuta health checks periódicos
+- **Shuri** es la ingeniera de software que trabaja en el código de Examya
+- **Loki** maneja operaciones financieras
+- **Vision** investiga mercado y compila inteligencia
+- **Banner** analiza datos clínicos
+- **Rocket** se encarga de ventas y leads
+
+Cuando llega un mensaje por Telegram, Cotocha clasifica, delega, consolida y hace follow up. Todo sin intervención mía a menos que sea necesario.
+
+La clave: Cotocha corre en OpenClaw, un gateway de agentes open source. No es un wrapper sobre ChatGPT. Es un sistema que persiste estado, tiene cron jobs, accede al filesystem y ejecuta comandos.
+
+## 24/7 sin intervenir
+
+Lo que más me sorprendió no fue construirlo. Fue despertarme una mañana y encontrar que Cotocha ya había:
+
+- Ejecutado 20 cron jobs durante la madrugada sin errores
+- Detectado que la memoria del VPS estaba en 33% (dentro del umbral seguro)
+- Leído Hacker News y preparado un briefing de las 10 noticias más relevantes
+- Extraído action items de resúmenes médicos en la base de datos de Examya
+- Sincronizado el vault de Obsidian con las notas del día anterior
+
+Yo no hice nada. El sistema se mantuvo solo.
+
+## La memoria que lo hace posible
+
+Un agente sin memoria es un chatbot con nostalgia. Cotocha usa QMD, un backend vectorial con búsqueda semántica. Cada sesión aprende algo y lo almacena. La próxima sesión puede buscar esa información antes de actuar.
+
+Esto significa que Cotocha no repite errores. Si en marzo descubrió que un flujo de Shuri tenía un bug en la confirmación de pagos, esa información está disponible para la próxima sesión que toque ese código.
+
+## Por qué no N8N o Make
+
+Me lo preguntan siempre. La respuesta corta: control total.
+
+Las plataformas no-code te dan nodos y cables. Funciona para flujos simples. Pero cuando tu agente necesita leer un archivo, hacer un git pull, consultar una base de datos, generar texto con un modelo específico y notificar por Telegram con botones interactivos, los nodos se vuelven un laberinto.
+
+Con OpenClaw, el agente tiene acceso directo al sistema. Puede ejecutar cualquier comando, leer cualquier archivo, llamar cualquier API. La flexibilidad es radicalmente diferente.
+
+## Lo que construí no es complicado
+
+Tres productos de IA. Un VPS. Un orquestador. Nada de esto requiere un equipo de 20 personas ni millones en funding. Requiere entender qué se puede automatizar y qué no, y tener la disciplina de dejar que el sistema opere.
+
+Si estás construyendo algo con IA y todavía eres tú quien abre las cinco pestañas cada mañana, date una pregunta: ¿podría un agente hacerlo por ti?
+
+Probablemente sí.
+
+---
+
+Si estás construyendo algo con agentes IA desde un lugar remoto, me encantaría conversar. Escríbeme por [WhatsApp](https://wa.me/56962170366) o búscame en [X como @marioSoftmedic](https://x.com/marioSoftmedic).
