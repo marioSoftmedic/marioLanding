@@ -1,0 +1,83 @@
+---
+title: "Huillín: el agente de WhatsApp que gestiona reservas de cabañas en la Patagonia"
+date: 2026-04-01
+description: "Cómo construí un bot agéntico con Claude API que maneja el ciclo completo de reservas — disponibilidad, sincronización de calendarios y pagos — sin intervención humana."
+tags: ["IA", "Agentes", "WhatsApp", "Claude API", "Patagonia"]
+image: "/img/projects/estepa.png"
+draft: false
+---
+
+Puerto Natales es la puerta de entrada a Torres del Paine. En temporada alta, los propietarios de cabañas reciben decenas de consultas por día — por WhatsApp, por Airbnb, por Booking.com, por Instagram — y gestionar todo eso manualmente es imposible.
+
+**Huillín** es el agente que construí para resolver ese problema. Un bot de WhatsApp que entiende lenguaje natural, consulta disponibilidad en tiempo real, sincroniza calendarios y genera links de pago — sin que el propietario tenga que tocar el teléfono.
+
+## El problema real
+
+Imaginá esto: son las 11 de la noche, un turista alemán que llega en tres días pregunta si hay disponibilidad para cuatro personas. El propietario está durmiendo. La cabaña está disponible. Pero nadie responde, y el turista reserva en otro lugar.
+
+Eso pasaba todo el tiempo. Y el costo no era solo económico — era la frustración de perder reservas por falta de respuesta inmediata.
+
+## La solución: un agente, no un chatbot
+
+La diferencia entre un chatbot y un agente es crítica. Un chatbot responde preguntas. Un agente **toma acciones**.
+
+Huillín no solo responde "sí, hay disponibilidad". Huillín:
+
+1. Consulta el calendario real de la cabaña
+2. Verifica que las fechas solicitadas estén libres
+3. Calcula el precio según temporada y duración
+4. Genera un link de pago personalizado (Mercado Pago o Stripe)
+5. Una vez confirmado el pago, bloquea las fechas en **todos** los calendarios
+
+Todo eso desde una conversación de WhatsApp, en español natural, con la calidez de alguien que conoce la Patagonia.
+
+## El desafío técnico: sincronización de calendarios
+
+El problema más difícil no fue la IA — fue la sincronización de disponibilidad.
+
+Las cabañas suelen estar publicadas en Airbnb, Booking.com y su propio sitio al mismo tiempo. Cada plataforma tiene su calendario. Si alguien reserva en Airbnb a las 3pm y otro cliente consulta en WhatsApp a las 3:05pm, Huillín tiene que saber que esas fechas ya no están disponibles.
+
+La solución fue **iCal bidireccional**: cada plataforma exporta un calendario `.ics`. Huillín lo lee en tiempo real antes de confirmar disponibilidad, y cuando se confirma una reserva por WhatsApp, actualiza el calendario maestro que las demás plataformas consumen.
+
+```
+Airbnb ──→ iCal ──→ Huillín ──→ PostgreSQL
+Booking  ──→ iCal ──↗           ↓
+WhatsApp ──────────────→ reserva confirmada
+                              ↓
+                    iCal bloqueado para Airbnb y Booking
+```
+
+Sin esta sincronización, el double-booking es inevitable.
+
+## Por qué Claude API y no GPT-4
+
+Probé ambos para manejar conversaciones en español patagónico — con modismos, errores de ortografía, mensajes incompletos como los que manda cualquier persona real por WhatsApp.
+
+Claude resultó notablemente mejor en tres cosas:
+
+- **Tono**: más cálido y natural en español, menos robótico
+- **Tool use**: la implementación de herramientas es más confiable y consistente
+- **Contexto largo**: las conversaciones de reserva pueden durar días con muchos mensajes; Claude maneja ese contexto sin perderse
+
+Huillín tiene una personalidad definida: sabe sobre Torres del Paine, conoce los mejores miradores, recomienda qué llevar en temporada de viento. Eso no es un feature secundario — es lo que hace que la conversación se sienta real.
+
+## Stack técnico
+
+- **Next.js + TypeScript**: API routes para el webhook de WhatsApp
+- **Claude API** (Anthropic): motor conversacional con tool use
+- **WhatsApp Business API**: canal de comunicación
+- **PostgreSQL + Drizzle ORM**: almacenamiento de reservas y conversaciones
+- **iCal**: sincronización con Airbnb y Booking.com
+- **Mercado Pago + Stripe**: generación de links de pago
+
+## Resultado
+
+Huillín maneja el ciclo completo de una reserva sin intervención humana. El propietario recibe una notificación cuando hay una reserva confirmada y paga. Nada más.
+
+En temporada alta, eso significa **respuesta inmediata a cualquier hora**, sin perder reservas por demoras y sin que el propietario tenga que vivir pegado al teléfono.
+
+El bot está vivo en [bot.estepapatagonia.com](https://bot.estepapatagonia.com/).
+
+---
+
+Si estás construyendo algo similar — ya sea para turismo, gastronomía o cualquier negocio con reservas — me encontrás en [WhatsApp](https://wa.me/56962170366) o en [X](https://x.com/marioHealthBits).
