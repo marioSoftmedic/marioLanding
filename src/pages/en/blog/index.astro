@@ -1,9 +1,9 @@
 ---
-import Base from '../../layouts/Base.astro';
+import Base from '../../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import { getLang, useTranslations, basePath } from '../../i18n/utils';
+import { useTranslations, basePath } from '../../../i18n/utils';
 
-const lang = getLang(Astro.url.pathname);
+const lang = 'en' as const;
 const t = useTranslations(lang);
 const base = basePath(lang);
 
@@ -48,43 +48,23 @@ const formatDate = (date: Date) =>
                 </time>
 
                 <div class="flex-1 min-w-0">
-                  <h2
-                    class="text-lg font-semibold mb-1 group-hover:text-gradient transition-colors duration-200"
-                    style="color: var(--text-primary);"
-                  >
+                  <h2 class="text-lg font-semibold mb-1 group-hover:text-gradient transition-colors duration-200" style="color: var(--text-primary);">
                     {post.data.title}
                   </h2>
-                  <p class="text-sm line-clamp-2 mb-3" style="color: var(--text-muted);">
-                    {post.data.description}
-                  </p>
+                  <p class="text-sm line-clamp-2 mb-3" style="color: var(--text-muted);">{post.data.description}</p>
                   {post.data.tags.length > 0 && (
                     <div class="flex flex-wrap gap-1.5">
                       {post.data.tags.map((tag) => (
-                        <span
-                          class="px-2 py-0.5 text-xs rounded-md font-medium"
-                          style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);"
-                        >
-                          {tag}
-                        </span>
+                        <span class="px-2 py-0.5 text-xs rounded-md font-medium" style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);">{tag}</span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                   class="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block"
                   style="color: var(--accent-orange);"
-                >
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
+                ><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </a>
             );
           })}

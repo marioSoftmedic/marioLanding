@@ -1,11 +1,10 @@
 ---
-import Base from '../../layouts/Base.astro'
-import NewsFeed from '../../components/NewsFeed.tsx'
-import { getLang, useTranslations, basePath } from '../../i18n/utils';
+import Base from '../../../layouts/Base.astro';
+import NewsFeed from '../../../components/NewsFeed.tsx';
+import { useTranslations, basePath } from '../../../i18n/utils';
 
-const lang = getLang(Astro.url.pathname);
-const t = useTranslations(lang);
-const base = basePath(lang);
+const t = useTranslations('en');
+const base = basePath('en');
 ---
 
 <Base title={t('news.page.meta.title')} description={t('news.page.meta.desc')}>

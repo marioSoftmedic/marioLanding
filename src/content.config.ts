@@ -6,12 +6,14 @@ const projects = defineCollection({
   schema: z.object({
     title: z.string(),
     description: z.string(),
+    descriptionEn: z.string().optional(),
     emoji: z.string(),
     techStack: z.array(z.string()),
     featured: z.boolean().default(false),
     image: z.string().optional(),
     githubUrl: z.string().optional(),
     demoUrl: z.string().optional(),
+    lang: z.enum(['es', 'en']).default('es'),
   }),
 });
 
@@ -24,6 +26,8 @@ const blog = defineCollection({
     tags: z.array(z.string()).default([]),
     image: z.string().optional(),
     draft: z.boolean().default(false),
+    lang: z.enum(['es', 'en']).default('es'),
+    canonicalSlug: z.string().optional(),
   }),
 });
 

@@ -30,10 +30,60 @@ npm run preview   # Preview production build locally
 Projects are MDX files in `src/content/projects/`. Schema defined in `src/content.config.ts`:
 
 ```ts
-{ title, description, emoji, techStack: string[], featured?, githubUrl?, demoUrl? }
+{ title, description, descriptionEn?, emoji, techStack: string[], featured?, githubUrl?, demoUrl?, lang: 'es'|'en' }
 ```
 
 The project card links to `/projects/{id}` unless only `demoUrl` is set (external link).
+
+## Internationalization (i18n)
+
+**Routes**: Spanish at `/`, English at `/en/`. Astro native i18n with `prefixDefaultLocale: false`.
+
+### Bilingual project file convention
+
+For each project, two MDX files exist:
+
+| File | ID | lang | description field |
+|---|---|---|---|
+| `{slug}.mdx` | `{slug}` | `es` | Spanish text |
+| `{slug}.en.mdx` | `{slug}.en` | `en` | English text |
+
+**Rules — always follow when adding or editing projects:**
+
+1. **ES file** (`{slug}.mdx`): `lang: 'es'`, `description` in Spanish, `descriptionEn` in English (required — used for EN home page cards).
+2. **EN file** (`{slug}.en.mdx`): `lang: 'en'`, `description` in English (NOT Spanish), no `descriptionEn` field.
+3. **Titles must match exactly** between ES and EN files (the EN lookup used `p.id === '${esProject.id}.en'` — so file naming is the source of truth).
+4. **File slug = URL slug**: the ES file name determines the URL for both languages. `openclaw.mdx` → `/projects/openclaw` and `/en/projects/openclaw`.
+
+### Filtering projects in pages
+
+Always filter by `p.data.lang === 'es'` to get the 3 base projects (never iterate all 6 — the `.en` files are content variants, not separate entries for display):
+
+```ts
+const projects = (await getCollection('projects')).filter((p) => p.data.lang === 'es');
+```
+
+### EN project detail page lookup
+
+`src/pages/en/projects/[slug].astro` maps ES slugs and finds the EN version by ID:
+
+```ts
+const enProject = allProjects.find((p) => p.id === `${esProject.id}.en`);
+// Falls back to ES entry if no .en file exists
+props: { project: enProject ?? esProject }
+```
+
+### Description display on EN pages
+
+- **Home cards** (`en/index.astro`): `project.data.descriptionEn ?? project.data.description` (reads from ES entry)
+- **Detail page** (`en/projects/[slug].astro`): `project.data.descriptionEn ?? project.data.description` (reads from EN entry, whose `description` is already in English)
+
+### When adding a new project
+
+1. Create `src/content/projects/{slug}.mdx` with `lang: 'es'`, Spanish `description`, and `descriptionEn` in English
+2. Create `src/content/projects/{slug}.en.mdx` with `lang: 'en'` and English `description`
+3. Both files must have the same `title` value
+4. Restart the dev server after adding new content files (`npm run dev`) — content collection changes are not picked up by HMR alone
 
 ### Design System
 

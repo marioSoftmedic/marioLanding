@@ -1,0 +1,39 @@
+---
+import { getLang, getAlternatePath } from '../i18n/utils';
+
+const pathname = Astro.url.pathname;
+const lang = getLang(pathname);
+const isEn = lang === 'en';
+
+// Paths for each language
+const esPath = isEn ? getAlternatePath(pathname, 'en') : pathname;
+const enPath = isEn ? pathname : getAlternatePath(pathname, 'es');
+---
+
+<div
+  role="group"
+  aria-label={isEn ? 'Change language' : 'Cambiar idioma'}
+  class="flex items-center gap-0.5 rounded-lg p-1"
+  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+>
+  <a
+    href={esPath}
+    hreflang="es"
+    aria-label="Ver sitio en Español"
+    aria-current={!isEn ? 'true' : undefined}
+    class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
+    style={!isEn
+      ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
+      : 'color: var(--text-muted);'}
+  >ES</a>
+  <a
+    href={enPath}
+    hreflang="en"
+    aria-label="View site in English"
+    aria-current={isEn ? 'true' : undefined}
+    class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
+    style={isEn
+      ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
+      : 'color: var(--text-muted);'}
+  >EN</a>
+</div>

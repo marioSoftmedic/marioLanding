@@ -1,0 +1,34 @@
+---
+title: Cotocha
+description: "AI agent orchestrator that automates daily operations: Telegram guard, infrastructure health checks, WhatsApp campaigns, GitHub automation and coding agent delegation."
+lang: 'en'
+emoji: "🐙"
+techStack:
+  - Node.js
+  - PostgreSQL
+  - pgvector
+  - Telegram
+  - Anthropic Claude
+  - GLM
+featured: true
+image: "/img/projects/cotocha.png"
+---
+
+**Cotocha** is my personal operations agent, built on OpenClaw (self-hosted AI agent gateway) running on a VPS in Contabo. Interaction is 100% through Telegram — direct channel and the "Command Center" group — and Slack.
+
+## What it automates
+
+- **Telegram group guard** — monitors group members every 12 hours, detects intruders and alerts automatically.
+- **Infrastructure health checks** — every 3 hours checks memory, disk, active sessions and VPS cron jobs. Reports to `#infra-vps` on Slack.
+- **Calendar triggers** — manages automatic follow-ups, reminders and no-show detection from the calendar.
+- **GitHub issue automation** — detects bugs in repos, opens issues and generates PRs automatically.
+- **WhatsApp campaigns** — sends bulk messages to Examya leads with targeting and tracking.
+- **Coding delegation** — spawns development agents (Codex, Claude Code, OpenCode, Gemini) for code tasks and supervises them.
+
+## Semantic memory
+
+Uses **PostgreSQL + pgvector** for vector storage: every conversation and event is embedded and retrievable via semantic search. Each agent also has its own local SQLite for session memory.
+
+## Tech stack
+
+**Runtime**: Node.js 22 on Linux (VPS Contabo). **LLMs**: multi-model — GLM-5/5.1 (ZAI), Kimi K2.5, Anthropic Claude and Gemini depending on the task. **Installed skills**: ~65, including `coding-agent`, `healthcheck`, `gh-issues`, `slack`, and others. **Channels**: Telegram (DM + Command Center group) and Slack (Examya workspace — `#alertas`, `#infra-vps`).
