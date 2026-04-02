@@ -21,6 +21,10 @@ export const ui = {
     'hero.cta-projects': 'Ver proyectos',
     'hero.cta-contact': 'Contactar',
     'hero.blog-link': 'También escribo sobre IA y agentes',
+    // About / Journey section
+    'section.about.label': 'Trayectoria',
+    'section.about.title': 'De la medicina a la IA',
+    'section.about.subtitle': 'Tecnólogo Médico convertido en AI Builder desde Puerto Natales, Patagonia.',
     // Projects section
     'section.projects.label': 'Portafolio',
     'section.projects.title': 'Proyectos',
@@ -105,6 +109,10 @@ export const ui = {
     'hero.cta-projects': 'View projects',
     'hero.cta-contact': 'Contact me',
     'hero.blog-link': 'I also write about AI and agents',
+    // About / Journey section
+    'section.about.label': 'Journey',
+    'section.about.title': 'From Medicine to AI',
+    'section.about.subtitle': 'Medical Technologist turned AI Builder from Puerto Natales, Patagonia.',
     // Projects section
     'section.projects.label': 'Portfolio',
     'section.projects.title': 'Projects',

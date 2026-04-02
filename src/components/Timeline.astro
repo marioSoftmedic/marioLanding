@@ -1,0 +1,163 @@
+---
+interface Props {
+  lang: 'es' | 'en';
+}
+
+const { lang } = Astro.props;
+
+type Milestone = {
+  year: string;
+  title: string;
+  org: string;
+  desc: string;
+  color: string;
+  current?: boolean;
+};
+
+const milestones: Record<string, Milestone[]> = {
+  es: [
+    {
+      year: '2011',
+      title: 'Tecnólogo Médico',
+      org: 'Hospital de Puerto Natales',
+      desc: 'Inicio en el sistema de salud público de la Patagonia. Diagnóstico clínico, urgencias y medicina de laboratorio en una de las ciudades más australes del mundo.',
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2015',
+      title: 'Fundador',
+      org: 'Laboratorio Biohealth',
+      desc: 'Creé el primer laboratorio clínico privado de alta tecnología en Puerto Natales. Incluimos un laboratorio de biología molecular, siendo referentes en diagnóstico de COVID en la Patagonia.',
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2017',
+      title: 'Co-fundador',
+      org: 'Softmedic',
+      desc: 'Junto a un equipo de developers, construimos software médico para el sistema de salud chileno. La pandemia de 2020 cerró el proyecto.',
+      color: 'var(--accent-orange)',
+    },
+    {
+      year: '2022',
+      title: 'Administrador Municipal',
+      org: 'Municipalidad de Natales',
+      desc: 'Lideré la gestión administrativa del municipio más austral del mundo. Transformación digital, modernización de procesos y gestión de equipos.',
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2024',
+      title: 'Co-fundador',
+      org: 'Estepa Patagónica',
+      desc: 'Con Macarena Alegría creamos Estepa Patagónica: 6 cabañas en Puerto Natales. El agente Huillín gestiona reservas de forma autónoma vía WhatsApp.',
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2024',
+      title: 'AI Builder',
+      org: 'Independiente',
+      desc: 'Agentes de IA, bots conversacionales y sistemas autónomos. Construyo tecnología que trabaja mientras duermo, desde el fin del mundo.',
+      color: 'var(--accent-orange)',
+      current: true,
+    },
+  ],
+  en: [
+    {
+      year: '2011',
+      title: 'Medical Technologist',
+      org: 'Puerto Natales Hospital',
+      desc: "Started in Patagonia's public healthcare system. Clinical diagnostics, emergency care and laboratory medicine in one of the world's southernmost cities.",
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2015',
+      title: 'Founder',
+      org: 'Laboratorio Biohealth',
+      desc: "Built Puerto Natales' first high-tech private clinical lab. We created a molecular biology unit that became a COVID diagnostics reference in Patagonia.",
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2017',
+      title: 'Co-founder',
+      org: 'Softmedic',
+      desc: 'Built medical software for the Chilean healthcare system with a developer team. The COVID-19 pandemic shut the project down in 2020.',
+      color: 'var(--accent-orange)',
+    },
+    {
+      year: '2022',
+      title: 'Municipal Administrator',
+      org: 'Municipalidad de Natales',
+      desc: "Led the administrative management of one of the world's southernmost municipalities. Digital transformation and process modernization in Patagonia.",
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2024',
+      title: 'Co-founder',
+      org: 'Estepa Patagónica',
+      desc: 'With Macarena Alegría we built Estepa Patagónica: 6 cabins in Puerto Natales. The Huillín agent autonomously handles bookings via WhatsApp.',
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2024',
+      title: 'AI Builder',
+      org: 'Independent',
+      desc: 'AI agents, conversational bots and autonomous systems. Building technology that works while I sleep, from the end of the world.',
+      color: 'var(--accent-orange)',
+      current: true,
+    },
+  ],
+};
+
+const items = milestones[lang];
+---
+
+<div class="relative">
+  <div
+    class="absolute top-4 bottom-10 w-px"
+    style="left: 1.125rem; background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-orange)); opacity: 0.35;"
+  ></div>
+
+  <div class="space-y-8">
+    {items.map((item) => (
+      <div class="flex gap-5 relative">
+        <div class="flex-shrink-0 flex flex-col items-center" style="width: 2.25rem;">
+          {item.current ? (
+            <div class="relative mt-2 z-10 w-2.5 h-2.5">
+              <div
+                class="w-2.5 h-2.5 rounded-full"
+                style={`background: ${item.color}; box-shadow: 0 0 10px ${item.color};`}
+              ></div>
+              <div
+                class="absolute inset-0 rounded-full animate-ping"
+                style={`background: ${item.color}; opacity: 0.35;`}
+              ></div>
+            </div>
+          ) : (
+            <div
+              class="w-2.5 h-2.5 rounded-full mt-2 z-10 relative"
+              style={`background: var(--bg-base); border: 2px solid ${item.color};`}
+            ></div>
+          )}
+          <span
+            class="text-[9px] font-mono font-bold mt-2 tracking-wide"
+            style="color: var(--text-faint);"
+          >{item.year}</span>
+        </div>
+
+        <div class="flex-1 min-w-0 pt-1 pb-2">
+          <span
+            class="text-[10px] font-semibold uppercase tracking-widest block"
+            style={`color: ${item.color};`}
+          >{item.title}</span>
+          <h3
+            class="text-sm font-bold mt-0.5 leading-snug"
+            style="color: var(--text-primary);"
+          >{item.org}</h3>
+          <p
+            class="text-sm mt-1.5 leading-relaxed"
+            style="color: var(--text-muted);"
+          >{item.desc}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
