@@ -2,6 +2,44 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Blog Publishing Protocol (MANDATORY)
+
+The Obsidian vault is the source of truth for the blog. Claude NEVER creates blog posts directly in the repo — the flow always starts in the vault.
+
+### Full protocol (follow in order, every time)
+
+**Before writing any post:**
+1. Read `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/_INDEX.md`
+   - Check "Temas cubiertos" — never duplicate a covered topic
+   - Check "Temas disponibles" — use these as candidates
+
+**To create a draft:**
+2. Copy `_template.md` in the vault to `borradores/{slug}.md`
+3. Fill in frontmatter — always start with `draft: true`
+4. Add entry to `_INDEX.md` under "Borradores pendientes"
+5. Add topic to "Temas cubiertos"
+
+**When the user says "publicá el post X":**
+6. Read `borradores/{slug}.md` from the vault
+7. Create `src/content/blog/YYYY-MM-DD-{slug}.mdx` in this repo with `lang: 'es'`
+8. Create `src/content/blog/YYYY-MM-DD-{slug}.en.mdx` with `lang: 'en'` (translated)
+9. Move `borradores/{slug}.md` → `publicados/{slug}.md` in the vault
+10. Update `_INDEX.md`: move from "Borradores pendientes" to "Publicados"
+11. Commit and push both repos
+
+**Vault paths (local iCloud):**
+```
+~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/
+  _INDEX.md          ← source of truth, always keep in sync
+  _template.md       ← base for every new post
+  borradores/        ← drafts (draft: true)
+  publicados/        ← published posts
+```
+
+**Blog file naming in this repo:**
+- ES: `src/content/blog/YYYY-MM-DD-{slug}.mdx` with `lang: 'es'`
+- EN: `src/content/blog/YYYY-MM-DD-{slug}.en.mdx` with `lang: 'en'`
+
 ## Commands
 
 ```bash
