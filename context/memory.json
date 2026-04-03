@@ -1,160 +1,22 @@
 {
-  "generated_at": "2026-04-03T10:23:27.319953",
+  "generated_at": "2026-04-03T10:44:25.447489",
   "source": "engram",
   "total_memories": 127,
+  "projects": {
+    "examya": 109,
+    "personal": 7,
+    "marioLanding": 10,
+    "estepa": 1
+  },
   "observations": [
-    {
-      "id": 1,
-      "title": "Diagnosed Shuri flow and intent misrouting",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-whatsapp-flow-routing",
-      "project": "examya",
-      "created_at": "2026-03-30 11:42:52",
-      "content": "**What**: Identified root causes in Shuri WhatsApp flow: campaign state path mismatch, contextless/cached intent classification for confirmation messages, and routing precedence that sends confirmations to package recommendations.\n**Why**: User reported that flow context was lost (`existingFlow: null`), and explicit confirmation (`si, generala`) was misrouted instead of generating an order.\n**Where**: apps/agents/src/agents/shuri/campaign-intent-detector.ts, apps/agents/src/agents/shuri/shuri-agent.ts, apps/agents/src/routes/shuri.ts, apps/agents/src/agents/shuri/shuri-memory.ts, apps/agents/src/agents/shuri/conversational-engine.ts.\n**Learned**: `campaignFlow` is persisted under `purchase` but read from `memory.campaignFlow`; IntentRouter cache key uses only raw message text, so short confirmations can be globally misclassified and reused across contexts."
-    },
-    {
-      "id": 3,
-      "title": "Guarded Shuri purchase confirmations from package routing",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-purchase-confirmation-routing",
-      "project": "examya",
-      "created_at": "2026-03-30 11:52:51",
-      "content": "**What**: Added a confirmation/generation guard in Shuri routing so active purchase stages are not hijacked by package recommendation intent, protected `userChangedIntent` from resetting purchase flow on confirmation messages, and fixed campaign flow read path to include `memory.purchase.campaignFlow`.\n**Why**: Users replying with confirmations like \"si, generala\" during order purchase were being routed to package suggestions instead of continuing order generation.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts; apps/agents/src/agents/shuri/campaign-intent-detector.ts\n**Learned**: `isPackageRecommendation` executes before `awaiting_exam_list` handling, so explicit stage-aware guards are required to preserve purchase continuity when intent classification is noisy."
-    },
-    {
-      "id": 5,
-      "title": "Fixed stage-aware confirmation routing in Shuri",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-intent-router-confirmation-stage-cache",
-      "project": "examya",
-      "created_at": "2026-03-30 11:57:16",
-      "content": "**What**: Added stage-aware intent routing context to Shuri IntentRouter, included stage in cache key hashing, and added deterministic confirmation bypass for purchase-confirmation stages to avoid LLM misclassification for phrases like \"si, generala\".\n**Why**: Confirmation replies in active purchase stages were being classified as `package_recommendation` and then reused cross-context via cache, breaking the exam-order confirmation flow.\n**Where**: apps/agents/src/agents/shuri/intent-router.ts; apps/agents/src/agents/shuri/intent-router.types.ts; apps/agents/src/agents/shuri/shuri-agent.ts\n**Learned**: The route call in Shuri already has purchase stage available, so a minimal context pass-through at that call site is enough to make cache/context behavior stage-safe without broad refactors."
-    },
-    {
-      "id": 7,
-      "title": "Updated lab prompts to mention symptom suggestions",
-      "type": "bugfix",
-      "topic_key": "ux/shuri-symptom-prompt-copy",
-      "project": "examya",
-      "created_at": "2026-03-30 11:58:23",
-      "content": "**What**: Updated the Shuri WhatsApp bot prompts for laboratory/imaging flows and the campaign buy-transfer reply to mention symptom-based exam suggestions.\n**Why**: Users selecting Laboratorio were not told they could describe symptoms to get exam recommendations, even though that backend capability already exists.\n**Where**: `apps/agents/src/agents/shuri/shuri-agent.ts`, `apps/agents/src/agents/shuri/handlers/campaign-handler.ts`, `apps/agents/src/agents/shuri/__tests__/shuri-agent.symptom-bridge.test.ts`\n**Learned**: The symptom/purchase prompt text is duplicated in two separate `awaiting_exam_type` branches, so both literals must be updated to keep the UX consistent."
-    },
-    {
-      "id": 9,
-      "title": "Fixed Shuri WhatsApp bot conversation flow bugs",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-conversation-flow",
-      "project": "examya",
-      "created_at": "2026-03-30 12:03:33",
-      "content": "**What**: Fixed 3 bugs + 1 persistence issue in Shuri WhatsApp bot: (1) routing precedence so purchase stage handlers run before package_recommendation, (2) intent router now receives stage context and uses it in cache key + deterministic confirmation bypass, (3) Laboratorio prompt now mentions symptom-to-exam suggestion, (4) campaign flow persistence path mismatch fixed.\n\n**Why**: User reported bot losing context between messages, \"si, generala\" being misrouted to package suggestions instead of generating medical order, and missing symptom suggestion UX.\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — confirmation guard before isPackageRecommendation, userChangedIntent protection, symptom mention in prompts\n- `apps/agents/src/agents/shuri/intent-router.ts` — RouteContext param, stage-aware cache key, confirmation bypass for sensitive stages\n- `apps/agents/src/agents/shuri/intent-router.types.ts` — RouteContext interface\n- `apps/agents/src/agents/shuri/campaign-intent-detector.ts` — fixed read path from purchase.campaignFlow\n- `apps/agents/src/agents/shuri/handlers/campaign-handler.ts` — added symptom mention in TRANSFER_TO_BUY_FLOW\n- `apps/agents/src/agents/shuri/__tests__/shuri-agent.symptom-bridge.test.ts` — new tests for symptom prompt strings\n\n**Learned**: \n- Campaign flow was written to `purchase.campaignFlow` but read from `memory.campaignFlow` — classic path mismatch\n- Intent router cache was keyed only by message text, so \"si, generala\" cached in one context was reused everywhere\n- The `isPackageRecommendation` branch ran before purchase stage handlers, intercepting confirmations\n- `userChangedIntent` could reset active purchase stages even on confirmation messages\n- HAND-01 test failure (human_handoff vs profile_capture_name) is preexisting and unrelated\n- Branch: `fix/shuri-conversation-flow-bugs` from `devops`"
-    },
-    {
-      "id": 10,
-      "title": "Identified symptom confirmation quote payload bug",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-symptom-confirmation-quote-payload",
-      "project": "examya",
-      "created_at": "2026-03-30 12:20:58",
-      "content": "**What**: Traced the WhatsApp \"Si, generala\" post-fix flow and identified that symptom-confirmation does reach the purchase-stage handler, but order quoting fails because the handler prioritizes display names over suggested exam codes.\n**Why**: User reported that package recommendation was blocked but order still was not generated after confirming symptom-suggested exams.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts (awaiting_exam_list handler around lines 2205-2235 and symptom panel payload around lines 3367-3371); logs in docs/logs/logs.1774873001879.log and docs/logs/logs.1774873030888.log.\n**Learned**: The fallback text \"Podemos intentar la cotización de nuevo...\" is LLM output from the prompt \"La cotización falló...\" and indicates quoteMedicalOrder failure, not package recommendation interception."
-    },
-    {
-      "id": 11,
-      "title": "Fixed symptom-to-order quote: uses FONASA codes over display names",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-symptom-quote-codes-priority",
-      "project": "examya",
-      "created_at": "2026-03-30 12:32:57",
-      "content": "**What**: Fixed symptom-to-order quote flow: `quoteMedicalOrder` was `shuri-agent.ts` now uses `suggestedExamCodes` (FONASA codes like \"0301045\") as primary search input instead of display names which were truncated to 40 chars and The search API (`/medical-order-sales/exams/search`) receives code-only FONASA codes query, works correctly. In `quote_medical_order.cjs`, when codes are found, it resolves and API item with correct `examCode`.\n\n**Why**: User reported \"Si, generala\" still shows \"cotización failed\" instead of generating order. Evidence from logs shows API search works with codes queries ( but display name query fails because names are truncated to 40 chars).\n**Where**: `apps/agents/src/agents/shuri/shuri-agent.ts` lines 2213-2217, `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` (uses `normalizedQuery.toUpperCase()`)\n**Learned**: The symptom panel generates `purchase.data.exams` (display names truncated to 40 chars) and `purchase.data.suggestedExamCodes` (FONASA codes). The old code prioritized display names which codes, but display names contain more context for the search API to For order to the code-only FONASA code has better chance of matching. The Fallback order uses display names which additional context ( the patient_rut check is still failing. Need to investigate why."
-    },
-    {
-      "id": 12,
-      "title": "PR #278 already merged before WhatsApp re-test",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-pr278-merged-status",
-      "project": "examya",
-      "created_at": "2026-03-30 12:37:27",
-      "content": "**What**: PR #278 (fix/shuri-conversation-flow-bugs) was already merged to devops BEFORE the user's second WhatsApp test. This means the first round of fixes (routing precedence, intent context, campaign persistence, symptom UX) was deployed and the user confirmed: Problem 1 ✅ fixed (Laboratorio mentions symptoms), Problem 3 ❌ still fails because quote uses display names instead of FONASA codes.\n\n**Why**: The follow-up fix (commit 521b242e - quote code priority) was pushed to the same branch AFTER merge, so it's orphaned. Need a new PR for the quote fix.\n\n**Where**: PR #278 merged to devops, follow-up commit on fix/shuri-conversation-flow-bugs\n\n**Learned**: Always check PR merge status before pushing follow-up commits to the same branch. If PR is merged, create a new branch for additional fixes."
-    },
-    {
-      "id": 15,
-      "title": "Traced Shuri symptom confirmation fallback",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-symptom-confirmation-fallback",
-      "project": "examya",
-      "created_at": "2026-03-30 13:19:26",
-      "content": "**What**: Tracé el flujo de Shuri para confirmación de orden tras sugerencias por síntoma y ubiqué el origen del fallback \"Podemos intentar la cotización de nuevo\".\n**Why**: Investigar bug donde el usuario confirma \"Si, generala\" pero no se genera orden médica.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts (líneas ~2188-2263, ~2324-2345, ~3365-3375), apps/agents/src/agents/shuri/conversational-engine.ts (generateReply), apps/agents/src/agents/shuri/campaign-intent-detector.ts (isInCampaignFlow), apps/agents/src/routes/shuri.ts (get/update context), apps/agents/src/agents/shuri/shuri-memory.ts (summary.compra persistencia), docs/logs/logs.1774873001879.log.\n**Learned**: `existingFlow` nulo en CampaignHandler es normal fuera de campañas y no explica por sí solo el bug. El mensaje observado proviene del fallback LLM disparado cuando `quoteMedicalOrder` falla en `awaiting_exam_list` tras la confirmación."
-    },
-    {
-      "id": 16,
-      "title": "Fixed Shuri order generation: patientRut fallback + deterministic errors",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-order-generation",
-      "project": "examya",
-      "created_at": "2026-03-30 14:42:10",
-      "content": "**What**: Fixed WhatsApp Shuri bot order generation failure after symptom suggestion. Root cause was `patient_rut` missing — `quoteMedicalOrder` requires patient RUT but Without it RUT in webhook context, quote fails silently and LLM generates vague \"Podemos intentar la cotización de nuevo...\" instead of actionable error.\n\n**Why**: Users without RUT in webhook context couldn't get past \"si, generala\" after symptom-suggested exams\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — All 4 quoteMedicalOrder call sites fixed with mainProfile fallback + RUT guard + deterministic errors\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Fixed examType param name mismatch\n\n**Learned**: \n- `quote_medical_order.cjs` uses `params.exam_type` but callers pass `params.examType` — now accepts both\n- The LLM fallback via `conversational.generateReply()` for quote failures produces vague unhelpful messages — replaced with deterministic error messages based on error type\n- `existingFlow: null` in CampaignHandler logs is a red herring — it's expected for non-campaign flows, not the root cause\n- Purchase state (including `data.suggestedExamCodes`) DOES persist correctly via shuri-memory.ts JSON summary — the `data` field is in `SummaryJson.compra.data`"
-    },
-    {
-      "id": 19,
-      "title": "Created skill registry in .atl/skill-registry.md",
-      "type": "architecture",
-      "topic_key": "architecture/skill-registry",
-      "project": "examya",
-      "created_at": "2026-03-30 14:50:44",
-      "content": "**What**: Created centralized skill registry at `.atl/skill-registry.md` cataloging all 8 unique skills across 4 repo locations + 8 user-level skills\n**Why**: SDD Orchestrator needs pre-resolved compact rules to inject into sub-agents; skills were fragmented across .opencode/skill/, .agent/skills/, .agents/skills/, .claude/skills/\n**Where**: `.atl/skill-registry.md` (new file)\n**Learned**: \n- 7 of 8 repo skills are duplicated in .claude/skills/ (canonical is .opencode/skill/)\n- development-methodologies is the only skill in .agents/skills/ (workspace-level, no compatibility specified)\n- prompt-engineering-patterns is the only skill in .agent/skills/ (agent-level)\n- docs/SKILL.md is an empty placeholder\n- Registry includes: compact rules per skill, trigger table for orchestrator matching, duplicate cross-reference, and skill resolution protocol"
-    },
-    {
-      "id": 20,
-      "title": "Diagnosed 5 interconnected platform bugs",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "created_at": "2026-03-30 15:32:44",
-      "content": "**What**: Diagnosed 5 interconnected bugs reported after WhatsApp test: SQL isActive error, quota page failure, analytics auth error, WhatsApp order generation failure, unnecessary RUT prompt.\n\n**Why**: User tested WhatsApp conversation flow and found multiple failures across the platform.\n\n**Where**: \n- `apps/api/src/modules/quota/infrastructure/repositories/prisma-user-quota.repository.ts` — raw SQL uses `is_active` (correct), but DB may have schema drift\n- `apps/web/src/lib/analytics/backend-proxy.ts` line 42 — `getServerSession()` runs even when `requireAuth: false`\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — order creation via ShuriBridge\n- `apps/agents/src/agents/shuri/service-token.cjs` — needs SHURI_SERVICE_CLIENT_ID/SECRET env vars\n- `apps/agents/src/agents/shuri/shuri-agent.ts` line 2221 — RUT resolution from context\n\n**Learned**:\n1. BUG 1 (SQL isActive): All Prisma schemas have correct `@map(\"is_active\")`, but likely unapplied migrations cause schema drift. Need `prisma migrate status`.\n2. BUG 2 (Quota page): Cascades from BUG 1. `getQuotaMetrics()` catch returns generic error.\n3. BUG 3 (Analytics auth): `getServerSession(authOptions)` in `backend-proxy.ts` runs unconditionally at line 42, even when `requireAuth: false`. If authOptions is misconfigured, it throws before checking requireAuth. Fix: move inside `if (requireAuth)` block.\n4. BUG 4 (WhatsApp order): Either `SHURI_SERVICE_CLIENT_ID`/`SHURI_SERVICE_CLIENT_SECRET` missing, or exam search returns no results because symptom panel provides display names not FONASA codes.\n5. BUG 5 (RUT prompt): `context.patientRut` is empty/null despite user being in DB. `mainProfile.rut` doesn't exist on User model. Need to populate from patient records by phone."
-    },
-    {
-      "id": 25,
-      "title": "Fixed 5 interconnected platform bugs after WhatsApp investigation",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "created_at": "2026-03-30 19:11:38",
-      "content": "**What**: Fixed 5 interconnected bugs reported after WhatsApp conversation test.\n\n**Why**: User tested WhatsApp flow and found multiple failures across the platform\n**Where**: \n- `apps/web/src/lib/analytics/backend-proxy.ts` — getServerSession conditional for requireAuth\n- `apps/agents/src/agents/shuri/shuri-agent.ts` — RUT DB fallback by phone lookup\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Diagnostic logging\n- `prisma/migrations/` — 44 migrations resolved locally via prisma migrate resolve\n- `apps/api/src/modules/quota/` — Cascade fix from migration sync\n\n**Learned**: \n1. `getServerSession()` throws even for `requireAuth: false` endpoints — must be conditional\n2. `User.rut` exists in Prisma schema — confirmed via grep\n3. `context.patientRut` is WhatsApp is when empty because previous conversation context not saved there — added DB fallback as 3rd option\n4. `prisma migrate resolve --applied` can mark migrations as applied when DB already has the schema — useful for `db push` databases\n5. `ShortLink.is_active` missing in both local and Supabase — needs `ALTER TABLE` to add the column\n6. `quoteMedicalOrder` exam search fails silently — added diagnostic logging in `console.warn` and `console.error` to show exam names and order status\n7. Quota metrics page fails as cascade from migration drift — resolving #1 also fix #2\n8. When `requireAuth: false`, Authorization header is simply omitted — no crash for public endpoints\n9. Supabase project `zsskhqgslpobwbnymxii` has 13 migrations recorded but local and remote that synced\n10. `Short_link` table in both DBs and Supabase has 5 columns: id, slug, url, created_at, expires_at — no `is_active` column exists. Migration needed."
-    },
     {
       "id": 26,
       "title": "Judgment Day approved: consolidation to gentle-ai SDD",
       "type": "decision",
       "topic_key": "sdd/consolidation-judgment-day",
       "project": "examya",
-      "created_at": "2026-03-30 19:13:54",
-      "content": "**What**: Ran 3-round Judgment Day on consolidation commit 18cb3e4b. Round 1 found 4 confirmed issues (1 CRITICAL: exposed API key in .bak file, 3 WARNING: missing deprecation notices). Round 2 found 1 more missed file. Round 3: both judges returned CLEAN.\n\n**Why**: Needed adversarial verification before merging the consolidation that removed old agent systems.\n\n**Where**: .opencode/opencode.jsonc.bak (deleted), docs/superclaude-codigos/ (3 files got DEPRECATED notices), docs/superpowers/ (4 files got SUPERSEDED notices)\n\n**Learned**: \n- When adding deprecation notices, grep the ENTIRE directory not just files you know about — missed superclaude-comandos-desarrollo.md in first pass\n- Judgment Day is effective: Round 1 found a CRITICAL security issue (API key in plaintext) that would have been pushed\n- professional-self-registration-design.md is an ACTIVE spec, not historical — don't mark it superseded"
-    },
-    {
-      "id": 34,
-      "title": "Pre-existing phone normalization bug in shuri quote flow",
-      "type": "bugfix",
-      "topic_key": "bugfix/phone-normalization-shuri",
-      "project": "examya",
-      "created_at": "2026-03-31 01:21:35",
-      "content": "**What**: Discovered during Judgment Day review that phone numbers are normalized for DB lookup (strips +56, spaces, dashes) but passed as-is to quoteMedicalOrder, which requires exact `+56XXXXXXXXX` format\n**Why**: Pre-existing bug — not introduced by the suggestedExamCodes fix. The handler at quote_medical_order.cjs:59-63 silently drops non-matching phones with `undefined`\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts lines ~2307 (fast-path) and ~996 (resume), apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs lines 59-63\n**Learned**: Orders created without phone numbers won't trigger WhatsApp notifications. Need a `normalizeToChileanFormat()` helper applied consistently before passing to quoteMedicalOrder"
-    },
-    {
-      "id": 35,
-      "title": "Fixed WhatsApp bot order creation — suggestedExamCodes fast-path",
-      "type": "bugfix",
-      "topic_key": "bugfix/whatsapp-order-creation",
-      "project": "examya",
-      "created_at": "2026-03-31 01:21:35",
-      "content": "**What**: Fixed 3 bugs in Shuri WhatsApp bot: (1) order not created after \"Si, creala\", (2) RUT not resolved from DB, (3) exam packages shown again after symptom suggestions. Added fast-path that skips conversational engine when suggestedExamCodes + confirmation detected. Added type validation via validateExamCodes() helper. Fixed context loss on profile capture resume by preserving suggestedExamCodes.\n**Why**: The conversational engine returned friendly messages but empty exam lists, blocking order creation. RUT resolution only checked context/mainProfile, not DB. Profile capture resume lost suggestedExamCodes.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts — validateExamCodes() at line 99, resume flow at lines 990-1023, fast-path at lines 2254-2348\n**Learned**: purchase.data is typed as `any` — boundary validation is critical. quote_medical_order.cjs passes non-string values to API as-is. Judge B (oracle) consistently times out on this codebase review — use librarian agents only for future reviews."
-    },
-    {
-      "id": 37,
-      "title": "Pre-existing handoff test failure — escalation vs profile capture",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "created_at": "2026-03-31 01:58:47",
-      "content": "**What**: Identified pre-existing test failure `HAND-01: escalation overrides any existing purchase stage` — when user requests human handoff during `awaiting_exam_type` stage without `mainProfile`, bot redirects to `profile_capture_name` instead of `human_handoff`\n**Why**: The handoff flow doesn't override the profile capture requirement — profile validation runs before intent routing\n**Where**: apps/agents/src/agents/shuri/__tests__/shuri-agent.human-handoff.test.ts:131-154, apps/agents/src/agents/shuri/shuri-agent.ts\n**Learned**: The test was already failing before our changes — it expects handoff to bypass profile capture but the code requires profile first. Not related to suggestedExamCodes fix."
+      "updated_at": "2026-03-30 19:13:54",
+      "content": "**What**: Ran 3-round Judgment Day on consolidation commit 18cb3e4b. Round 1 found 4 confirmed issues (1 CRITICAL: exposed API key in .bak file, 3 WARNING: missing deprecation notices). Round 2 found 1 more missed file. Round 3: both judges returned CLEAN.\n\n**Why**: Needed adversarial verification before merging the consolidation that removed old agent systems.\n\n**Where**: .opencode/opencode.jsonc.bak (deleted), docs/superclaude-codigos/ (3 files got DEPRECATED notices), docs/superpowers/ (4 files got SUPERSEDED notices)\n\n**Learned**: \n- When adding deprecation notices, grep the ENTIRE directory not just files you know about — missed superclaude-comandos-desarrollo.md in first pass\n- Judgment Day is effective: Round 1 found a CRITICAL security issue (API key in plaintext) that would have b"
     },
     {
       "id": 40,
@@ -162,17 +24,125 @@
       "type": "architecture",
       "topic_key": "architecture/portfolio-redesign",
       "project": "marioLanding",
-      "created_at": "2026-03-31 10:01:24",
-      "content": "**What**: Rewrote all page templates (index.astro, [slug].astro, news/index.astro) to use the design system CSS variables instead of hardcoded zinc-* Tailwind classes. Replaced all emoji icons with inline SVGs. Added WOW-factor hero with gradient mesh background, grid pattern overlay, status badge, and scroll indicator.\n\n**Why**: User said the site \"se ve demasiado básica\" — needed to level up the visual design to match modern dark mode UI patterns (Linear/Vercel style).\n\n**Where**: portfolio/src/pages/index.astro, portfolio/src/pages/projects/[slug].astro, portfolio/src/pages/news/index.astro, portfolio/public/favicon.svg\n\n**Learned**: \n- Using inline `style` with CSS vars + `onmouseover`/`onmouseout` for hover states avoids Tailwind class proliferation with CSS variables\n- Glass-card class from global.css provides consistent hover effects with proper transitions (not `all`)\n- Hero section uses layered radial gradients + grid overlay for depth\n- `prose max-w-none` alone works fine with custom .prose CSS (no need for prose-invert/prose-zinc plugins)\n- Build passes: 5 pages in 1.26s\n- Git repo initialized with commit 0146286"
+      "updated_at": "2026-03-31 10:01:24",
+      "content": "**What**: Rewrote all page templates (index.astro, [slug].astro, news/index.astro) to use the design system CSS variables instead of hardcoded zinc-* Tailwind classes. Replaced all emoji icons with inline SVGs. Added WOW-factor hero with gradient mesh background, grid pattern overlay, status badge, and scroll indicator.\n\n**Why**: User said the site \"se ve demasiado básica\" — needed to level up the visual design to match modern dark mode UI patterns (Linear/Vercel style).\n\n**Where**: portfolio/src/pages/index.astro, portfolio/src/pages/projects/[slug].astro, portfolio/src/pages/news/index.astro, portfolio/public/favicon.svg\n\n**Learned**: \n- Using inline `style` with CSS vars + `onmouseover`/`onmouseout` for hover states avoids Tailwind class proliferation with CSS variables\n- Glass-card cla"
     },
     {
-      "id": 55,
-      "title": "Fixed ShuriBridge empty object causing Shuri fallback",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-bridge-empty",
+      "id": 106,
+      "title": "Implemented Astro native i18n ES/EN with URL routing",
+      "type": "architecture",
+      "topic_key": "architecture/i18n",
+      "project": "marioLanding",
+      "updated_at": "2026-04-02 12:04:07",
+      "content": "**What**: Added full ES/EN internationalization to the Astro 6 portfolio using URL-based routing (no JS toggle). Spanish at `/`, English at `/en/`.\n\n**Why**: SEO-friendly i18n — Google indexes both languages independently. Client-side toggle was rejected.\n\n**Where**:\n- `src/i18n/ui.ts` — all translation strings (ES + EN)\n- `src/i18n/utils.ts` — `getLang(pathname)`, `useTranslations(lang)`, `getAlternatePath()`, `basePath()`\n- `src/components/LangSwitch.astro` — ES/EN pill toggle in nav (desktop + mobile)\n- `src/layouts/Base.astro` — detects lang from URL, adds `<html lang>`, hreflang SEO tags, LangSwitch\n- `src/content.config.ts` — added `lang: z.enum(['es','en']).default('es')` and `canonicalSlug` to blog schema\n- `src/pages/index.astro` — uses `useTranslations('es')`\n- `src/pages/blog/in"
+    },
+    {
+      "id": 123,
+      "title": "ExamIA: STRICT/FLUID composition pattern for medical agent handlers",
+      "type": "architecture",
+      "topic_key": "architecture/examia-handler-composition",
       "project": "examya",
-      "created_at": "2026-03-31 21:12:31",
-      "content": "**What**: ShuriStateMachine.createBridge() returned {} instead of the actual shuriBridge singleton, causing TypeError: this.bridge.call is not a function\n**Why**: During PR288 FSM refactor, createBridge() was left as a stub returning an empty object\n**Where**: apps/agents/src/agents/shuri/core/shuri-state-machine.ts — static createBridge() method\n**Learned**: The PurchaseHandler (and other handlers) receive bridge via constructor injection from ShuriAgent, which calls ShuriStateMachine.createBridge(). If bridge is {}, every this.bridge.call() throws TypeError, triggering fallback to generic ExamIA greeting. The error was visible in production logs at purchase.handler.js:38:49."
+      "updated_at": "2026-04-03 11:28:33",
+      "content": "**What**: Handlers classified as STRICT (template-only) or FLUID (LLM+fallback) based on safety requirements.\n\nSTRICT handlers (financial/compliance paths): purchase.handler.ts, cart.handler.ts — do NOT extend BaseHandler, zero LLM calls. Required for CENS compliance.\n\nFLUID handlers (conversational paths): profile.handler.ts, symptom.handler.ts, scheduling.handler.ts — extend BaseHandler, use interpretUserMessage()/generateNaturalReply() with template fallback when LLM returns null or confidence < 0.3.\n\n**Why**: Medical order creation, payment, coupon validation must never include LLM-hallucinated text. Validated by two independent code review agents.\n\n**Where**: apps/agents/src/agents/shuri/handlers/\n\n**Learned**: When nextStage === 'START', handleFsmFlow() returns purchase: {} — stage f"
+    },
+    {
+      "id": 19,
+      "title": "Created skill registry in .atl/skill-registry.md",
+      "type": "architecture",
+      "topic_key": "architecture/skill-registry",
+      "project": "examya",
+      "updated_at": "2026-03-30 14:50:44",
+      "content": "**What**: Created centralized skill registry at `.atl/skill-registry.md` cataloging all 8 unique skills across 4 repo locations + 8 user-level skills\n**Why**: SDD Orchestrator needs pre-resolved compact rules to inject into sub-agents; skills were fragmented across .opencode/skill/, .agent/skills/, .agents/skills/, .claude/skills/\n**Where**: `.atl/skill-registry.md` (new file)\n**Learned**: \n- 7 of 8 repo skills are duplicated in .claude/skills/ (canonical is .opencode/skill/)\n- development-methodologies is the only skill in .agents/skills/ (workspace-level, no compatibility specified)\n- prompt-engineering-patterns is the only skill in .agent/skills/ (agent-level)\n- docs/SKILL.md is an empty placeholder\n- Registry includes: compact rules per skill, trigger table for orchestrator matching, d"
+    },
+    {
+      "id": 114,
+      "title": "Shuri Agent Architectural Hardening (CENS Compliance)",
+      "type": "architecture",
+      "topic_key": "architecture/shuri-agent-hardening",
+      "project": "mariosoftmedic/examya",
+      "updated_at": "2026-04-02 13:32:08",
+      "content": "**What**: Restructured ShuriAgent to use a clean orchestration pipeline with a top-level urgency guard and class-based memory.\n**Why**: Architectural stabilization for CENS compliance (ISO 25010) and fixing persistent test regressions in flow transitions.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts, apps/agents/src/agents/shuri/shuri-memory.ts, apps/agents/src/agents/shuri/domain/shuri-utils.ts\n**Learned**: Prioritizing safety guards (Urgency) at the start of `processMessage` ensures compliance without breaking complex FSM stage logic. Terminal stages must clear local state objects immediately to satisfy state-dependent tests."
+    },
+    {
+      "id": 126,
+      "title": "Judgment Day - Shuri Agent Compliance Verdict",
+      "type": "decision",
+      "topic_key": "",
+      "project": "mariosoftmedic/examya",
+      "updated_at": "2026-04-03 12:33:56",
+      "content": "**What**: Synthesized the final Judgment Day verdict for the Shuri Agent hardening.\n**Why**: Adversarial review confirmed critical architectural improvements for CENS compliance.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts, apps/agents/src/agents/shuri/handlers/purchase.handler.ts, apps/agents/src/agents/shuri/services/medical-summary.service.ts\n**Learned**: The system is now resilient against RUT brute-force (3-retry limit) and payment duplication (idempotency guard). A clinical summary is now guaranteed upon order completion. One minor suggestion (RUT normalization) was identified."
+    },
+    {
+      "id": 9,
+      "title": "Fixed Shuri WhatsApp bot conversation flow bugs",
+      "type": "bugfix",
+      "topic_key": "bugfix/shuri-conversation-flow",
+      "project": "examya",
+      "updated_at": "2026-03-30 12:03:33",
+      "content": "**What**: Fixed 3 bugs + 1 persistence issue in Shuri WhatsApp bot: (1) routing precedence so purchase stage handlers run before package_recommendation, (2) intent router now receives stage context and uses it in cache key + deterministic confirmation bypass, (3) Laboratorio prompt now mentions symptom-to-exam suggestion, (4) campaign flow persistence path mismatch fixed.\n\n**Why**: User reported bot losing context between messages, \"si, generala\" being misrouted to package suggestions instead of generating medical order, and missing symptom suggestion UX.\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — confirmation guard before isPackageRecommendation, userChangedIntent protection, symptom mention in prompts\n- `apps/agents/src/agents/shuri/intent-router.ts` — RouteContext pa"
+    },
+    {
+      "id": 11,
+      "title": "Fixed symptom-to-order quote: uses FONASA codes over display names",
+      "type": "bugfix",
+      "topic_key": "bugfix/shuri-symptom-quote-codes-priority",
+      "project": "examya",
+      "updated_at": "2026-03-30 12:32:57",
+      "content": "**What**: Fixed symptom-to-order quote flow: `quoteMedicalOrder` was `shuri-agent.ts` now uses `suggestedExamCodes` (FONASA codes like \"0301045\") as primary search input instead of display names which were truncated to 40 chars and The search API (`/medical-order-sales/exams/search`) receives code-only FONASA codes query, works correctly. In `quote_medical_order.cjs`, when codes are found, it resolves and API item with correct `examCode`.\n\n**Why**: User reported \"Si, generala\" still shows \"cotización failed\" instead of generating order. Evidence from logs shows API search works with codes queries ( but display name query fails because names are truncated to 40 chars).\n**Where**: `apps/agents/src/agents/shuri/shuri-agent.ts` lines 2213-2217, `apps/agents/src/agents/shuri/handlers/quote_medi"
+    },
+    {
+      "id": 15,
+      "title": "Traced Shuri symptom confirmation fallback",
+      "type": "bugfix",
+      "topic_key": "bugfix/shuri-symptom-confirmation-fallback",
+      "project": "examya",
+      "updated_at": "2026-03-30 13:19:26",
+      "content": "**What**: Tracé el flujo de Shuri para confirmación de orden tras sugerencias por síntoma y ubiqué el origen del fallback \"Podemos intentar la cotización de nuevo\".\n**Why**: Investigar bug donde el usuario confirma \"Si, generala\" pero no se genera orden médica.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts (líneas ~2188-2263, ~2324-2345, ~3365-3375), apps/agents/src/agents/shuri/conversational-engine.ts (generateReply), apps/agents/src/agents/shuri/campaign-intent-detector.ts (isInCampaignFlow), apps/agents/src/routes/shuri.ts (get/update context), apps/agents/src/agents/shuri/shuri-memory.ts (summary.compra persistencia), docs/logs/logs.1774873001879.log.\n**Learned**: `existingFlow` nulo en CampaignHandler es normal fuera de campañas y no explica por sí solo el bug. El mensaje ob"
+    },
+    {
+      "id": 16,
+      "title": "Fixed Shuri order generation: patientRut fallback + deterministic errors",
+      "type": "bugfix",
+      "topic_key": "bugfix/shuri-order-generation",
+      "project": "examya",
+      "updated_at": "2026-03-30 14:42:10",
+      "content": "**What**: Fixed WhatsApp Shuri bot order generation failure after symptom suggestion. Root cause was `patient_rut` missing — `quoteMedicalOrder` requires patient RUT but Without it RUT in webhook context, quote fails silently and LLM generates vague \"Podemos intentar la cotización de nuevo...\" instead of actionable error.\n\n**Why**: Users without RUT in webhook context couldn't get past \"si, generala\" after symptom-suggested exams\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — All 4 quoteMedicalOrder call sites fixed with mainProfile fallback + RUT guard + deterministic errors\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Fixed examType param name mismatch\n\n**Learned**: \n- `quote_medical_order.cjs` uses `params.exam_type` but callers pass `params.examTy"
+    },
+    {
+      "id": 20,
+      "title": "Diagnosed 5 interconnected platform bugs",
+      "type": "bugfix",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-03-30 15:32:44",
+      "content": "**What**: Diagnosed 5 interconnected bugs reported after WhatsApp test: SQL isActive error, quota page failure, analytics auth error, WhatsApp order generation failure, unnecessary RUT prompt.\n\n**Why**: User tested WhatsApp conversation flow and found multiple failures across the platform.\n\n**Where**: \n- `apps/api/src/modules/quota/infrastructure/repositories/prisma-user-quota.repository.ts` — raw SQL uses `is_active` (correct), but DB may have schema drift\n- `apps/web/src/lib/analytics/backend-proxy.ts` line 42 — `getServerSession()` runs even when `requireAuth: false`\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — order creation via ShuriBridge\n- `apps/agents/src/agents/shuri/service-token.cjs` — needs SHURI_SERVICE_CLIENT_ID/SECRET env vars\n- `apps/agents/src/agents"
+    },
+    {
+      "id": 25,
+      "title": "Fixed 5 interconnected platform bugs after WhatsApp investigation",
+      "type": "bugfix",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-03-30 19:11:38",
+      "content": "**What**: Fixed 5 interconnected bugs reported after WhatsApp conversation test.\n\n**Why**: User tested WhatsApp flow and found multiple failures across the platform\n**Where**: \n- `apps/web/src/lib/analytics/backend-proxy.ts` — getServerSession conditional for requireAuth\n- `apps/agents/src/agents/shuri/shuri-agent.ts` — RUT DB fallback by phone lookup\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Diagnostic logging\n- `prisma/migrations/` — 44 migrations resolved locally via prisma migrate resolve\n- `apps/api/src/modules/quota/` — Cascade fix from migration sync\n\n**Learned**: \n1. `getServerSession()` throws even for `requireAuth: false` endpoints — must be conditional\n2. `User.rut` exists in Prisma schema — confirmed via grep\n3. `context.patientRut` is WhatsApp is when"
+    },
+    {
+      "id": 35,
+      "title": "Fixed WhatsApp bot order creation — suggestedExamCodes fast-path",
+      "type": "bugfix",
+      "topic_key": "bugfix/whatsapp-order-creation",
+      "project": "examya",
+      "updated_at": "2026-03-31 01:21:35",
+      "content": "**What**: Fixed 3 bugs in Shuri WhatsApp bot: (1) order not created after \"Si, creala\", (2) RUT not resolved from DB, (3) exam packages shown again after symptom suggestions. Added fast-path that skips conversational engine when suggestedExamCodes + confirmation detected. Added type validation via validateExamCodes() helper. Fixed context loss on profile capture resume by preserving suggestedExamCodes.\n**Why**: The conversational engine returned friendly messages but empty exam lists, blocking order creation. RUT resolution only checked context/mainProfile, not DB. Profile capture resume lost suggestedExamCodes.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts — validateExamCodes() at line 99, resume flow at lines 990-1023, fast-path at lines 2254-2348\n**Learned**: purchase.data is t"
+    },
+    {
+      "id": 43,
+      "title": "Configured all delegates to use glm-5.1 instead of Anthropic Claude",
+      "type": "config",
+      "topic_key": "tooling/opencode-delegate-model",
+      "project": "examya",
+      "updated_at": "2026-03-31 13:21:18",
+      "content": "**What**: Added `delegate`, `delegation_list`, `delegation_read` tools to gentleman agent, and updated Judgment Day SKILL.md to force `agent: \"gentleman\"` on ALL delegate() calls. Also changed language from Rioplatense to Chilean southern Spanish.\n\n**Why**: Delegates were using OpenCode's built-in `general` subagent which inherits the session's default model. If OpenCode fell back to Anthropic Claude, it failed with \"no balance\" error because the user has Anthropic Max (subscription for claude.ai) but no API credit at console.anthropic.com. The API key `sk-ant-api03-...` is separate billing from the Max subscription.\n\n**Where**: \n- `~/.config/opencode/opencode.json` — added delegate tools to gentleman agent\n- `~/.config/opencode/skills/judgment-day/SKILL.md` — added agent: \"gentleman\" requ"
     },
     {
       "id": 57,
@@ -180,8 +150,44 @@
       "type": "bugfix",
       "topic_key": "",
       "project": "examya",
-      "created_at": "2026-03-31 23:15:39",
-      "content": "**What**: Fixed 3 chained bugs where Shuri lost suggested exam codes between symptom report and order confirmation, returning \"He encontrado 0 exámenes. El total estimado es $0.\"\n\n**Why**: When user confirmed \"si por favor\" after symptom suggestions, PurchaseHandler ignored the `suggestedExamCodes` stored in context and tried to extract exam names from the confirmation text.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts — Added isConfirmation() heuristic + quoteByCodes() to use pre-suggested codes\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts — Added missing Spanish stopwords to extractExamList, raised validateExamCodes min length to 3\n\n**Learned**:\n- State handoff between FSM handlers is fragile — data stored in `purchase.data` by one handler can be silently ignored by the next handler if it doesn't explicitly check for it\n- `extractExamList` had incomplete Spanish stopwords allowing \"por favor\" to pass as an exam name\n- `validateExamCodes` accepted any non-empty string including natural language phrases"
+      "updated_at": "2026-03-31 23:15:39",
+      "content": "**What**: Fixed 3 chained bugs where Shuri lost suggested exam codes between symptom report and order confirmation, returning \"He encontrado 0 exámenes. El total estimado es $0.\"\n\n**Why**: When user confirmed \"si por favor\" after symptom suggestions, PurchaseHandler ignored the `suggestedExamCodes` stored in context and tried to extract exam names from the confirmation text.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts — Added isConfirmation() heuristic + quoteByCodes() to use pre-suggested codes\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts — Added missing Spanish stopwords to extractExamList, raised validateExamCodes min length to 3\n\n**Learned**:\n- State handoff between FSM handlers is fragile — data stored in `purchase.data` by one handler can be s"
+    },
+    {
+      "id": 58,
+      "title": "Fixed symptom-to-order flow losing suggested exams",
+      "type": "bugfix",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-03-31 23:29:34",
+      "content": "**What**: Fixed 3 bugs in symptom-to-order flow where exams suggested by SymptomHandler were lost when user confirmed. Also added next.config.mjs security header change.\n\n**Why**: User tested WhatsApp flow \"me duele el estomago\" -> \"si por favor\" and got \"0 exams, $0 total\" instead of the actual exam prices.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts — added isConfirmation(), quoteByCodes(), suggestedExamCodes priority in handleQuote()\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts — added Spanish stopwords to extractExamList, raised min length in validateExamCodes\n- apps/web/next.config.mjs — replaced X-Frame-Options DENY with Content-Security-Policy frame-ancestors\n\n**Learned**:\n- SymptomHandler saves suggestedExamCodes in purchase.data but Purchas"
+    },
+    {
+      "id": 59,
+      "title": "Fixed Shuri symptom→exam_list persisting session",
+      "type": "bugfix",
+      "topic_key": "bug/fixed-shuri-symptom-to-order-flow-losing-suggested-exams",
+      "project": "examya",
+      "updated_at": "2026-04-01 00:10:00",
+      "content": "**What**: Added `isConfirmation()` heuristic + `suggestedExamCodes` priority check in PurchaseHandler + stopwords fix in extractExamList + added session session persisted state.\n**Why**: Previous session left `purchase.stage = 'awaiting_exam_list'` from symptoms flow. When user said \"hola\", it the code on devops was all fixes.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts\n- apps/web/next.config.mjs\n\n- **Learned**:\n- `isGreeting && !purchase.stage` guard at line 245 of shuri-agent.ts DOES NOT account for stale sessions state. Even though the new greeting is sent, + our `isConfirmation` fix will route to purchase handler first. This is safe because `awaiting_exam_list` can now be confirmed → suggestion flow.\n"
+    },
+    {
+      "id": 62,
+      "title": "Fixed WhatsApp bot 0 exams $0 on order creation",
+      "type": "bugfix",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-04-01 01:14:21",
+      "content": "**What**: Fixed WhatsApp bot returning \"0 exámenes, $0\" when user confirms order creation after symptom-based exam suggestion.\n**Why**: Two bugs in the purchase flow: (1) ExamCatalogService.searchExams() received comma-separated FONASA codes as a single string and tried `contains` matching, finding nothing. (2) PurchaseHandler treated the `total` field (record count) as a monetary amount.\n**Where**: apps/api/src/modules/medical-order-sales/services/exam-catalog.service.ts — Added multi-code detection that splits comma-separated codes and uses Prisma `in` operator. apps/agents/src/agents/shuri/handlers/purchase.handler.ts — Fixed both quoteByCodes() and handleQuote() to sum level1TotalValue from items instead of using the count field.\n**Learned**: The searchExams endpoint was designed for t"
+    },
+    {
+      "id": 63,
+      "title": "Fixed Shuri confirmation stage regression and flat fee",
+      "type": "bugfix",
+      "topic_key": "shuri/purchase-handler-confirmation-fix",
+      "project": "examya",
+      "updated_at": "2026-04-01 01:33:40",
+      "content": "**What**: Fixed 3 chained bugs in PurchaseHandler that caused WhatsApp order flow to fail after symptom-based exam suggestions.\n**Why**: Bot was responding \"No pude identificar los exámenes\" after user confirmed a quote because: (1) `awaiting_confirmation` stage fell through to `handleQuote()` instead of transitioning to coupon flow, (2) FONASA prices were summed instead of flat $5.000 CLP, (3) `quoteByCodes()` overwrote `suggestedExamCodes` in data payload.\n**Where**: `apps/agents/src/agents/shuri/handlers/purchase.handler.ts` — added `handleConfirmation()`, `FLAT_ORDER_FEE = 5000`, preserved `suggestedExamCodes` in `quoteByCodes()` data.\n**Learned**: The FSM stage routing in `handle()` was incomplete — only checked for `awaiting_coupon` but not `awaiting_confirmation`. Always verify that"
     }
   ]
 }
