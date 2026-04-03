@@ -1,10 +1,11 @@
 {
-  "generated_at": "2026-04-03T10:44:25.447489",
-  "source": "engram",
-  "total_memories": 127,
+  "generated_at": "2026-04-03T13:05:06.547404",
+  "source": "engram-unified",
+  "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
+  "total_memories": 137,
   "projects": {
-    "examya": 109,
-    "personal": 7,
+    "examya": 117,
+    "personal": 9,
     "marioLanding": 10,
     "estepa": 1
   },
@@ -35,6 +36,24 @@
       "project": "marioLanding",
       "updated_at": "2026-04-02 12:04:07",
       "content": "**What**: Added full ES/EN internationalization to the Astro 6 portfolio using URL-based routing (no JS toggle). Spanish at `/`, English at `/en/`.\n\n**Why**: SEO-friendly i18n — Google indexes both languages independently. Client-side toggle was rejected.\n\n**Where**:\n- `src/i18n/ui.ts` — all translation strings (ES + EN)\n- `src/i18n/utils.ts` — `getLang(pathname)`, `useTranslations(lang)`, `getAlternatePath()`, `basePath()`\n- `src/components/LangSwitch.astro` — ES/EN pill toggle in nav (desktop + mobile)\n- `src/layouts/Base.astro` — detects lang from URL, adds `<html lang>`, hreflang SEO tags, LangSwitch\n- `src/content.config.ts` — added `lang: z.enum(['es','en']).default('es')` and `canonicalSlug` to blog schema\n- `src/pages/index.astro` — uses `useTranslations('es')`\n- `src/pages/blog/in"
+    },
+    {
+      "id": 132,
+      "title": "New skills: debug-prod and examya-test",
+      "type": "decision",
+      "topic_key": "skills/examya-debug-and-test",
+      "project": "examya",
+      "updated_at": "2026-04-03 14:02:13",
+      "content": "**What**: Created two new Claude Code skills for Examya.\n\n**Why**: Repeated production debugging sessions with manual log sharing — needed a repeatable protocol.\n\n**Where**: \n- `~/.claude/skills/debug-prod/SKILL.md` — production WhatsApp bot debugging via Railway CLI\n- `~/.claude/skills/examya-test/SKILL.md` — test creation guide for both workspaces\n\n**Learned**:\n- debug-prod skill: service routing (examya-agents for bot behavior, examya-api for orders/payments), Railway commands (`railway logs -n 400 --service examya-agents`), known failure patterns with root causes\n- examya-test skill covers both workspaces: agents (Vitest, pipeline pattern, FSM injection) and api (NestJS TestingModule, supertest, Prisma mockDeep, domain tests)\n- Railway CLI: `railway status` shows current linked service"
+    },
+    {
+      "id": 136,
+      "title": "Sistema Engram bidireccional Mac ↔ VPS activado",
+      "type": "architecture",
+      "topic_key": "arquitectura/engram-pipeline",
+      "project": "personal",
+      "updated_at": "2026-04-03 14:30:50",
+      "content": "**What**: Sistema de memoria bidireccional Engram completamente operativo entre Mac (Claude Code/Cowork) y VPS (Cotocha).\n\n**Why**: Crear un segundo cerebro unificado (estilo Karpathy) donde el trabajo real alimenta automáticamente Obsidian y el blog.\n\n**Where**: \n- Mac: ~/.engram/engram.db, ~/scripts/engram-sync.sh, obsidian-vault/.engram/chunks/\n- VPS: ~/.engram/engram.db (134 obs importadas), blog-writer skill actualizado\n- GitHub: marioSoftmedic/obsidian-vault (canal de sync via chunks .gz)\n- GitHub: marioSoftmedic/marioLanding/context/memory.json (para Cotocha blog-writer)\n\n**Learned**: \n- engram sync --all (no sin flag) para exportar todos los proyectos desde el vault git\n- Canal de sync = obsidian-vault repo en GitHub, chunks en .engram/chunks/*.jsonl.gz sin conflictos\n- Cotocha bus"
     },
     {
       "id": 123,
@@ -170,24 +189,6 @@
       "project": "examya",
       "updated_at": "2026-04-01 00:10:00",
       "content": "**What**: Added `isConfirmation()` heuristic + `suggestedExamCodes` priority check in PurchaseHandler + stopwords fix in extractExamList + added session session persisted state.\n**Why**: Previous session left `purchase.stage = 'awaiting_exam_list'` from symptoms flow. When user said \"hola\", it the code on devops was all fixes.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts\n- apps/web/next.config.mjs\n\n- **Learned**:\n- `isGreeting && !purchase.stage` guard at line 245 of shuri-agent.ts DOES NOT account for stale sessions state. Even though the new greeting is sent, + our `isConfirmation` fix will route to purchase handler first. This is safe because `awaiting_exam_list` can now be confirmed → suggestion flow.\n"
-    },
-    {
-      "id": 62,
-      "title": "Fixed WhatsApp bot 0 exams $0 on order creation",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "updated_at": "2026-04-01 01:14:21",
-      "content": "**What**: Fixed WhatsApp bot returning \"0 exámenes, $0\" when user confirms order creation after symptom-based exam suggestion.\n**Why**: Two bugs in the purchase flow: (1) ExamCatalogService.searchExams() received comma-separated FONASA codes as a single string and tried `contains` matching, finding nothing. (2) PurchaseHandler treated the `total` field (record count) as a monetary amount.\n**Where**: apps/api/src/modules/medical-order-sales/services/exam-catalog.service.ts — Added multi-code detection that splits comma-separated codes and uses Prisma `in` operator. apps/agents/src/agents/shuri/handlers/purchase.handler.ts — Fixed both quoteByCodes() and handleQuote() to sum level1TotalValue from items instead of using the count field.\n**Learned**: The searchExams endpoint was designed for t"
-    },
-    {
-      "id": 63,
-      "title": "Fixed Shuri confirmation stage regression and flat fee",
-      "type": "bugfix",
-      "topic_key": "shuri/purchase-handler-confirmation-fix",
-      "project": "examya",
-      "updated_at": "2026-04-01 01:33:40",
-      "content": "**What**: Fixed 3 chained bugs in PurchaseHandler that caused WhatsApp order flow to fail after symptom-based exam suggestions.\n**Why**: Bot was responding \"No pude identificar los exámenes\" after user confirmed a quote because: (1) `awaiting_confirmation` stage fell through to `handleQuote()` instead of transitioning to coupon flow, (2) FONASA prices were summed instead of flat $5.000 CLP, (3) `quoteByCodes()` overwrote `suggestedExamCodes` in data payload.\n**Where**: `apps/agents/src/agents/shuri/handlers/purchase.handler.ts` — added `handleConfirmation()`, `FLAT_ORDER_FEE = 5000`, preserved `suggestedExamCodes` in `quoteByCodes()` data.\n**Learned**: The FSM stage routing in `handle()` was incomplete — only checked for `awaiting_coupon` but not `awaiting_confirmation`. Always verify that"
     }
   ]
 }
