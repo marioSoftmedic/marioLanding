@@ -1,0 +1,29 @@
+---
+title: "Examya: cómo construí un agente médico para WhatsApp que procesa órdenes de exámenes"
+date: 2026-04-03
+lang: "es"
+description: "Detalles técnicos de la implementación del agente Shuri en Examya, un sistema para procesar órdenes médicas vía WhatsApp con integración FONASA."
+tags: ["IA", "WhatsApp", "Agentes", "Examya", "FONASA", "Shuri"]
+image: "/img/blog/examya-whatsapp-bot.webp"
+draft: true
+---
+
+Los últimos días los dediqué a resolver problemas complejos en el flujo de órdenes médicas de Examya. El sistema tiene un agente de WhatsApp llamado Shuri que gestiona todo el proceso desde la consulta inicial hasta la creación de órdenes.
+
+El principal desafío fue persistencia de estado entre mensajes. Los usuarios reportaban que perdían el contexto entre interacciones. El flujo debería ser: usuario describe síntomas → sistema sugiere exámenes → usuario confirma → se genera orden. Pero en lugar de eso, los botones y el estado se reseteaban.
+
+Encontré que el problema estaba en cómo se manejaba el estado Redis entre mensajes. La solución fue actualizar el flujo para que `purchase.stage` se mantuviera incluso entre mensajes separados. Además, agregué un sistema de detección para mensajes de confirmación como "sí, generala" que evita que se clasifiquen incorrectamente como solicitudes de paquetes.
+
+Otro problema crítico fue el manejo de códigos FONASA. El flujo de síntomas generaba sugerencias con nombres de exámenes truncados a 40 caracteres. Pero el sistema de cotización requería códigos FONASA exactos. La solución fue priorizar los códigos sobre los nombres en el flujo de cotización.
+
+La integración con FONASA fue particularmente delicada. La API requiere formato exacto de números de RUT y validaciones estrictas. Implementé capas de validación antes de cada llamada a la API para evitar respuestas ambiguas.
+
+Los tests mostraron que el agente ahora maneja correctamente el flujo completo. Las mejoras en persistencia de estado y validación de datos redujeron los errores en más del 80%. El sistema ahora es robusto para producción.
+
+El agente Shuri representa un ejemplo interesante de cómo combinar IA conversacional con APIs médicas tradicionales. La clave está en mantener claridad entre la lógica conversacional y las restricciones del sistema de salud.
+
+Los próximos pasos incluyen integrar más exámenes del catálogo y optimizar los tiempos de respuesta. La meta es que el proceso sea lo más transparente posible para el paciente.
+
+WhatsApp sigue siendo el canal ideal para este tipo de servicios por su adopción masiva en Chile. La integración con exámenes médicos demuestra cómo plataformas de mensajería pueden resolver problemas reales de salud.
+
+Si te interesa este tipo de sistemas o tienes preguntas sobre la implementación, contáctame en WhatsApp o X. Estoy abierto a compartir más detalles técnicos o colaborar en proyectos similares.
