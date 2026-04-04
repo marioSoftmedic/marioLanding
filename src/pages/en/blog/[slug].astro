@@ -35,7 +35,7 @@ const formatDate = (date: Date) =>
 
       {post.data.image && (
         <div class="mb-10 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle);">
-          <img src={post.data.image} alt={post.data.title} width="800" height="400" class="w-full object-cover" style="max-height: 400px;" loading="eager" />
+          <img src={post.data.image} alt={post.data.title} width="800" height="400" class="w-full object-cover hero-zoomable" style="max-height: 400px; cursor: zoom-in;" loading="eager" />
         </div>
       )}
 
@@ -88,7 +88,7 @@ const formatDate = (date: Date) =>
 
 <script>
   import mediumZoom from 'medium-zoom';
-  mediumZoom('.prose-blog img', {
+  mediumZoom('.prose-blog img, .hero-zoomable', {
     margin: 24,
     background: 'rgba(0, 0, 0, 0.88)',
   });
