@@ -7,7 +7,7 @@ export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'en');
   return posts.map((post) => ({
     // Strip .en suffix for clean URLs: post-slug.en.mdx → /en/blog/post-slug
-    params: { slug: post.data.canonicalSlug ?? post.id.replace(/\.en$/, '') },
+    params: { slug: post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '') },
     props: { post },
   }));
 }
