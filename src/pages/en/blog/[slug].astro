@@ -34,8 +34,8 @@ const formatDate = (date: Date) =>
       </div>
 
       {post.data.image && (
-        <div class="mb-10 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle);">
-          <img src={post.data.image} alt={post.data.title} width="800" height="400" class="w-full object-cover hero-zoomable" style="max-height: 400px; cursor: zoom-in;" loading="eager" />
+        <div class="mb-10 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle); max-height: 400px;">
+          <img src={post.data.image} alt={post.data.title} width="800" height="400" class="w-full object-cover hero-zoomable" style="cursor: zoom-in;" loading="eager" />
         </div>
       )}
 
