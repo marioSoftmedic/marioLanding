@@ -81,6 +81,15 @@ const formatDate = (date: Date) =>
   .prose-blog :global(li) { margin-bottom: 0.5rem; }
   .prose-blog :global(blockquote) { border-left: 3px solid var(--accent-orange); padding-left: 1.25rem; margin: 1.5rem 0; color: var(--text-muted); font-style: italic; }
   .prose-blog :global(hr) { border: none; border-top: 1px solid var(--border-subtle); margin: 2.5rem 0; }
-  .prose-blog :global(img) { border-radius: 12px; border: 1px solid var(--border-subtle); margin: 1.5rem auto; max-width: 100%; }
+  .prose-blog :global(img) { border-radius: 12px; border: 1px solid var(--border-subtle); margin: 1.5rem auto; max-width: 100%; cursor: zoom-in; transition: opacity 150ms; display: block; }
+  .prose-blog :global(img:hover) { opacity: 0.88; }
   .prose-blog :global(strong) { color: var(--text-primary); font-weight: 600; }
 </style>
+
+<script>
+  import mediumZoom from 'medium-zoom';
+  mediumZoom('.prose-blog img', {
+    margin: 24,
+    background: 'rgba(0, 0, 0, 0.88)',
+  });
+</script>
