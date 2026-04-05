@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-04-05T07:31:28.193602",
+  "generated_at": "2026-04-05T13:05:37.430044",
   "source": "engram-unified",
   "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
-  "total_memories": 216,
+  "total_memories": 219,
   "projects": {
-    "examya": 136,
+    "examya": 139,
     "personal": 67,
     "marioLanding": 11,
     "estepa": 1,
@@ -147,6 +147,15 @@
       "content": "**What**: Bridge OpenClaw→Engram ahora es un script Python standalone que parsea session JSONL files directamente, sin depender de mem tools ni agente aislado.\\n**Why**: Los mem_* tools solo están disponibles dentro de sesiones activas del gateway; no se pueden llamar desde scripts externos. El gateway WS requiere auth propietario que no pudimos replicar.\\n**Where**: /root/clawd/skills/self-improve/scripts/bridge-openclaw-engram.py\\n**Learned**: Las observaciones de mem_save se guardan como toolCall blocks en los session JSONL files con formato {type:'toolCall', name:'mem_save', arguments:{title,content,type,project,...}}. El script lee todos los JSONL, extrae mem_save calls, deduplica por title+project, y genera chunks Engram válidos. Cron usa agente aislado con GLM-4.7-flash para ejecuta"
     },
     {
+      "id": 217,
+      "title": "Added three new ShuriStage values to FSM",
+      "type": "decision",
+      "topic_key": "architecture/shuri-stages",
+      "project": "examya",
+      "updated_at": "2026-04-05 11:41:23",
+      "content": "**What**: Added three new stage values to ShuriStage union type and updated STAGE_HISTORY_MAP for backtracking\n\n**Why**: Enable type-safe transitions for two new flows: OCR exam result interpretation and scheduling with practitioner selection\n\n**Where**: `apps/agents/src/agents/shuri/domain/types.ts`\n- Line 16: `awaiting_results_photo` — waiting for user to send exam result photo\n- Line 23: `scheduling_search_practitioners` — showing practitioner list, waiting for selection\n- Line 24: `scheduling_confirm` — showing booking confirmation\n\n**Learned**: STAGE_HISTORY_MAP must be updated in lockstep with ShuriStage union type. Updated route: `scheduling_select_date` → `scheduling_search_practitioners` → `scheduling_select_slot` (instead of direct `scheduling_select_date` → `scheduling_select_sl"
+    },
+    {
       "id": 154,
       "title": "Phone priority in PurchaseHandler: patient_phone > phone > from",
       "type": "decision",
@@ -181,15 +190,6 @@
       "project": "examya",
       "updated_at": "2026-03-30 12:03:33",
       "content": "**What**: Fixed 3 bugs + 1 persistence issue in Shuri WhatsApp bot: (1) routing precedence so purchase stage handlers run before package_recommendation, (2) intent router now receives stage context and uses it in cache key + deterministic confirmation bypass, (3) Laboratorio prompt now mentions symptom-to-exam suggestion, (4) campaign flow persistence path mismatch fixed.\n\n**Why**: User reported bot losing context between messages, \"si, generala\" being misrouted to package suggestions instead of generating medical order, and missing symptom suggestion UX.\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — confirmation guard before isPackageRecommendation, userChangedIntent protection, symptom mention in prompts\n- `apps/agents/src/agents/shuri/intent-router.ts` — RouteContext pa"
-    },
-    {
-      "id": 11,
-      "title": "Fixed symptom-to-order quote: uses FONASA codes over display names",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-symptom-quote-codes-priority",
-      "project": "examya",
-      "updated_at": "2026-03-30 12:32:57",
-      "content": "**What**: Fixed symptom-to-order quote flow: `quoteMedicalOrder` was `shuri-agent.ts` now uses `suggestedExamCodes` (FONASA codes like \"0301045\") as primary search input instead of display names which were truncated to 40 chars and The search API (`/medical-order-sales/exams/search`) receives code-only FONASA codes query, works correctly. In `quote_medical_order.cjs`, when codes are found, it resolves and API item with correct `examCode`.\n\n**Why**: User reported \"Si, generala\" still shows \"cotización failed\" instead of generating order. Evidence from logs shows API search works with codes queries ( but display name query fails because names are truncated to 40 chars).\n**Where**: `apps/agents/src/agents/shuri/shuri-agent.ts` lines 2213-2217, `apps/agents/src/agents/shuri/handlers/quote_medi"
     }
   ]
 }
