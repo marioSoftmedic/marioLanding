@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-04-04T13:05:14.951453",
+  "generated_at": "2026-04-05T02:13:56.831116",
   "source": "engram-unified",
   "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
-  "total_memories": 144,
+  "total_memories": 213,
   "projects": {
-    "examya": 120,
-    "personal": 11,
+    "examya": 134,
+    "personal": 66,
     "marioLanding": 11,
     "estepa": 1,
     "blog": 1
@@ -57,6 +57,51 @@
       "content": "**What**: Sistema de memoria bidireccional Engram completamente operativo entre Mac (Claude Code/Cowork) y VPS (Cotocha).\n\n**Why**: Crear un segundo cerebro unificado (estilo Karpathy) donde el trabajo real alimenta automáticamente Obsidian y el blog.\n\n**Where**: \n- Mac: ~/.engram/engram.db, ~/scripts/engram-sync.sh, obsidian-vault/.engram/chunks/\n- VPS: ~/.engram/engram.db (134 obs importadas), blog-writer skill actualizado\n- GitHub: marioSoftmedic/obsidian-vault (canal de sync via chunks .gz)\n- GitHub: marioSoftmedic/marioLanding/context/memory.json (para Cotocha blog-writer)\n\n**Learned**: \n- engram sync --all (no sin flag) para exportar todos los proyectos desde el vault git\n- Canal de sync = obsidian-vault repo en GitHub, chunks en .engram/chunks/*.jsonl.gz sin conflictos\n- Cotocha bus"
     },
     {
+      "id": 146,
+      "title": "OCR Flow Map — Architecture & Pipeline",
+      "type": "architecture",
+      "topic_key": "architecture/ocr-flow",
+      "project": "examya",
+      "updated_at": "2026-04-04 16:14:05",
+      "content": "**What**: Complete map of the WhatsApp OCR flow from image arrival to structured order.\n\n**Why**: Analysis session to find bugs and prepare real testing.\n\n**Where**: \n- Entry: `apps/api/src/modules/whatsapp/controllers/whatsapp-webhook.controller.ts`\n- Vision: `apps/api/src/ai/vision.service.ts`, `apps/api/src/ai/openai-vision.adapter.ts`\n- Prompts: `apps/api/src/modules/admin/ocr/ocr-prompts.service.ts`\n- Enrichment: agents microservice via `agentsClientService.processExamNames`\n- Admin validation: `apps/api/src/modules/admin/ocr/ocr-admin.service.ts`\n- STUB (not production): `apps/api/src/modules/orders/ocr.service.ts`\n\n**Pipeline**:\n1. Meta Cloud API → POST /whatsapp/webhook → handleMetaMediaMessage\n2. Quota check (3 free/month per phone)\n3. Upload to Supabase Storage bucket `medical-or"
+    },
+    {
+      "id": 148,
+      "title": "Created E2E WhatsApp order flow integration tests",
+      "type": "decision",
+      "topic_key": "testing/whatsapp-order-flow",
+      "project": "examya",
+      "updated_at": "2026-04-04 19:44:58",
+      "content": "**What**: Created comprehensive integration tests that simulate complete multi-step WhatsApp conversations for the medical order flow. All 13 tests pass, no regressions.\n\n**Why**: Previous test coverage only tested isolated fragments. No test verified the full chain: photo → OCR → pendingOcr capture → RUT/email messages → order creation → payment link → post-payment delivery.\n\n**Where**: `apps/api/src/modules/whatsapp/controllers/__tests__/whatsapp-order-flow.spec.ts`\n\n**Learned**:\n- Stateful in-memory contextStore: `Map<string, string>` simulates `prismaAgents.whatsappContext`. savePendingOcr writes to it, getPendingOcr reads from it, clearPendingOcr deletes the key — all within a single test.\n- Stateful mutable user: `Object.assign(user, data)` in `prisma.user.update` mock allows `update"
+    },
+    {
+      "id": 151,
+      "title": "Examya Post-Payment Flow Architecture",
+      "type": "architecture",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-04-05 02:11:08",
+      "content": "**What**: Complete mapping of the WhatsApp medical order quotation system post-payment flow (after PAID status)\n\n**Why**: Understanding the full pipeline of PDF generation, email/WhatsApp delivery, and FONASA pricing computation is critical for feature development, testing, and maintenance\n\n**Where**: \n- Core pipeline: apps/api/src/modules/medical-order-sales/\n  - Processors: order-sales.processor.ts (Bull job handler)\n  - Services: order-sales-processing.service.ts, order-ready-notification.service.ts, medical-email.service.ts, medical-order-pdf.service.ts, fonasa-pricing.service.ts\n  - Utilities: utils/pdf-data.mapper.ts (FONASA level computation, Magallanes handling)\n\n**Learned**: \n1. Post-PAID pipeline is triggered by Bull job 'process-payment-confirmation' (line 275 in order-sales.pro"
+    },
+    {
+      "id": 157,
+      "title": "Flow separation analysis: OCR Quotation vs Shuri Purchase — hardening applied",
+      "type": "architecture",
+      "topic_key": "architecture/ocr-vs-purchase-flow-separation",
+      "project": "examya",
+      "updated_at": "2026-04-05 03:37:20",
+      "content": "## What\nComplete analysis and hardening of the OCR Quotation vs Shuri Purchase flow separation in the WhatsApp bot.\n\n## Why\nUser asked to verify both flows don't overlap at intent detection, pricing, or PDF generation. Discovered a state contamination risk in PurchaseHandler and a pre-existing coupon discount bug.\n\n## Flow Separation (confirmed independent)\n\n**OCR Quotation flow** (IMAGE message):\n- Entry: `handleImageMessage()` → `handleOcrExtraction()` in `whatsapp-webhook.controller.ts`\n- Price: `$2,000` from `WHATSAPP_QUOTE_PRICE` env var (read in controller, NOT in agents)\n- Creates order with `isQuotation: true`\n- PDF: `mapSaleOrder(..., isQuotation=true)` → title \"COTIZACIÓN DE EXÁMENES\", FONASA pricing (Nacional 3 levels / Magallanes level 3), no doctor section\n- pendingOcr pattern"
+    },
+    {
+      "id": 178,
+      "title": "Arquitectura sync bidireccional Engram Mac ↔ VPS Cotocha",
+      "type": "architecture",
+      "topic_key": "infrastructure/engram-sync-architecture",
+      "project": "/",
+      "updated_at": "2026-04-05 05:06:51",
+      "content": "**What**: Sistema de sync bidireccional de memorias entre Engram local (Mac) y Cotocha (VPS) vía git repo obsidian-vault como transporte.\n\n**Flujo Mac → VPS**: engram-sync.sh --sync-only → exporta chunk → git push obsidian-vault main → VPS cron cada 2h hace git pull + engram sync --import → bridge-engram-to-qmd.py escribe .md en workspace/memory/mac/ → QMD indexa en 5min.\n\n**Flujo VPS → Mac**: bridge-openclaw-engram.py (Option C: parsea session JSONL de /root/.openclaw/agents/main/sessions/ + .md files de otros agents) → genera chunk formato {sessions, observations, prompts} como un solo JSON dentro del .jsonl.gz (no JSONL) → git push origin main → engram-sync.sh en Mac absorbe automáticamente a las 7:30am.\n\n**Crons VPS**: bridge export cada 4h (xx:30 UTC), engram import cada 2h (xx:00 UTC"
+    },
+    {
       "id": 123,
       "title": "ExamIA: STRICT/FLUID composition pattern for medical agent handlers",
       "type": "architecture",
@@ -73,6 +118,42 @@
       "project": "examya",
       "updated_at": "2026-03-30 14:50:44",
       "content": "**What**: Created centralized skill registry at `.atl/skill-registry.md` cataloging all 8 unique skills across 4 repo locations + 8 user-level skills\n**Why**: SDD Orchestrator needs pre-resolved compact rules to inject into sub-agents; skills were fragmented across .opencode/skill/, .agent/skills/, .agents/skills/, .claude/skills/\n**Where**: `.atl/skill-registry.md` (new file)\n**Learned**: \n- 7 of 8 repo skills are duplicated in .claude/skills/ (canonical is .opencode/skill/)\n- development-methodologies is the only skill in .agents/skills/ (workspace-level, no compatibility specified)\n- prompt-engineering-patterns is the only skill in .agent/skills/ (agent-level)\n- docs/SKILL.md is an empty placeholder\n- Registry includes: compact rules per skill, trigger table for orchestrator matching, d"
+    },
+    {
+      "id": 177,
+      "title": "Prospects table created - medical centers/clinics discovery",
+      "type": "decision",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-04-05T04:49:37Z",
+      "content": "**What**: Created `prospects` table in db_monitor for centros médicos, clínicas privadas, and médicos particulares. Scraped Superdesalud (accredited providers) and Doctoralia.\n**Why**: Expand lead generation beyond laboratories to all healthcare providers that could use Examya (ficha clínica, agendamiento, OCR órdenes)\n**Where**: db_monitor PostgreSQL, table `prospects` with columns: id, name, name_normalized, segment, type, phone, whatsapp, whatsapp_source, website, region, address, specialty, fonasa_level, rut, registration_number\n**Learned**: Superdesalud region pages have data in raw HTML (grep for Centro Médico/Clínica patterns) but are JS-rendered for readability extractor. Article IDs: 8531=Metropolitana, 8532=Valparaíso, 8533=Arica, 8534=Tarapacá, 8535-8543=other regions. Brave Sea"
+    },
+    {
+      "id": 186,
+      "title": "Prospects table created - medical centers/clinics discovery",
+      "type": "decision",
+      "topic_key": "",
+      "project": "examya",
+      "updated_at": "2026-04-05T04:53:13Z",
+      "content": "**What**: Created `prospects` table in db_monitor for centros médicos, clínicas privadas, and médicos particulares. Scraped Superdesalud (accredited providers) and Doctoralia.\n**Why**: Expand lead generation beyond laboratories to all healthcare providers that could use Examya (ficha clínica, agendamiento, OCR órdenes)\n**Where**: db_monitor PostgreSQL, table `prospects` with columns: id, name, name_normalized, segment, type, phone, whatsapp, whatsapp_source, website, region, address, specialty, fonasa_level, rut, registration_number\n**Learned**: Superdesalud region pages have data in raw HTML (grep for Centro Médico/Clínica patterns) but are JS-rendered for readability extractor. Article IDs: 8531=Metropolitana, 8532=Valparaíso, 8533=Arica, 8534=Tarapacá, 8535-8543=other regions. Brave Sea"
+    },
+    {
+      "id": 185,
+      "title": "Bridge script parses session JSONL directly",
+      "type": "architecture",
+      "topic_key": "",
+      "project": "cotocha",
+      "updated_at": "2026-04-05T04:53:13Z",
+      "content": "**What**: Bridge OpenClaw→Engram ahora es un script Python standalone que parsea session JSONL files directamente, sin depender de mem tools ni agente aislado.\\n**Why**: Los mem_* tools solo están disponibles dentro de sesiones activas del gateway; no se pueden llamar desde scripts externos. El gateway WS requiere auth propietario que no pudimos replicar.\\n**Where**: /root/clawd/skills/self-improve/scripts/bridge-openclaw-engram.py\\n**Learned**: Las observaciones de mem_save se guardan como toolCall blocks en los session JSONL files con formato {type:'toolCall', name:'mem_save', arguments:{title,content,type,project,...}}. El script lee todos los JSONL, extrae mem_save calls, deduplica por title+project, y genera chunks Engram válidos. Cron usa agente aislado con GLM-4.7-flash para ejecuta"
+    },
+    {
+      "id": 154,
+      "title": "Phone priority in PurchaseHandler: patient_phone > phone > from",
+      "type": "decision",
+      "topic_key": "convention/shuri-phone-priority",
+      "project": "examya",
+      "updated_at": "2026-04-05 02:24:09",
+      "content": "**What**: La prioridad del campo `patientPhone` en handlePayment() es `patient_phone ?? phone ?? from` (en ese orden).\n**Why**: Judgment Day sugirió invertirlo a `from` primero por ser el campo canónico de WhatsApp, pero los tests PHONE-01/PHONE-02 documentan que `patient_phone` (número registrado del paciente) tiene prioridad sobre `from` (número fuente WA). El Judgment Day estaba equivocado.\n**Where**: apps/agents/src/agents/shuri/handlers/purchase.handler.ts — handlePayment(), orderPayload.patientPhone\n**Learned**: NUNCA cambiar prioridad de campos sin revisar tests existentes primero. Los tests PHONE-01/PHONE-02/PHONE-03 en purchase.handler.spec.ts documentan este contrato explícitamente."
     },
     {
       "id": 114,
@@ -109,87 +190,6 @@
       "project": "examya",
       "updated_at": "2026-03-30 12:32:57",
       "content": "**What**: Fixed symptom-to-order quote flow: `quoteMedicalOrder` was `shuri-agent.ts` now uses `suggestedExamCodes` (FONASA codes like \"0301045\") as primary search input instead of display names which were truncated to 40 chars and The search API (`/medical-order-sales/exams/search`) receives code-only FONASA codes query, works correctly. In `quote_medical_order.cjs`, when codes are found, it resolves and API item with correct `examCode`.\n\n**Why**: User reported \"Si, generala\" still shows \"cotización failed\" instead of generating order. Evidence from logs shows API search works with codes queries ( but display name query fails because names are truncated to 40 chars).\n**Where**: `apps/agents/src/agents/shuri/shuri-agent.ts` lines 2213-2217, `apps/agents/src/agents/shuri/handlers/quote_medi"
-    },
-    {
-      "id": 15,
-      "title": "Traced Shuri symptom confirmation fallback",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-symptom-confirmation-fallback",
-      "project": "examya",
-      "updated_at": "2026-03-30 13:19:26",
-      "content": "**What**: Tracé el flujo de Shuri para confirmación de orden tras sugerencias por síntoma y ubiqué el origen del fallback \"Podemos intentar la cotización de nuevo\".\n**Why**: Investigar bug donde el usuario confirma \"Si, generala\" pero no se genera orden médica.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts (líneas ~2188-2263, ~2324-2345, ~3365-3375), apps/agents/src/agents/shuri/conversational-engine.ts (generateReply), apps/agents/src/agents/shuri/campaign-intent-detector.ts (isInCampaignFlow), apps/agents/src/routes/shuri.ts (get/update context), apps/agents/src/agents/shuri/shuri-memory.ts (summary.compra persistencia), docs/logs/logs.1774873001879.log.\n**Learned**: `existingFlow` nulo en CampaignHandler es normal fuera de campañas y no explica por sí solo el bug. El mensaje ob"
-    },
-    {
-      "id": 16,
-      "title": "Fixed Shuri order generation: patientRut fallback + deterministic errors",
-      "type": "bugfix",
-      "topic_key": "bugfix/shuri-order-generation",
-      "project": "examya",
-      "updated_at": "2026-03-30 14:42:10",
-      "content": "**What**: Fixed WhatsApp Shuri bot order generation failure after symptom suggestion. Root cause was `patient_rut` missing — `quoteMedicalOrder` requires patient RUT but Without it RUT in webhook context, quote fails silently and LLM generates vague \"Podemos intentar la cotización de nuevo...\" instead of actionable error.\n\n**Why**: Users without RUT in webhook context couldn't get past \"si, generala\" after symptom-suggested exams\n\n**Where**: \n- `apps/agents/src/agents/shuri/shuri-agent.ts` — All 4 quoteMedicalOrder call sites fixed with mainProfile fallback + RUT guard + deterministic errors\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Fixed examType param name mismatch\n\n**Learned**: \n- `quote_medical_order.cjs` uses `params.exam_type` but callers pass `params.examTy"
-    },
-    {
-      "id": 20,
-      "title": "Diagnosed 5 interconnected platform bugs",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "updated_at": "2026-03-30 15:32:44",
-      "content": "**What**: Diagnosed 5 interconnected bugs reported after WhatsApp test: SQL isActive error, quota page failure, analytics auth error, WhatsApp order generation failure, unnecessary RUT prompt.\n\n**Why**: User tested WhatsApp conversation flow and found multiple failures across the platform.\n\n**Where**: \n- `apps/api/src/modules/quota/infrastructure/repositories/prisma-user-quota.repository.ts` — raw SQL uses `is_active` (correct), but DB may have schema drift\n- `apps/web/src/lib/analytics/backend-proxy.ts` line 42 — `getServerSession()` runs even when `requireAuth: false`\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — order creation via ShuriBridge\n- `apps/agents/src/agents/shuri/service-token.cjs` — needs SHURI_SERVICE_CLIENT_ID/SECRET env vars\n- `apps/agents/src/agents"
-    },
-    {
-      "id": 25,
-      "title": "Fixed 5 interconnected platform bugs after WhatsApp investigation",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "updated_at": "2026-03-30 19:11:38",
-      "content": "**What**: Fixed 5 interconnected bugs reported after WhatsApp conversation test.\n\n**Why**: User tested WhatsApp flow and found multiple failures across the platform\n**Where**: \n- `apps/web/src/lib/analytics/backend-proxy.ts` — getServerSession conditional for requireAuth\n- `apps/agents/src/agents/shuri/shuri-agent.ts` — RUT DB fallback by phone lookup\n- `apps/agents/src/agents/shuri/handlers/quote_medical_order.cjs` — Diagnostic logging\n- `prisma/migrations/` — 44 migrations resolved locally via prisma migrate resolve\n- `apps/api/src/modules/quota/` — Cascade fix from migration sync\n\n**Learned**: \n1. `getServerSession()` throws even for `requireAuth: false` endpoints — must be conditional\n2. `User.rut` exists in Prisma schema — confirmed via grep\n3. `context.patientRut` is WhatsApp is when"
-    },
-    {
-      "id": 35,
-      "title": "Fixed WhatsApp bot order creation — suggestedExamCodes fast-path",
-      "type": "bugfix",
-      "topic_key": "bugfix/whatsapp-order-creation",
-      "project": "examya",
-      "updated_at": "2026-03-31 01:21:35",
-      "content": "**What**: Fixed 3 bugs in Shuri WhatsApp bot: (1) order not created after \"Si, creala\", (2) RUT not resolved from DB, (3) exam packages shown again after symptom suggestions. Added fast-path that skips conversational engine when suggestedExamCodes + confirmation detected. Added type validation via validateExamCodes() helper. Fixed context loss on profile capture resume by preserving suggestedExamCodes.\n**Why**: The conversational engine returned friendly messages but empty exam lists, blocking order creation. RUT resolution only checked context/mainProfile, not DB. Profile capture resume lost suggestedExamCodes.\n**Where**: apps/agents/src/agents/shuri/shuri-agent.ts — validateExamCodes() at line 99, resume flow at lines 990-1023, fast-path at lines 2254-2348\n**Learned**: purchase.data is t"
-    },
-    {
-      "id": 43,
-      "title": "Configured all delegates to use glm-5.1 instead of Anthropic Claude",
-      "type": "config",
-      "topic_key": "tooling/opencode-delegate-model",
-      "project": "examya",
-      "updated_at": "2026-03-31 13:21:18",
-      "content": "**What**: Added `delegate`, `delegation_list`, `delegation_read` tools to gentleman agent, and updated Judgment Day SKILL.md to force `agent: \"gentleman\"` on ALL delegate() calls. Also changed language from Rioplatense to Chilean southern Spanish.\n\n**Why**: Delegates were using OpenCode's built-in `general` subagent which inherits the session's default model. If OpenCode fell back to Anthropic Claude, it failed with \"no balance\" error because the user has Anthropic Max (subscription for claude.ai) but no API credit at console.anthropic.com. The API key `sk-ant-api03-...` is separate billing from the Max subscription.\n\n**Where**: \n- `~/.config/opencode/opencode.json` — added delegate tools to gentleman agent\n- `~/.config/opencode/skills/judgment-day/SKILL.md` — added agent: \"gentleman\" requ"
-    },
-    {
-      "id": 57,
-      "title": "Fixed Shuri symptom→order flow losing exam codes",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "updated_at": "2026-03-31 23:15:39",
-      "content": "**What**: Fixed 3 chained bugs where Shuri lost suggested exam codes between symptom report and order confirmation, returning \"He encontrado 0 exámenes. El total estimado es $0.\"\n\n**Why**: When user confirmed \"si por favor\" after symptom suggestions, PurchaseHandler ignored the `suggestedExamCodes` stored in context and tried to extract exam names from the confirmation text.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts — Added isConfirmation() heuristic + quoteByCodes() to use pre-suggested codes\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts — Added missing Spanish stopwords to extractExamList, raised validateExamCodes min length to 3\n\n**Learned**:\n- State handoff between FSM handlers is fragile — data stored in `purchase.data` by one handler can be s"
-    },
-    {
-      "id": 58,
-      "title": "Fixed symptom-to-order flow losing suggested exams",
-      "type": "bugfix",
-      "topic_key": "",
-      "project": "examya",
-      "updated_at": "2026-03-31 23:29:34",
-      "content": "**What**: Fixed 3 bugs in symptom-to-order flow where exams suggested by SymptomHandler were lost when user confirmed. Also added next.config.mjs security header change.\n\n**Why**: User tested WhatsApp flow \"me duele el estomago\" -> \"si por favor\" and got \"0 exams, $0 total\" instead of the actual exam prices.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts — added isConfirmation(), quoteByCodes(), suggestedExamCodes priority in handleQuote()\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts — added Spanish stopwords to extractExamList, raised min length in validateExamCodes\n- apps/web/next.config.mjs — replaced X-Frame-Options DENY with Content-Security-Policy frame-ancestors\n\n**Learned**:\n- SymptomHandler saves suggestedExamCodes in purchase.data but Purchas"
-    },
-    {
-      "id": 59,
-      "title": "Fixed Shuri symptom→exam_list persisting session",
-      "type": "bugfix",
-      "topic_key": "bug/fixed-shuri-symptom-to-order-flow-losing-suggested-exams",
-      "project": "examya",
-      "updated_at": "2026-04-01 00:10:00",
-      "content": "**What**: Added `isConfirmation()` heuristic + `suggestedExamCodes` priority check in PurchaseHandler + stopwords fix in extractExamList + added session session persisted state.\n**Why**: Previous session left `purchase.stage = 'awaiting_exam_list'` from symptoms flow. When user said \"hola\", it the code on devops was all fixes.\n\n**Where**:\n- apps/agents/src/agents/shuri/handlers/purchase.handler.ts\n- apps/agents/src/agents/shuri/domain/shuri-extractors.ts\n- apps/web/next.config.mjs\n\n- **Learned**:\n- `isGreeting && !purchase.stage` guard at line 245 of shuri-agent.ts DOES NOT account for stale sessions state. Even though the new greeting is sent, + our `isConfirmation` fix will route to purchase handler first. This is safe because `awaiting_exam_list` can now be confirmed → suggestion flow.\n"
     }
   ]
 }
