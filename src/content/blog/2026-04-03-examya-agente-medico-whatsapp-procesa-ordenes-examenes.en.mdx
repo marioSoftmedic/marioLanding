@@ -4,7 +4,7 @@ date: 2026-04-03
 description: "Technical details of implementing the Shuri agent in Examya, a system for processing medical orders via WhatsApp with FONASA integration."
 tags: ["AI", "WhatsApp", "Agents", "Examya", "FONASA", "Shuri"]
 image: "/img/blog/examya-whatsapp-bot.webp"
-draft: true
+draft: false
 lang: "en"
 canonicalSlug: "2026-04-03-examya-agente-medico-whatsapp-procesa-ordenes-examenes"
 ---
@@ -13,13 +13,15 @@ I spent the last few days fixing complex issues in Examya's medical order flow. 
 
 The main challenge was state persistence between messages. Users reported losing context between interactions. The flow should be: user describes symptoms → system suggests exams → user confirms → order gets generated. Instead, buttons and state would reset.
 
-I found the problem was in how Redis state was handled between messages. The solution was updating the flow to keep `purchase.stage` persistent even across separate messages. I also added detection for confirmation messages like "yes, create it" to prevent them from being misclassified as package requests.
+I found the problem was in how Redis state was handled between messages. The solution was updating the flow to keep `purchase.stage` persistent even across separate messages. I also added detection for confirmation messages like "yes, the full panel" to prevent them from being misclassified as package requests.
 
 Another critical issue was FONASA code handling. The symptom flow generated suggestions with exam names truncated to 40 characters. But the quoting system required exact FONASA codes. The solution was prioritizing codes over names in the quoting flow.
 
 FONASA integration was particularly delicate. The API requires exact RUT number format and strict validations. I implemented validation layers before each API call to avoid ambiguous responses.
 
-Tests showed the agent now correctly handles the complete flow. Improvements in state persistence and data validation reduced errors by over 80%. The system is now production-ready.
+FONASA integration also handles the copayment tiers (A, B, C, D) that determine what the patient pays out of pocket. The system automatically validates the tier based on the patient's RUT and adjusts prices before generating the order.
+
+Tests showed the agent now correctly handles the complete flow. Improvements in state persistence and data validation notably reduced interpretation errors. The system is now production-ready.
 
 The Shuri agent represents an interesting example of combining conversational AI with traditional medical APIs. The key is maintaining clarity between conversational logic and healthcare system constraints.
 
