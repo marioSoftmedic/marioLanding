@@ -1,0 +1,30 @@
+---
+title: pgvector + Embeddings in Production: The Foundation of Medical Reasoning in Examya
+date: 2026-04-07
+lang: "en"
+description: Architecture for semantic search and text similarity in production with pgvector, pg_trgm, and real MINSAL data.
+tags: ["AI", "PostgreSQL", "pgvector", "Examya", "Production", "Medical"]
+image: "/img/blog/pgvector-production.png"
+draft: true
+canonicalSlug: 2026-04-07-pgvector-embeddings-production
+---
+
+In Examya, the accuracy of medical result interpretation depends on two search layers working together: pgvector for semantic embeddings and pg_trgm for text similarity when vector search fails.
+
+The production system in Supabase (examya_agents) needs both extensions to function. pg_vector handles LLM-generated embeddings, but pg_trgm saves the system when queries fail or data is incomplete.
+
+The real implementation included a critical migration: pg_trgm extension installed in production, medical_guides table populated with 5 real MINSAL GPC guides (hemogram, lipid, glucose, thyroid, urine), and an idempotent deploy-interpreter-tables.sql script for future deployments.
+
+The fallback architecture is key: when a doctor sends a lab result, the system first tries vector search with pgvector. If it fails due to low similarity or missing data, it automatically falls back to pg_trgm with similarity() to find results by text similarity.
+
+MINSAL data is the lifeblood of the system. The medical_guides and exam_normalization_mappings tables contain normal reference ranges, FONASA levels, and exam codes with the exact terminology used in Chile. Without this data, the AI cannot correctly interpret values like glucose 99 vs 100.
+
+The biggest challenge was data quality. The audit showed that many exams had incorrect or missing normal parameters. For example, glucose normalMax was at 100 when it should be 99 according to MINSAL GPC. Worse yet, some hemograms were classified as urine due to naming errors.
+
+The integration with WhatsApp OCR creates a robust system. When a user sends a results photo, the system first classifies the document. If it's exam_result, it uses ExamResultInterpreterAgent with both search methods to ensure accuracy. This solves the problem of two different paths that produced inconsistent results.
+
+The production deployment was complex. It required creating formal migrations, idempotent scripts, and updating schema.prisma with extensions = [vector, pg_trgm]. The Judgment Day audit found critical bugs: exposed API keys, missing deprecation notices, and failures in the fallback mechanism.
+
+Today the system processes real medical exams with precision. The flow: photo → classification → vector/textual search → interpretation with MINSAL ranges → accurate response. This all depends on pgvector and pg_trgm working in sync in production.
+
+Contact: Mario Inostroza | WhatsApp: +569XXXXXXX | X: @marioinostroza

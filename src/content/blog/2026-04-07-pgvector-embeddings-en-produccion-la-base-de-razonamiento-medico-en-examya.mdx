@@ -1,0 +1,29 @@
+---
+title: pgvector + embeddings en producción: La base de razonamiento médico en Examya
+date: 2026-04-07
+lang: "es"
+description: Arquitectura de búsqueda semántica y similitud textual en producción con pgvector, pg_trgm y datos MINSAL reales.
+tags: ["IA", "PostgreSQL", "pgvector", "Examya", "Producción", "Médico"]
+image: "/img/blog/pgvector-production.png"
+draft: true
+---
+
+En Examya, la precisión en la interpretación de resultados médicos depende de dos capas de búsqueda que trabajan en conjunto: pgvector para embeddings semánticos y pg_trgm para similitud textual cuando el vector search falla.
+
+El sistema de producción en Supabase (examya_agents) necesita ambas extensiones funcionales. pg_vector es para los embeddings generados por LLMs, pero pg_trgm salva el sistema cuando las consultas fallan o los datos están incompletos.
+
+La implementación real incluyó una migración crítica: extensión pg_trgm instalada en producción, tabla medical_guides poblada con 5 guías MINSAL GPC reales (hemograma, lípidos, glucosa, tiroides, orina), y un script idempotente deploy-interpreter-tables.sql para despliegues futuros.
+
+La arquitectura de fallback es clave: cuando un médico envía un resultado de laboratorio, el sistema primero intenta búsqueda vectorial con pgvector. Si falla por baja similitud o datos faltantes, automáticamente cae a pg_trgm con similarity() para encontrar resultados por similitud textual.
+
+Los datos MINSAL son la sangre del sistema. Las tablas medical_guides y exam_normalization_mappings contienen rangos de referencia normales, niveles de FONASA, y códigos de examen con la terminología exacta usada en Chile. Sin estos datos, la IA no puede interpretar correctamente valores como glucosa 99 vs 100.
+
+El mayor desafío fue la calidad de los datos. La auditoría mostró que muchos exámenes tenían parámetros normales incorrectos o faltantes. Por ejemplo, la glucosa normalMax estaba en 100 cuando debería ser 99 según MINSAL GPC. Peor aún: algunos hemogramas eran clasificados como orina por errores en los nombres.
+
+La integración con WhatsApp OCR crea un sistema robusto. Cuando un usuario envía una foto de resultados, el sistema primero clasifica el documento. Si es exam_result, usa ExamResultInterpreterAgent con ambos métodos de búsqueda para garantizar precisión. Esto soluciona el problema de dos caminos diferentes que producían resultados inconsistentes.
+
+El despliegue en producción fue complejo. Tuvo que crear migraciones formales, scripts idempotentes, y actualizar el schema.prisma con extensions = [vector, pg_trgm]. La auditoría con Judgment Day encontró críticos bugs: API keys expuestas, falta de deprecation notices, y fallos en el fallback mechanism.
+
+Hoy el sistema procesa exámenes reales con precisión médica. El flujo: foto → clasificación → búsqueda vectorial/textual → interpretación con rangos MINSAL → respuesta precisa. Todo esto depende de que pgvector y pg_trgm funcionen en sincronía en producción.
+
+Contacto: Mario Inostroza | WhatsApp: +569XXXXXXX | X: @marioinostroza
