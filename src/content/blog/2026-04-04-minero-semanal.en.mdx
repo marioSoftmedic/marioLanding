@@ -1,0 +1,74 @@
+---
+title: "One Week of Building: 82 Decisions That Shaped an AI Product"
+date: 2026-04-04
+lang: "en"
+description: "What Engram's memories reveal about a real week of development: bugs caught, architecture hardened, and the invisible decisions that make a medical agent work."
+tags: ["AI", "Agents", "Development", "Examya", "OpenClaw", "Memory"]
+image: "/img/blog/examya-whatsapp-bot.webp"
+draft: false
+canonicalSlug: "2026-04-04-minero-semanal"
+---
+
+Every development session leaves a trace. What usually gets lost in scattered commits and Slack messages now gets recorded in Engram: my persistent memory system. Reviewing the observations from the last 7 days, I found 82 relevant events across 8 projects. Here's what actually happened.
+
+## The week in numbers
+
+82 observations spanning decisions, fixed bugs, discoveries, and architecture changes. The distribution speaks for itself:
+
+- **Examya**: 61 observations (74%)
+- **mariosoftmedic/examya**: 10
+- **marioLanding**: 4
+- **Examya WhatsApp hardening**: 3
+- **Personal, Blog, OpenClaw**: 3
+
+Examya dominated the week. Shuri, the medical agent that processes lab orders via WhatsApp, went through an intense stabilization phase.
+
+## Shuri: from chained bugs to hardened agent
+
+Monday started with a raw diagnosis: 5 interconnected bugs in the WhatsApp flow. These weren't isolated bugs. An issue in intent routing dragged errors into order confirmation, which generated incorrect prices, which led to broken payment links.
+
+The cascade had a perverse logic. Fixing the symptom (broken payment link) was useless if the root cause (intent misrouting) remained active. The solution was to attack bottom-up: first the FSM that manages conversation states, then the handlers for each stage, and finally the pricing layer.
+
+### The key moment: Judgment Day
+
+To verify the consolidation didn't break anything, I ran a "Judgment Day": three rounds of adversarial review where independent judges audit every change. Round 1 found 4 issues, including an exposed API key in a backup file. Round 2 found 1 more. Round 3: CLEAN.
+
+It sounds excessive until you find an API key in plaintext that was about to go to production.
+
+### CENS compliance and RUT normalization
+
+Alongside the bugs, Shuri needed to comply with Chilean health regulations (CENS). I implemented a STRICT/FLUID composition pattern for the medical agent's handlers: strict compliance rules are separated from fluid conversation logic. Each handler knows what it can and cannot do based on regulatory context.
+
+The patient's RUT also went through a silent but critical fix. Normalization failed on certain formats, generating handoffs to humans that never reached their destination. A malformed string can block the entire purchase flow.
+
+## The portfolio and internationalization
+
+While Shuri consumed most of the time, the Astro portfolio received its own refactoring. I implemented native i18n with URL-based routing for Spanish and English. Each post now has an ES and EN version, served from `/blog/slug` (Spanish default) and `/en/blog/slug` (English).
+
+The design also changed. The site went from "basic" to something with visual impact: gradient mesh in the hero, glass cards, inline SVGs instead of emojis. The difference between a portfolio that looks templated and one that feels personal is in the CSS details.
+
+## Engram: the memory that connects everything
+
+Friday marked a milestone: the bidirectional memory system between Mac and VPS became operational. Engram captures what I do in Claude Code (Mac) and what Cotocha executes on the VPS. Memory chunks travel via GitHub, and every morning a script compiles the Karpathy Wiki in Obsidian.
+
+This post is the proof of concept. The 82 observations I describe here came from `engram export`, not from my memory. When the system works, knowledge accumulates without friction.
+
+## What I take away from this week
+
+1. **Chained bugs need systemic diagnosis**, not individual patches. The technique of attacking the FSM first saved days of work.
+
+2. **Judgment Day works.** Finding an exposed API key in audit round 1 justified the entire process.
+
+3. **Persistent memory changes the dynamic.** Being able to search "what did I decide about WhatsApp pricing" and get the exact answer with context, without re-reading logs or chats, is a productivity multiplier.
+
+4. **Compliance isn't a feature, it's architecture.** The STRICT/FLUID pattern separates concerns so regulatory changes don't touch business logic.
+
+5. **Publishing in two languages doubles the work but triples the reach.** The barrier to entry is low with Astro i18n, and SEO benefits enormously.
+
+---
+
+Building something with AI and want it to work in production? Let's talk:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,73 @@
+---
+title: "Una semana de construcción: 82 decisiones que moldean un producto de IA"
+date: 2026-04-04
+lang: "es"
+description: "Lo que revelan las memorias de Engram sobre una semana real de desarrollo: bugs cazados, arquitectura endurecida, y las decisiones invisibles que hacen que un agente médico funcione."
+tags: ["IA", "Agentes", "Desarrollo", "Examya", "OpenClaw", "Memoria"]
+image: "/img/blog/examya-whatsapp-bot.webp"
+draft: false
+---
+
+Cada sesión de desarrollo deja rastro. Lo que normalmente se pierde en commits dispersos y mensajes de Slack, ahora queda grabado en Engram: mi sistema de memoria persistente. Al revisar las observaciones de los últimos 7 días, encontré 82 eventos relevantes distribuidos en 8 proyectos. Esto es lo que pasó realmente.
+
+## La semana en números
+
+82 observaciones entre decisiones, bugs corregidos, descubrimientos y cambios de arquitectura. La distribución habla por sí sola:
+
+- **Examya**: 61 observaciones (74%)
+- **mariosoftmedic/examya**: 10
+- **marioLanding**: 4
+- **Examya WhatsApp hardening**: 3
+- **Personal, Blog, OpenClaw**: 3
+
+Examya dominó la semana. Shuri, el agente médico que procesa órdenes de exámenes por WhatsApp, pasó por una fase intensa de estabilización.
+
+## Shuri: de bugs encadenados a agente hardened
+
+El lunes arrancó con un diagnóstico crudo: 5 bugs interconectados en el flujo de WhatsApp. No eran bugs aislados. Un problema en el enrutamiento de intents arrastraba errores en la confirmación de órdenes, que a su vez generaba precios incorrectos, que derivaban en links de pago rotos.
+
+La cascada tenía una lógica perversa. Corregir el síntoma (link de pago roto) no servía si la causa raíz (intent misrouting) seguía activa. La solución fue atacar de abajo hacia arriba: primero el FSM (finite state machine) que gestiona los estados de conversación, después los handlers de cada etapa, y finalmente la capa de pricing.
+
+### El momento clave: Judgment Day
+
+Para verificar que la consolidación no rompía nada, ejecuté un "Judgment Day": tres rondas de revisión adversaria donde jueces independientes auditan cada cambio. La ronda 1 encontró 4 issues, incluyendo un API key expuesto en un archivo de backup. La ronda 2 encontró 1 más. La ronda 3: CLEAN.
+
+Es un proceso que suena excesivo hasta que encontrás un API key en plaintext que estaba a punto de ir a producción.
+
+### Compliance CENS y normalización de RUT
+
+En paralelo a los bugs, Shuri necesitaba cumplir con las regulaciones de salud chilenas (CENS). Implementé un patrón de composición STRICT/FLUID para los handlers del agente médico: las reglas estrictas de compliance se separan de la lógica fluida de conversación. Cada handler sabe qué puede y qué no puede hacer según el contexto regulatorio.
+
+El RUT del paciente también pasó por un fix silencioso pero crítico. La normalización fallaba en ciertos formatos, lo que generaba handoffs al humano que nunca llegaban a destino. Un string mal formateado puede bloquear todo el flujo de compra.
+
+## El portfolio y la internacionalización
+
+Mientras Shuri consumía la mayor parte del tiempo, el portfolio en Astro recibió su propia refactorización. Implementé i18n nativo con routing por URL para español e inglés. Cada post ahora tiene versión ES y EN, servida desde `/blog/slug` (español por defecto) y `/en/blog/slug` (inglés).
+
+El diseño también cambió. El sitio pasó de "básico" a algo con impacto visual: gradient mesh en el hero, glass cards, SVGs inline en vez de emojis. La diferencia entre un portfolio que se ve templated y uno que se siente propio está en los detalles de CSS.
+
+## Engram: la memoria que conecta todo
+
+El viernes marcó un hito: el sistema de memoria bidireccional entre Mac y VPS quedó operativo. Engram captura lo que hago en Claude Code (Mac) y lo que Cotocha ejecuta en el VPS. Los chunks de memorias viajan via GitHub, y cada mañana un script compila la Wiki Karpathy en Obsidian.
+
+Este post es la prueba de concepto. Las 82 observaciones que describo acá salieron de `engram export`, no de mi memoria. Cuando el sistema funciona, el conocimiento se acumula sin fricción.
+
+## Lo que me llevo de esta semana
+
+1. **Los bugs encadenados necesitan diagnóstico sistémico**, no parches individuales. La técnica de atacar el FSM primero salvó días de trabajo.
+
+2. **Judgment Day funciona.** Encontrar un API key expuesto en ronda 1 de auditoría justificó todo el proceso.
+
+3. **La memoria persistente cambia la dinámica.** Poder buscar "qué decidí sobre pricing de WhatsApp" y obtener la respuesta exacta con contexto, sin tener que releer logs o chats, es un multiplicador de productividad.
+
+4. **Compliance no es un feature, es arquitectura.** El patrón STRICT/FLUID separa preocupaciones de forma que los cambios regulatorios no tocan la lógica de negocio.
+
+5. **Publicar en dos idiomas duplica el trabajo pero triplica el alcance.** La barra de entrada es baja con Astro i18n, y el SEO se beneficia enormemente.
+
+---
+
+¿Construyes algo con IA y quieres que funcione en producción? Hablemos:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
