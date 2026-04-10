@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-04-07T07:31:46.616220",
+  "generated_at": "2026-04-10T08:00:25.479769",
   "source": "engram-unified",
   "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
-  "total_memories": 296,
+  "total_memories": 448,
   "projects": {
-    "examya": 204,
-    "personal": 78,
+    "examya": 321,
+    "personal": 113,
     "marioLanding": 11,
     "estepa": 1,
     "blog": 2
@@ -28,6 +28,15 @@
       "project": "marioLanding",
       "updated_at": "2026-03-31 10:01:24",
       "content": "**What**: Rewrote all page templates (index.astro, [slug].astro, news/index.astro) to use the design system CSS variables instead of hardcoded zinc-* Tailwind classes. Replaced all emoji icons with inline SVGs. Added WOW-factor hero with gradient mesh background, grid pattern overlay, status badge, and scroll indicator.\n\n**Why**: User said the site \"se ve demasiado básica\" — needed to level up the visual design to match modern dark mode UI patterns (Linear/Vercel style).\n\n**Where**: portfolio/src/pages/index.astro, portfolio/src/pages/projects/[slug].astro, portfolio/src/pages/news/index.astro, portfolio/public/favicon.svg\n\n**Learned**: \n- Using inline `style` with CSS vars + `onmouseover`/`onmouseout` for hover states avoids Tailwind class proliferation with CSS variables\n- Glass-card cla"
+    },
+    {
+      "id": 46,
+      "title": "sdd-init/examya",
+      "type": "architecture",
+      "topic_key": "sdd-init/examya",
+      "project": "examya",
+      "updated_at": "2026-04-08 15:34:42",
+      "content": "## Project Context: examya\n\n**Stack**: Next.js 14 (web), NestJS 11 (api + agents), Prisma 6 + PostgreSQL + pgvector, Flutter (mobile), pnpm workspaces\n**Architecture**: DDD, Clean Architecture, monorepo `apps/*` + `packages/*`\n**Testing**: Vitest (unit), Supertest+real-DB (integration), Playwright (E2E), DeepEval/Python (LLM evaluation)\n**Strict TDD Mode**: enabled (project has full test runner + TDD rule in CLAUDE.md for tasks ID≥8)\n**CI/CD**: GitHub Actions, Railway\n**Languages**: TypeScript (NestJS/Next.js), Python (evaluation layer), Dart (Flutter)\n**Key conventions**: Conventional commits `feat(scope): Task: N.M desc`, comments in English, user comms in Spanish, pnpm -F for workspace filters\n**Monorepo structure**:\n- apps/api — NestJS backend port 3001\n- apps/agents — NestJS agents mi"
     },
     {
       "id": 106,
@@ -181,15 +190,6 @@
       "project": "natales.travel",
       "updated_at": "2026-04-06 02:21:05",
       "content": "## natales.travel MVP — Implementation Complete\n\n**What**: Built the full MVP for natales.travel destination portal.\n\n**Stack (actual, differs slightly from plan)**:\n- Next.js 16 (not 15 — latest at time of install)\n- Tailwind CSS v4 (CSS-based config via @theme inline, NO tailwind.config.ts)\n- Prisma 6.19 with PostgreSQL (local, not Docker — port conflict resolved by using local postgres)\n- next-intl for i18n (EN default, ES with /es/ prefix)\n- next-mdx-remote for guide content rendering\n- Vitest for testing (25 tests passing)\n\n**Key deviations from plan**:\n- Tailwind v4 uses CSS config, not JS config — custom colors/fonts in globals.css @theme block\n- Prisma 6 auto-generated prisma.config.ts was removed (caused type errors, not needed)\n- vitest.config.ts needed `react() as any` cast due "
-    },
-    {
-      "id": 243,
-      "title": "Judgment Day audit completed — 6 fixes applied, 8 architecture gaps deferred",
-      "type": "decision",
-      "topic_key": "audit/judgment-day-whatsapp-flows",
-      "project": "examya",
-      "updated_at": "2026-04-06 18:18:27",
-      "content": "**What**: Completed adversarial Judgment Day review of 4 Shuri WhatsApp flows. Two independent judges found 40 issues (20 each, 0 contradictions). Fix Agent applied 6 surgical fixes for confirmed CRITICAL/WARNING bugs. Round 2 re-judge: both judges CLEAN.\n\n**Why**: Validate Gemini audit report against actual code and find real gaps in quotation OCR, purchase, results OCR, and scheduling flows.\n\n**Where**: \n- `apps/agents/src/agents/shuri/handlers/purchase.handler.ts` — removed `ya` and `seat` from isConfirmation regex (line 85)\n- `apps/agents/src/agents/shuri/handlers/scheduling.handler.ts` — fake booking → pending message (lines 277-294), timezone fix (lines 59-60), modality branching (lines 70-72), practitioner null guard (lines 258-268)\n- `apps/agents/src/agents/shuri/__tests__/shuri-ex"
     }
   ]
 }
