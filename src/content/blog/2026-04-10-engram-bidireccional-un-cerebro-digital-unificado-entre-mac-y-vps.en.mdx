@@ -1,0 +1,90 @@
+---
+title: "Bidirectional Engram: A Unified Digital Brain Between Mac and VPS"
+date: 2026-04-10
+lang: "en"
+description: "How I implemented a bidirectional memory synchronization system between my MacBook Pro and VPS server using Engram, git, and Obsidian."
+tags: ["Engram", "Obsidian", "Synchronization", "Infrastructure", "Karpathy"]
+image: ""
+canonicalSlug: "2026-04-10-bidirectional-engram-unified-digital-brain"
+draft: true
+---
+
+In the distributed world of AI development, maintaining consistent memory across multiple environments has been one of the biggest challenges. For months, I've struggled with knowledge fragmentation between my MacBook Pro (where I do most development) and my VPS server (where Cotocha runs 24/7).
+
+The problem: two digital brains working with unsynchronized information, duplicated decisions, and isolated learnings.
+
+The solution: a bidirectional memory pipeline that creates a unified brain in real-time.
+
+## System Architecture
+
+The system consists of two main flows operating on separate schedules to avoid conflicts:
+
+**Mac → VPS Flow (Import)**
+- Every 2 hours on VPS: a cron job executes `git pull` from the obsidian-vault repository
+- Then runs `engram sync --import` to absorb new memories from chunks
+- Finally, a bridge script transforms observations into accessible .md files for QMD
+
+**VPS → Mac Flow (Export)**
+- Every 4 hours on VPS: another cron exports OpenClaw sessions to Engram chunks
+- Chunks are compressed and pushed to the same obsidian-vault repository via git push
+- In Mac, the `engram-sync.sh` script automatically absorbs new chunks at 7:30 AM
+
+## Key Components
+
+### 1. Central Repository as Bridge
+
+The `marioSoftmedic/obsidian-vault` repository serves as the transport medium between both environments. It stores not only Obsidian notes but also compressed memory chunks in `.engram/chunks/`.
+
+```
+obsidian-v/
+├── .engram/chunks/
+│   ├── sessions-2026-04-10.jsonl.gz
+│   ├── observations-2026-04-10.jsonl.gz
+│   └── prompts-2026-04-10.jsonl.gz
+├── Proyectos/
+│   └── 05_Blog/
+│       └── _INDEX.md
+└── 10_Investigación/
+    └── Wiki/
+        └── _INDEX.md
+```
+
+### 2. Synchronization Scripts
+
+**On Mac (`engram-sync.sh`):**
+```bash
+#!/bin/bash
+# Export chunks from vault and push to repo
+cd ~/.engram
+engram sync --all --export
+cd ~/repos/obsidian-vault
+git add .engram/
+git commit -m "sync: engram chunk $(date +%Y-%m-%d)"
+git push
+```
+
+**On VPS (bridge scripts):**
+- `bridge-openclaw-engram.py`: Parses JSONL sessions and generates chunks
+- `bridge-engram-to-qmd.py`: Converts chunks to .md for semantic search
+
+### 3. Conflict Resolution
+
+The biggest challenge was resolving git history divergences. At one point, the Mac local repository had only 4 commits with no common ancestor to the remote (VPS had 133).
+
+The solution was using `git reset --soft obsidian-vault/main`, which kept all local changes but positioned them over the remote HEAD, allowing a clean commit.
+
+## System Benefits
+
+1. **Unified Memory**: Technical decisions, architectural choices, and project updates are available in both environments
+2. **Reduced Duplication**: Eliminates the need to document twice or remember what was done in another environment
+3. **Cross-Semantic Search**: QMD can index both Obsidian notes and OpenClaw sessions
+4. **Work Continuity**: I can continue sessions where I left them, without losing context
+
+## Future: Karpathy Knowledge Base
+
+This system is the fundamental component for implementing the Karpathy personal knowledge base method. With constant ingestion, LLM processing, and Wiki publication, I'm building a system that learns and compiles knowledge automatically.
+
+The next step is connecting this pipeline with the blog-writer so recent memories automatically convert to public content, closing the loop from private to public knowledge.
+
+---
+*Contact: WhatsApp or X for consultations on personal memory system implementation*
