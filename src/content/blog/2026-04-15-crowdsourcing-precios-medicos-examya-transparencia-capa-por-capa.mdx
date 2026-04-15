@@ -1,0 +1,121 @@
+---
+title: "Crowdsourcing de precios médicos: cómo Examya construye transparencia de costos capa por capa"
+date: 2026-04-15
+lang: "es"
+description: "Arquitectura real de las 3 capas de inteligencia de precios en Examya: datos FONASA, crowdsourcing de usuarios y generación de órdenes desde WhatsApp. Con código, decisiones de diseño y bugs reales."
+tags: ["IA", "Examya", "Crowdsourcing", "FONASA", "WhatsApp", "Precios", "Salud", "Agentes"]
+image: "/img/blog/crowdsourcing-precios-hero.png"
+draft: false
+---
+
+En Chile, averiguar cuánto cuesta un examen de laboratorio es un ejercicio de paciencia. Llamás al laboratorio, te ponen en espera, te dan un precio que varía según tu previsión, tu nivel FONASA, y si el viento sopla del sur. Multiplicá eso por 5 exámenes y 3 laboratorios distintos. Media mañana perdida.
+
+Examya resuelve esto con un sistema de 3 capas que estamos construyendo de forma incremental. Cada capa agrega una fuente de datos distinta. Ninguna reemplaza a la anterior. Se apilan.
+
+## Capa 1: los precios oficiales FONASA
+
+La base de todo es el catálogo FONASA. El Ministerio de Salud publica un arancel con más de 6.000 prestaciones, cada una con un código y un precio base en pesos chilenos.
+
+El problema: ese precio base no es lo que pagás. Se multiplica por un factor según tu nivel de cobertura (FONASA A, B, C o D) y según la región. Un hemograma en Santiago cuesta distinto que en Punta Arenas. El arancel Magallanes tiene factor diferenciado.
+
+En Examya, el componente `FonasaPricingDisplay` toma el código del examen y muestra tres columnas: precio nivel 1, nivel 2, nivel 3. Para Magallanes, muestra solo nivel 3 con el factor regional aplicado. No es una tabla estática. Cada precio se calcula en tiempo real contra el catálogo que mantenemos sincronizado.
+Esto funciona bien como referencia. Pero tiene un límite claro: el precio FONASA es el piso. Los laboratorios privados cobran lo que quieren por encima de eso. Y no hay ningún registro público de cuánto cobran realmente.
+
+## Capa 2: crowdsourcing de precios reales
+
+Acá es donde la cosa se pone interesante.
+
+Cuando un paciente se hace un examen y paga en un laboratorio, sabe exactamente cuánto le costó. Ese dato, que hoy se pierde en una boleta o un comprobante de transferencia, tiene un valor enorme si se agrega.
+
+La Capa 2 permite que cualquier usuario reporte el precio real que pagó. El modelo en la base de datos es `ExamPriceReport`:
+
+```
+ExamPriceReport
+├── examCode      (código FONASA del examen)
+├── examName      (nombre legible)
+├── labId         (laboratorio donde pagó)
+├── price         (precio real en CLP)
+├── fonasaLevel   (nivel de cobertura del paciente)
+├── reportedAt    (fecha del reporte)
+└── userId        (quién reportó)
+```
+
+En el frontend, el modal `ReportPriceModal` aparece después de que el usuario busca un examen y ve los precios FONASA de referencia. Un botón dice: "¿Pagaste otro precio? Reportalo." El formulario es mínimo: laboratorio, precio, nivel FONASA. Tres campos.
+
+La Server Action `price-report.actions.ts` recibe el reporte y lo persiste. Hay una decisión de diseño acá que vale la pena contar: el frontend no tiene acceso al `examCode`. El componente de precios muestra el nombre del examen, pero el código FONASA no viaja en el DTO de respuesta. En vez de agregar el campo al DTO (lo que implicaba tocar la API, el tipo, y todos los consumers), la Server Action busca el código en base al nombre del examen directamente en el backend.
+```typescript
+// En vez de recibir examCode del frontend:
+const exam = await db.fonasaExam.findFirst({
+  where: { name: { equals: examName, mode: 'insensitive' } }
+});
+```
+
+Pragmático. Un lookup extra que ahorra cambios en 4 archivos.
+
+Con suficientes reportes, cada examen en cada laboratorio tiene un rango de precios reales. El paciente ya no ve solo "el precio FONASA dice X". Ve "pacientes como vos pagaron entre X e Y en este laboratorio el mes pasado".
+
+## Capa 3: de la búsqueda a la orden médica en una conversación
+
+Las primeras dos capas son informativas. La Capa 3 cierra el loop: el paciente puede comprar una orden médica directamente desde WhatsApp, después de buscar precios o interpretar resultados.
+
+El agente Shuri (que vive en WhatsApp) ya sabía interpretar resultados de laboratorio y cotizar órdenes médicas desde fotos. Lo que faltaba era un intent de búsqueda: "¿dónde me puedo hacer un hemograma cerca de mi casa?"
+
+Para esto agregamos `LAB_SEARCH_INTENT` al router de intenciones de Shuri. El LLM analiza el mensaje del paciente y, si detecta intención de búsqueda, extrae dos entidades: el examen y la comuna.
+
+El gotcha estuvo en la máquina de estados. Shuri usa una FSM (`ShuriStateMachine`) que mantiene contexto entre mensajes. Cuando el IntentRouter detecta un intent, devuelve un `IntentDecision` con las entidades extraídas. Pero el contexto de la FSM (`ShuriContext`) no tenía campo para esas entidades. El handler de búsqueda no podía saber qué examen o qué comuna había pedido el paciente.
+
+```typescript
+// Antes: las entidades se perdían en la transición
+stateMachine.transition('LAB_SEARCH');
+// handler: "¿qué examen busco? No tengo idea"
+
+// Después: entidades viajan en el contexto
+shuriContext.intentEntities = intentDecision.entities;
+stateMachine.transition('LAB_SEARCH');
+// handler: { exam: "hemograma", comuna: "Puerto Natales" }
+```
+El `LabSearchHandler` recibe las entidades, consulta la base de datos de 221 laboratorios consolidados (esa es otra historia), filtra por comuna, y devuelve opciones con precios. Si el paciente quiere, genera la orden ahí mismo.
+
+El flujo completo:
+
+```
+Paciente: "¿dónde me hago un hemograma en Puerto Natales?"
+    ↓
+IntentRouter → LAB_SEARCH_INTENT
+    entities: { exam: "hemograma", comuna: "Puerto Natales" }
+    ↓
+LabSearchHandler → consulta DB → 3 laboratorios encontrados
+    ↓
+Shuri: "Encontré 3 opciones:
+  1. Lab Sur - $4.500
+  2. Lab Austral - $5.200
+  3. Clínica Natales - $4.800
+  ¿Querés generar una orden?"
+    ↓
+Paciente: "Sí, en Lab Sur"
+    ↓
+Generación de orden → PDF → link de pago → WhatsApp
+```
+
+La misma lógica funciona después de interpretar resultados. Si el agente explica "tu colesterol está alto, deberías repetir el perfil lipídico en 3 meses", el call-to-action al final del `InterpretResultsHandler` ofrece buscar laboratorios cercanos para el siguiente control. El paciente no sale nunca de la conversación.
+
+## El sistema de 3 capas como ventaja competitiva
+
+Ninguna de estas capas es revolucionaria por sí sola. Los precios FONASA son públicos. El crowdsourcing existe en otros rubros. La generación de órdenes es un flujo transaccional estándar.
+
+Lo que es difícil de copiar es la combinación. Cada capa alimenta a las siguientes:
+Los precios FONASA dan la referencia. Los reportes de usuarios dan el precio real del mercado. La búsqueda de laboratorios usa ambos para mostrar opciones informadas. La generación de órdenes monetiza el flujo completo.
+
+Y todo pasa en WhatsApp. Sin apps que instalar. Sin cuentas que crear. El paciente habla con un contacto y resuelve en minutos lo que antes le tomaba medio día.
+
+## Lo que viene
+
+La Capa 2 está fría todavía. Tenemos la infraestructura pero pocos reportes. El desafío ahora es de producto, no de código: cómo motivar al paciente a reportar su precio después de pagar. Estamos evaluando un incentivo simple: acceso a precios comparativos detallados a cambio de un reporte.
+
+La base de 221 laboratorios tiene cobertura de WhatsApp al 55.7% y sitios web al 83.3%. Cada laboratorio nuevo que se suma mejora las opciones de la Capa 3. Es un efecto de red lento pero consistente.
+
+El próximo paso técnico es conectar los reportes de precios con el `LabSearchHandler` para que las opciones de búsqueda muestren precios reales reportados además de los FONASA de referencia. Cuando eso esté, el loop se cierra: el paciente busca, compara con datos reales, compra, y después reporta su precio para el siguiente.
+
+---
+
+Si estás construyendo productos de salud con IA y querés discutir arquitectura de datos de precios, me encontrás en [X (@marioHealthBits)](https://x.com/marioHealthBits) o por WhatsApp.
