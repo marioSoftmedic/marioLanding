@@ -1,0 +1,42 @@
+---
+title: "Multi-Agent Orchestration vs Single Agent: Lessons from the Trenches"
+date: 2026-04-16
+lang: "en"
+description: "My journey building Cotocha: why multi-agent orchestration beats single agents in real-world projects."
+tags: ["AI", "Agents", "Architecture", "Cotocha", "OpenClaw"]
+image: ""
+draft: true
+canonicalSlug: "2026-04-16-orquestacion-multi-agente-vs-agente-unico"
+---
+
+The decision between single agent vs multi-agent is not academic. I made it every day for 6 months while building Cotocha. The answer seems obvious now. It wasn't then.
+
+I started with the simple belief. One intelligent agent should solve everything. A single system with access to all tools. The classic AGI universal vision. Reality hit hard.
+
+Cotocha was born from practical frustration. Managing Examya, natales.travel, VPS infrastructure, social media and personal projects simultaneously. No single agent could maintain context. Capabilities clashed. States contaminated.
+
+Shuri demonstrated the value of specialization. Medical agent with deep FONASA knowledge, Chilean formats and WhatsApp flows. Worked well in its domain. Useless outside it.
+
+Banner emerged from another need. Clinical analysis of complex data. Requires deep medical understanding. No general agent could replace its specialized approach. Each agent built its niche.
+
+Thor showed the natural delegation principle. Cabin reservation management needs availability logic, cancellation policies and human communication. Separate system. Isolated capability. Perfect for its purpose.
+
+Orchestration is not just task distribution. It's maintaining complex state between specialized systems. Cotocha doesn't solve problems. It coordinates who solves them. It's the orchestra director, not the musician.
+
+Errors came when I tried over-specialization. Agents for OCR, payments, notifications, PDFs. Too granular. Communication between them exceeded the value they added. I returned to logical layers.
+
+The current architecture works through clear responsibility separation. Each agent has non-overlapping domain. Cotocha maintains global state and decides delegation. Technical agents execute specific tasks.
+
+The Judge-01 system showed another crucial benefit. Cross-verification between specialized agents. An error in Shuri detected by Banner. Impossible in a monolithic system. Diversity of approaches prevents systematic blindness.
+
+Scalability depends on this modularity. Adding a new agent doesn't affect existing ones. Thor now handles new properties without changes to other systems. Extension is natural.
+
+The cost is not technical. It's conceptual. Accept that no agent knows everything. Trust in coordinated specialization. It's the architectural humility that generates robust systems.
+
+Cotocha teaches us the future isn't smarter agents. It's better orchestrated systems. Intelligence emerges from coordination, not individual size.
+
+Contact: Mario Inostroza. WhatsApp or @marioinost on X. Building AI systems in Patagonia from Puerto Natales.
+
+---
+
+**Methodological note**: This post arises from real work observations during Cotocha construction. Examples come from architectural decisions documented in the Engram memory system.
