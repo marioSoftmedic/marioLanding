@@ -1,0 +1,88 @@
+---
+title: "Chile obliga a interoperar fichas clínicas: por qué esto cambia todo para la salud digital"
+date: 2026-04-16
+lang: "es"
+description: "La Ley 21.668 obliga a todos los prestadores de salud en Chile a interoperar sus fichas clínicas. Analizo qué significa esto técnicamente, qué estándares vienen (FHIR, SNOMED CT, AIToF), y cómo Examya se está preparando para este nuevo mercado obligatorio."
+tags: [HealthTech, Interoperabilidad, FHIR, Chile, Ley21668, Examya, IA, SNOMED, HL7, SaludDigital]
+image: "/img/blog/interoperabilidad-hero.svg"
+draft: false
+---
+
+En mayo de 2024, Chile publicó la Ley 21.668. En una oración: todos los prestadores de salud — públicos y privados — están obligados a hacer interoperables sus fichas clínicas. Suena burocrático. Es revolucionario.
+
+Soy tecnólogo médico. Trabajé años en laboratorios clínicos. Viví el problema desde adentro: pacientes que repetían exámenes porque el nuevo centro no tenía acceso a los resultados previos. Médicos tomando decisiones con información incompleta. Un sistema que pagaba múltiples veces por lo mismo — se estiman $300 millones USD anuales en exámenes duplicados solo en Chile.
+
+Ahora estoy del otro lado, construyendo Examya, una plataforma que procesa órdenes médicas con IA. Y esta ley cambia las reglas del juego.
+
+## Qué dice la ley (sin abogadés)
+
+La Ley 21.668 modifica la Ley 20.584 de Derechos y Deberes de los Pacientes. Los puntos clave:
+
+**Obligatoriedad**: No es opcional. Todos los prestadores deben compartir fichas clínicas electrónicamente. **Continuidad del cuidado**: El objetivo es que un paciente pueda cambiar de prestador sin perder su historial. **Plazo para el reglamento**: El MINSAL tiene 18 meses desde la publicación (noviembre 2025) para definir los estándares técnicos exactos. **Gradualidad**: La implementación será progresiva según tamaño del prestador.
+
+El reglamento es donde está la carne. Define qué estándar de intercambio se usará, qué terminologías, cómo se identifica a los pacientes. Todo apunta a FHIR.
+
+## FHIR: el estándar que viene
+
+FHIR (Fast Healthcare Interoperability Resources) es el estándar de HL7 que está reemplazando a los formatos legacy (HL7 v2, CDA) en todo el mundo. En vez de mensajes monolíticos, FHIR modela la salud como recursos REST: un `Patient`, un `ServiceRequest`, un `DiagnosticReport`. JSON nativo, APIs REST, pensado para la web moderna.
+
+En Chile, el CENS (Centro Nacional en Sistemas de Información en Salud) ya trabaja en perfiles FHIR nacionales. El Connectathon HL7 Chile 2026 será el primer evento donde implementadores validan sus integraciones contra estos perfiles. Examya estará ahí.
+
+¿Por qué importa para un builder? Porque significa que los datos de salud van a hablar un idioma común. Y cuando los datos hablan un idioma común, puedes construir cosas encima.
+
+## La oportunidad que nadie está viendo
+
+La mayoría de los laboratorios y centros médicos en Chile corren sistemas legacy que hablan HL7 v2 — un protocolo de 1987. La ley les obliga a interoperar. No tienen cómo hacerlo sin ayuda.
+
+Ahí está la oportunidad: un middleware que recibe mensajes HL7 v2 de laboratorios, los traduce a recursos FHIR, y expone una API estándar. Cada laboratorio que necesite cumplir con la ley necesitará este tipo de solución — y la mayoría no tiene capacidad interna para construirla.
+
+Pero el middleware es solo la capa 1.
+
+## IA + interoperabilidad: donde Examya entra
+
+Examya ya procesa órdenes médicas con IA. Un usuario envía una orden por WhatsApp (foto, PDF, texto libre), y nuestro pipeline:
+
+1. Extrae los exámenes con OCR + NLP
+2. Clasifica cada examen contra nuestro catálogo
+3. Sugiere laboratorios y precios
+4. Genera un flujo de compra conversacional
+
+Todo esto hoy funciona con datos propietarios. Con FHIR, el output podría ser un `ServiceRequest` estándar que cualquier laboratorio del país entienda. Con SNOMED CT, cada examen estaría codificado en una terminología universal.
+
+Y aquí viene la parte que más me entusiasma: **AIToF**.
+
+## AIToF: transparencia de IA en datos clínicos
+
+AIToF (AI Transparency on FHIR) es un Implementation Guide de HL7 que define cómo marcar datos que fueron generados o procesados por IA. Cada recurso FHIR puede llevar metadata que dice: "este campo fue generado por el modelo examya-ocr-v2.3, con confianza 0.94, el 16 de abril de 2026".
+
+¿Por qué importa? Porque en salud, la trazabilidad no es un nice-to-have. Si tu IA clasifica un examen mal, necesitas saber exactamente qué modelo lo hizo, con qué input, y cuándo. AIToF estandariza eso.
+
+Examya podría ser el primer sistema en Chile con compliance AIToF. No porque sea obligatorio hoy — sino porque será obligatorio mañana. Y llegar primero a un estándar que todos deberán cumplir es una ventaja competitiva que no se compra.
+
+## MCP + FHIR: agentes que hablan salud
+
+Hay una última pieza. En Examya usamos MCP (Model Context Protocol) para que nuestros agentes accedan a herramientas externas. Imagina publicar un MCP Server que exponga la API FHIR de Examya. Cualquier agente IA — de Google, Anthropic, open-source — podría consultar órdenes médicas, verificar estados, obtener resultados. Sin integración custom.
+
+A2A (Agent-to-Agent Protocol) lleva esto más lejos: agentes de distintos sistemas que negocian entre sí. El agente de un laboratorio preguntándole al agente de un hospital si un paciente ya tiene resultados previos de un examen similar. Todo sobre FHIR, todo trazable con AIToF.
+
+Suena a ciencia ficción. Pero cada pieza ya existe. Solo falta ensamblarlas.
+
+## La hoja de ruta
+
+Para Examya, la estrategia es clara:
+
+**Q2-Q3 2026**: Adoptar FHIR R4 para la API, implementar codificación SNOMED CT + LOINC, participar en el Connectathon HL7 Chile como implementador. Unirse a HL7 Chile.
+
+**Q4 2026 - Q1 2027**: Publicar MCP Server de Examya, implementar AIToF para transparencia de IA, desarrollar el middleware HL7 v2 → FHIR, primeros pilotos con laboratorios.
+
+**2027+**: Middleware como producto SaaS, analytics premium con IA sobre datos interoperables, Agent Card A2A para el ecosistema de salud.
+
+## Por qué escribo esto
+
+No soy un consultor de interoperabilidad. Soy un builder que construye herramientas para salud desde un pueblo de 20.000 personas en la Patagonia. Pero precisamente por eso creo que la perspectiva importa: la tecnología que necesita Chile para cumplir esta ley no va a venir de un corporativo en Santiago. Va a venir de equipos pequeños que entienden tanto el problema clínico como el stack moderno.
+
+La Ley 21.668 no es solo regulación. Es una señal de mercado. Y los que la lean primero, construirán primero.
+
+---
+
+*¿Estás trabajando en interoperabilidad en salud en LATAM? Me encantaría conectar. Escríbeme en [LinkedIn](https://www.linkedin.com/in/mario-inostroza-softmedic/), [X](https://x.com/marioHealthBits) o [Instagram](https://www.instagram.com/mariohealthbits/).*
