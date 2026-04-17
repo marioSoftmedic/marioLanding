@@ -16,35 +16,43 @@ Los laboratorios clínicos.
 
 Pensemos el flujo típico. Un paciente sale del consultorio con una orden de exámenes. Esa orden llega al laboratorio por fax, WhatsApp, o incluso presencialmente en papel. El resultado vuelve al médico cuando puede. A veces días después.
 
-El proceso es manual, fragmentado y lento. Y afecta directamente la toma de decisiones clínicas.
+El proceso es manual, fragmentado y lento. Y afecta directamente la toma de decisiones clínicas. Se estiman $300 millones USD anuales en exámenes duplicados solo en Chile, en parte porque los sistemas no comparten información entre sí.
 
-En Examya hablamos con laboratorios todos los días. Pequeños, medianos y grandes. El patrón se repite en casi todos:
+## Lo que encontramos al hablar con 245 laboratorios
 
-- Sistemas heredados que no hablan entre sí
-- Procesos manuales que consumen horas del personal técnico
-- Pacientes que llaman preguntando por resultados que ya están listos
+En Examya no hablamos de salud digital desde un escritorio. Hemos contactado y mapeado **245 laboratorios clínicos en todo Chile**, desde Arica a Punta Arenas. De esos, logramos identificar y validar contacto WhatsApp en **146 laboratorios** (59.6% del total).
+
+Ese proceso de descubrimiento lo hizo un agente autónomo que ejecutó más de **100 rondas de scraping**, rotando estrategias de búsqueda: web scraping, Google Business Profile, redes sociales, búsqueda manual por región. Cada ronda procesaba entre 10 y 20 laboratorios, validando números en formato +569 y cruzando datos con sitios institucionales como el registro del Departamento de Estadísticas e Información de Salud (DEIS).
+
+¿Qué aprendimos de esas 245 conversaciones indirectas?
+
+- **El 40% de los laboratorios no tiene presencia digital funcional.** Sitios caídos, dominios expirados, páginas de Facebook sin actualizar en años.
+- **Los laboratorios pequeños y medianos son los más vulnerables.** No tienen equipo de ingeniería, dependen de un software heredado que no integra con nada, y reciben órdenes por canales que no pueden rastrear.
+- **WhatsApp es el canal de facto.** No porque sea lo ideal, sino porque es lo que los pacientes usan. Muchos laboratorios ya gestionan citas y entregan resultados por WhatsApp de forma informal.
+
+## Lo que construimos sobre esa base
+
+Con esa información real de campo, construimos tres cosas concretas:
+
+**Shuri, el agente médico de WhatsApp.** Un agente de IA que recibe una foto de la orden de exámenes por WhatsApp, la interpreta con OCR, valida los códigos FONASA, cotiza los exámenes según el tramo del paciente (A, B, C, D), y genera la orden. Todo en una conversación. Sin papel, sin llamadas, sin filas.
+
+**Integración FONASA completa.** La API de FONASA requiere formato exacto de RUT, validaciones estrictas y manejo de tramos de cotización. Implementamos capas de validación antes de cada llamada para que el paciente sepa su copago exacto antes de confirmar.
+
+**Procesamiento de resultados con OCR.** Cuando el laboratorio entrega los resultados, el sistema los interpreta, estructura y pone a disposición del paciente y el médico. El flujo completo: orden → cotización → confirmación → resultado → entrega.
 
 ## El laboratorio como nodo de información
 
-La interoperabilidad que propone la Ley 21.668 no es solo un tema de estándares técnicos. Es un problema operativo real que afecta a los laboratorios hoy mismo.
+La interoperabilidad que propone la Ley 21.668 no es solo un tema de estándares técnicos (FHIR, HL7, SNOMED CT). Es un problema operativo real que afecta a los laboratorios hoy mismo.
 
 Y ahí está la oportunidad. El laboratorio clínico no es un eslabón pasivo de la cadena de salud. Es un nodo de información que, si se digitaliza correctamente, puede acelerar diagnósticos, reducir errores y mejorar la experiencia del paciente de forma inmediata.
 
-Pensemos en lo que ya tienen los laboratorios: datos estructurados de cada examen, historial de pacientes, resultados normalizados. La información está ahí. El problema es cómo fluye.
-
-## Lo que estamos construyendo
-
-En Examya estamos conectando ese nodo. No desde la teoría, sino desde la conversación diaria con quienes procesan los exámenes de Chile.
-
-Hemos visto de primera mano cómo un laboratorio pequeño puede reducir su tiempo de procesamiento de órdenes en horas solo con una mejor integración. No necesitan reemplazar todos sus sistemas. Necesitan que los sistemas que ya tienen puedan hablar entre sí.
-
-La clave no es más tecnología. Es mejor conexión.
+Los datos están ahí. Lo que ya tienen los laboratorios es valioso: datos estructurados de cada examen, historial de pacientes, resultados normalizados. El problema nunca fue la información. Es cómo fluye.
 
 ## El desafío real
 
-El verdadero reto de la interoperabilidad en salud no es técnico. Es de adopción. Los estándares existen (HL7, FHIR). Las APIs existen. Lo que falta es que los laboratorios, sobre todo los pequeños y medianos de todo Chile, tengan acceso a herramientas que conecten sus sistemas sin requerir un equipo de ingeniería interno.
+El verdadero reto de la interoperabilidad en salud no es técnico. Es de adopción. Los estándares existen. Las APIs existen. Lo que falta es que los laboratorios, sobre todo los pequeños y medianos de todo Chile, tengan acceso a herramientas que conecten sus sistemas sin requerir un equipo de ingeniería interno.
 
-Eso es lo que estamos resolviendo.
+Eso es lo que estamos resolviendo en Examya. No esperamos a que el sistema se arregle solo. Lo conectamos desde abajo, un laboratorio a la vez.
 
 ---
 

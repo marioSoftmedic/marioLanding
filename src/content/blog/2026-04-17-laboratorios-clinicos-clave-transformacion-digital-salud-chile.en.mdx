@@ -17,35 +17,43 @@ Clinical laboratories.
 
 Think about the typical flow. A patient leaves the doctor's office with a lab order. That order reaches the lab via fax, WhatsApp, or even in person on paper. The result comes back to the doctor when it can. Sometimes days later.
 
-The process is manual, fragmented, and slow. And it directly impacts clinical decision-making.
+The process is manual, fragmented, and slow. And it directly impacts clinical decision-making. An estimated $300 million USD per year is spent on duplicate tests in Chile alone, partly because systems don't share information with each other.
 
-At Examya we talk to labs every day. Small, medium, and large. The pattern repeats across almost all of them:
+## What we found after contacting 245 labs
 
-- Legacy systems that don't talk to each other
-- Manual processes that consume hours of technical staff time
-- Patients calling to ask about results that are already ready
+At Examya we don't talk about digital health from a desk. We've contacted and mapped **245 clinical laboratories across Chile**, from Arica to Punta Arenas. Of those, we identified and validated WhatsApp contact for **146 labs** (59.6% of the total).
+
+That discovery process was carried out by an autonomous agent that executed over **100 scraping rounds**, rotating search strategies: web scraping, Google Business Profile, social media, manual regional search. Each round processed between 10 and 20 labs, validating numbers in +569 format and cross-referencing data with institutional sources like Chile's DEIS health registry.
+
+What did we learn from those 245 indirect interactions?
+
+- **40% of labs have no functional digital presence.** Dead websites, expired domains, Facebook pages untouched for years.
+- **Small and medium labs are the most vulnerable.** No engineering team, dependent on legacy software that integrates with nothing, receiving orders through channels they can't track.
+- **WhatsApp is the de facto channel.** Not because it's ideal, but because it's what patients use. Many labs already manage appointments and deliver results through WhatsApp informally.
+
+## What we built on that foundation
+
+With that real field data, we built three concrete things:
+
+**Shuri, the WhatsApp medical agent.** An AI agent that receives a photo of a lab order via WhatsApp, interprets it with OCR, validates FONASA codes, quotes tests according to the patient's tier (A, B, C, D), and generates the order. All in one conversation. No paper, no calls, no queues.
+
+**Complete FONASA integration.** The FONASA API requires exact RUT formatting, strict validations, and tier management. We implemented validation layers before each call so patients know their exact copay before confirming.
+
+**OCR result processing.** When the lab delivers results, the system interprets, structures, and makes them available to both the patient and the physician. The complete flow: order → quote → confirmation → result → delivery.
 
 ## The lab as an information node
 
-The interoperability proposed by Chile's Ley 21.668 isn't just a matter of technical standards. It's a real operational problem affecting labs right now.
+The interoperability proposed by Chile's Ley 21.668 isn't just about technical standards (FHIR, HL7, SNOMED CT). It's a real operational problem affecting labs right now.
 
 And that's where the opportunity lies. The clinical lab isn't a passive link in the healthcare chain. It's an information node that, when properly digitized, can accelerate diagnoses, reduce errors, and improve the patient experience immediately.
 
-Think about what labs already have: structured data from every test, patient history, normalized results. The information is there. The problem is how it flows.
-
-## What we're building
-
-At Examya we're connecting that node. Not from theory, but from daily conversations with those who process Chile's lab tests.
-
-We've seen firsthand how a small lab can reduce order processing time by hours just with better integration. They don't need to replace all their systems. They need their existing systems to talk to each other.
-
-The key isn't more technology. It's better connection.
+The data is already there. What labs have is valuable: structured data from every test, patient history, normalized results. The problem was never the information. It's how it flows.
 
 ## The real challenge
 
-The true challenge of health interoperability isn't technical. It's about adoption. The standards exist (HL7, FHIR). The APIs exist. What's missing is for labs, especially small and medium ones across Chile, to have access to tools that connect their systems without requiring an in-house engineering team.
+The true challenge of health interoperability isn't technical. It's about adoption. The standards exist. The APIs exist. What's missing is for labs, especially small and medium ones across Chile, to have access to tools that connect their systems without requiring an in-house engineering team.
 
-That's what we're solving.
+That's what we're solving at Examya. Not waiting for the system to fix itself. Connecting it from the ground up, one lab at a time.
 
 ---
 
