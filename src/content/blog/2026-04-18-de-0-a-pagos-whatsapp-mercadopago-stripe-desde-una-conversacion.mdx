@@ -1,16 +1,11 @@
-**What**: Generar borrador de blog post sobre pagos por WhatsApp basado en trabajo reciente de Examya
-**Why**: Contexto reciente muestra mucho trabajo con WhatsApp OCR, flujos de pago y arquitectura de sistemas
-**Where**: /root/repos/obsidian-vault/Proyectos/05_Blog/borradores/2026-04-18-pagos-whatsapp-mercadopago-stripe.md
-**Learned**: Usar observaciones reales de Engram como fuente, no inventar detalles técnicos
-
 ---
 title: "De 0 a pagos por WhatsApp: Mercado Pago + Stripe desde una conversación"
 date: 2026-04-18
 lang: "es"
-description: "Cómo construí un sistema de pagos integrado en WhatsApp que procesa órdenes médicas y cobra automáticamente Mercado Pago y Stripe."
-tags: ["WhatsApp", "Pagos", "Mercado Pago", "Stripe", "Examya", "Integración", "Arquitectura"]
-image: "/img/blog/pagos-whatsapp-mecanismos.png"
-draft: true
+description: "Cómo construí un sistema de pagos integrado en WhatsApp que procesa órdenes médicas y cobra automáticamente con Mercado Pago y Stripe."
+tags: [WhatsApp, Pagos, Mercado Pago, Stripe, Examya, Integración, Arquitectura]
+image: "/img/blog/pagos-whatsapp-mercadopago-stripe.png"
+draft: false
 ---
 
 Un paciente envía un mensaje por WhatsApp. Adjunta un examen médico. El sistema procesa la imagen, extrae datos, calcula el precio, y envuelve todo en un flujo de pago automático. ¿Simple? Detrás hay arquitectura.
@@ -115,11 +110,11 @@ Usamos un cache en memoria con patrones específicos:
 const contextCache = new Map<string, string>()
 
 function savePendingOcr(userId: string, ocrData: string) {
-  contextCache.set(\`pending_ocr_\${userId}\`, ocrData)
+  contextCache.set(`pending_ocr_${userId}`, ocrData)
 }
 
-function getPendingOrc(userId: string): string | undefined {
-  return contextCache.get(\`pending_ocr_\${userId}\`)
+function getPendingOcr(userId: string): string | undefined {
+  return contextCache.get(`pending_ocr_${userId}`)
 }
 ```
 
@@ -130,11 +125,11 @@ Este sistema permite recibir múltiples imágenes en secuencia y procesarlas com
 En Chile, el RUT es fundamental. Validamos identidad antes de cualquier pago:
 
 1. Usuario envía RUT o número de documento
-2. Sistema valida formato y digito verificador
+2. Sistema valida formato y dígito verificador
 3. Si válido, procede con el pago
 4. Si inválido, solicita formato correcto
 
-La validación oculta en segundo plano para no interrumpir la conversación.
+La validación ocurre en segundo plano para no interrumpir la conversación.
 
 ## Manejo de errores y reintentos
 
@@ -166,7 +161,7 @@ Construir este sistema enseñó varias cosas importantes.
 
 Primero, la separación de flujos es crítica. Los pedidos de examen y los resultados deben procesarse con lógicas distintas. Un error aquí causa flujos incorrectos y pérdida de confianza.
 
-Segundo, los proveedores de pago tienen comportamientos muy distintos. Mercadopago funciona mejor para pagos rápidos dentro de Chile. Stripe es necesario para internacional pero rompe la experiencia fluida de WhatsApp.
+Segundo, los proveedores de pago tienen comportamientos muy distintos. Mercado Pago funciona mejor para pagos rápidos dentro de Chile. Stripe es necesario para internacional pero rompe la experiencia fluida de WhatsApp.
 
 Tercero, las pruebas integrales son obligatorias. Creamos 13 tests que simulan conversaciones completas: desde el primer mensaje hasta la confirmación de pago. Sin ellos, los problemas aparecen en producción.
 
