@@ -1,0 +1,189 @@
+**What**: Generar borrador de blog post sobre pagos por WhatsApp basado en trabajo reciente de Examya
+**Why**: Contexto reciente muestra mucho trabajo con WhatsApp OCR, flujos de pago y arquitectura de sistemas
+**Where**: /root/repos/obsidian-vault/Proyectos/05_Blog/borradores/2026-04-18-pagos-whatsapp-mercadopago-stripe.md
+**Learned**: Usar observaciones reales de Engram como fuente, no inventar detalles técnicos
+
+---
+title: "De 0 a pagos por WhatsApp: Mercado Pago + Stripe desde una conversación"
+date: 2026-04-18
+lang: "es"
+description: "Cómo construí un sistema de pagos integrado en WhatsApp que procesa órdenes médicas y cobra automáticamente Mercado Pago y Stripe."
+tags: ["WhatsApp", "Pagos", "Mercado Pago", "Stripe", "Examya", "Integración", "Arquitectura"]
+image: "/img/blog/pagos-whatsapp-mecanismos.png"
+draft: true
+---
+
+Un paciente envía un mensaje por WhatsApp. Adjunta un examen médico. El sistema procesa la imagen, extrae datos, calcula el precio, y envuelve todo en un flujo de pago automático. ¿Simple? Detrás hay arquitectura.
+
+## El desafío real
+
+Los flujos de pago por WhatsApp no son solo botones. Es un rompecabezas complejo con piezas móviles:
+
+- Detección de documentos médicos desde imágenes
+- Extracción de datos con OCR
+- Cálculo de precios según tipo de examen
+- Validación de identidad con RUT
+- Integración con dos proveedores de pago distintos
+- Manejo de estados complejos en conversaciones
+- Generación de comprobantes PDF
+- Notificación inmediata al confirmar pago
+
+La clave no está en un único componente. Está en cómo todos se conectan sin que el usuario lo note.
+
+## Arquitectura del flujo de pago
+
+La arquitectura sigue un modelo etapa-gate. Primero validamos que el documento sea médico. Luego procesamos según el tipo.
+
+### Etapa 1: Clasificación de documentos
+
+El sistema recibe una imagen y verifica tres cosas:
+
+- ¿Es documento médico? (clasificador de documentos)
+- ¿Es orden de examen o resultados? (diferenciación clave)
+- ¿Qué tipo de examen específico? (hemograma, lípidos, glucosa, etc.)
+
+Esta etapa usa un clasificador que detecta el tipo de documento antes de procesar. Si no es médico, el sistema rechaza amablemente.
+
+```typescript
+// Flujo básico de clasificación
+documentClassifier.classifyDocumentFromStorage()
+```
+
+El sistema aprendió que confundir hemogramas con orina era un error crítico. Las pruebas encontraron falsos positivos que derivaban en flujos incorrectos.
+
+### Etapa 2: Procesamiento OCR
+
+Si el documento es válido, el sistema extrae datos. Aquí hay dos caminos según el tipo de documento:
+
+**Para órdenes de examen:**
+- Extraer nombre del paciente
+- Validar RUT (requerido en Chile)
+- Identificar exámenes solicitados
+- Calcular precio basado en catálogo
+
+**Para resultados de examen:**
+- Extraer tipo de examen
+- Validar rangos normales vs patológicos
+- Generar interpretación automática
+- Enviar resultados con firma digital
+
+El OCR utiliza tanto OpenAI Vision como modelos locales. La clave está en los prompts específicos para cada tipo de documento médico.
+
+## Integración con proveedores de pago
+
+Aquí está la complejidad real. Dos sistemas de pago distintos que deben comportarse como uno solo desde la perspectiva del usuario.
+
+### Mercado Pago: el preferido en Chile
+
+Mercado Pago domina el mercado chileno por su integración con WhatsApp Business. El flujo es:
+
+1. Generar preferencia de pago con monto y descripción
+2. Enviar botón de pago con URL personalizada
+3. Esperar confirmación webhook del pago
+4. Liberar servicios automáticamente al confirmar
+
+```typescript
+// Simplified flow for Mercado Pago
+await mercadopago.preferences.create({
+  items: [{
+    title: examen.nombre,
+    unit_price: examen.precio,
+    currency_id: 'CLP'
+  }]
+})
+```
+
+### Stripe: para pagos internacionales
+
+Stripe requiere un enfoque diferente. Aunque soporta WhatsApp, su integración es más compleja:
+
+1. Crear PaymentIntent con amount y currency
+2. Generar Checkout Session URL
+3. Redirigir usuario a interfaz segura de Stripe
+4. Webhook para confirmación en servidor
+
+El desafío es mantener la experiencia de WhatsApp mientras rediriges a un entorno externo seguro.
+
+## Estado en conversaciones
+
+Las conversaciones de WhatsApp son stateless por naturaleza. El sistema debe recordar contexto entre mensajes.
+
+Usamos un cache en memoria con patrones específicos:
+
+```typescript
+// Pattern: pendingOcr para capturar múltiples documentos
+const contextCache = new Map<string, string>()
+
+function savePendingOcr(userId: string, ocrData: string) {
+  contextCache.set(\`pending_ocr_\${userId}\`, ocrData)
+}
+
+function getPendingOrc(userId: string): string | undefined {
+  return contextCache.get(\`pending_ocr_\${userId}\`)
+}
+```
+
+Este sistema permite recibir múltiples imágenes en secuencia y procesarlas como parte del mismo pedido.
+
+## Validación de identidad
+
+En Chile, el RUT es fundamental. Validamos identidad antes de cualquier pago:
+
+1. Usuario envía RUT o número de documento
+2. Sistema valida formato y digito verificador
+3. Si válido, procede con el pago
+4. Si inválido, solicita formato correcto
+
+La validación oculta en segundo plano para no interrumpir la conversación.
+
+## Manejo de errores y reintentos
+
+Los pagos fallan por muchas razones: tarjeta vencida, saldo insuficiente, problemas de red.
+
+El sistema implementa:
+
+- Intentos automáticos con backoff exponencial
+- Notificación amable de falla
+- Opción de cambiar método de pago
+- Logging detallado para debugging
+
+No podemos dejar al usuario en la incertidumbre si algo falla.
+
+## Transparencia con el usuario
+
+La clave es mantener al usuario informado sin abrumar:
+
+- Confirmación inmediata al recibir documento
+- Progreso real de procesamiento
+- Estado del pago en tiempo real
+- Comprobante PDF enviado automáticamente
+
+El usuario siempre sabe qué está pasando.
+
+## Lecciones aprendidas
+
+Construir este sistema enseñó varias cosas importantes.
+
+Primero, la separación de flujos es crítica. Los pedidos de examen y los resultados deben procesarse con lógicas distintas. Un error aquí causa flujos incorrectos y pérdida de confianza.
+
+Segundo, los proveedores de pago tienen comportamientos muy distintos. Mercadopago funciona mejor para pagos rápidos dentro de Chile. Stripe es necesario para internacional pero rompe la experiencia fluida de WhatsApp.
+
+Tercero, las pruebas integrales son obligatorias. Creamos 13 tests que simulan conversaciones completas: desde el primer mensaje hasta la confirmación de pago. Sin ellos, los problemas aparecen en producción.
+
+## Futuro: interoperabilidad total
+
+El siguiente paso es conectar esto con sistemas de salud existentes. FHIR, HL7, y la Ley 21.668 nos obligan a interoperar con clínicas, laboratorios y aseguradoras.
+
+La arquitectura actual permite esta expansión. Podemos integrarnos con cualquier sistema que use estándares médicos.
+
+## El valor real
+
+Lo importante no es que puedas cobrar por WhatsApp. Es que puedes reducir la fricción en el sistema de salud.
+
+Un paciente puede pedir exámenes desde su celular. Pagar sin complicaciones. Recibir resultados sin papeles. Todo en una conversación natural.
+
+Esa es la verdadera innovación.
+
+---
+
+¿Listo para transformar tu sistema de pagos? Escribe a mario.inostroza.m@gmail.com o contáctame en @marioinostroza en X. Construyo estos sistemas para empresas reales con problemas complejos.
