@@ -1,0 +1,29 @@
+name: Validate blog posts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/blog/**'
+      - 'scripts/validate-posts.mjs'
+      - '.github/workflows/validate-posts.yml'
+  pull_request:
+    paths:
+      - 'src/content/blog/**'
+      - 'scripts/validate-posts.mjs'
+      - '.github/workflows/validate-posts.yml'
+
+jobs:
+  validate:
+    name: canonicalSlug required on EN posts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Script has zero runtime deps — no install needed.
+      - name: Run validate-posts
+        run: node scripts/validate-posts.mjs

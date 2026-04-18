@@ -40,11 +40,39 @@ The Obsidian vault is the source of truth for the blog. Claude NEVER creates blo
 - ES: `src/content/blog/YYYY-MM-DD-{slug}.mdx` with `lang: 'es'`
 - EN: `src/content/blog/YYYY-MM-DD-{slug}.en.mdx` with `lang: 'en'`
 
+### Blog publishing gotchas (MANDATORY — learned the hard way)
+
+These rules exist because production deploys failed. The automated guard is `scripts/validate-posts.mjs`, wired into both a Husky pre-commit hook and a GitHub Actions workflow (`.github/workflows/validate-posts.yml`). Respect them even when editing by hand.
+
+1. **Every EN post MUST have `canonicalSlug` in its frontmatter.**
+   `src/pages/en/blog/[slug].astro` routes via `post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '')`. Astro's fallback from `post.id` does not always produce the expected URL, so EN posts without an explicit `canonicalSlug` 404 in production. **This is not a style preference — it breaks the live site.**
+
+   Required frontmatter example for `2026-04-17-my-post.en.mdx`:
+   ```yaml
+   ---
+   title: "..."
+   date: 2026-04-17
+   lang: "en"
+   canonicalSlug: "2026-04-17-my-post"   # <-- MANDATORY for EN posts
+   description: "..."
+   tags: [...]
+   image: "/img/blog/..."
+   draft: false
+   ---
+   ```
+
+2. **Run the validator before asking for a deploy.** `npm run validate-posts` should exit 0. The pre-commit hook runs it automatically on staged EN posts; CI re-runs it on every PR and main-branch push. If CI fails, the fix is almost always "add canonicalSlug to the failing file."
+
+3. **ES posts do not need `canonicalSlug`.** Only `.en.mdx` files — the Spanish URLs don't go through the same fallback path.
+
+4. **Never bypass the hook** (`git commit --no-verify`). The CI check will still fail and block the deploy; you just lose local signal.
+
 ## Commands
 
 ```bash
-npm run dev       # Start dev server at localhost:4321
-npm run preview   # Preview production build locally
+npm run dev              # Start dev server at localhost:4321
+npm run preview          # Preview production build locally
+npm run validate-posts   # Guard: every EN post has canonicalSlug (run before deploy)
 ```
 
 > **Never run `npm run build` after changes** — this is a rule.

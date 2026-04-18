@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# Pre-commit: block any EN blog post missing canonicalSlug.
+#
+# Why: src/pages/en/blog/[slug].astro routes via post.data.canonicalSlug,
+# and EN posts without it 404 in production (see scripts/validate-posts.mjs).
+#
+# Only runs the check when staged files include EN posts, so regular commits
+# stay fast.
+
+set -e
+
+staged_en_posts=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^src/content/blog/.+\.en\.(md|mdx)$' || true)
+
+if [ -z "$staged_en_posts" ]; then
+  exit 0
+fi
+
+echo "[pre-commit] Validating staged EN blog posts..."
+# shellcheck disable=SC2086
+node scripts/validate-posts.mjs $staged_en_posts
