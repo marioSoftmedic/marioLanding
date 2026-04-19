@@ -1,0 +1,117 @@
+---
+title: "FHIR + Law 21.668: How Examya Is Preparing for Chile's Mandatory Interoperability"
+date: 2026-04-18
+lang: "en"
+canonicalSlug: "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+description: "How we're adding a FHIR layer on top of Examya's current stack (NestJS + Prisma + pgvector) to comply with Law 21.668 without rewriting anything."
+tags: ["FHIR", "Law 21.668", "Interoperability", "Digital Health", "Chile", "Examya", "HL7", "NestJS", "pgvector"]
+image: "/img/blog/fhir-adapter-architecture.svg"
+draft: false
+---
+
+Two days ago I wrote about why Law 21.668 changes the game for digital health in Chile, and yesterday about the 245 labs we mapped to understand the landscape. Today the concrete part: how we're preparing the Examya stack to actually speak FHIR, without starting from scratch.
+
+This post is for anyone who already understands what FHIR and Law 21.668 are and is wondering: *how do you implement this on top of an app that's already in production?*
+
+## The dangerous temptation: rewrite everything
+
+When a new standard arrives the first reaction is easy: "let's redo the data model in native FHIR." Expensive mistake. Your app works, your tests pass, your users depend on the current flow. Breaking that to comply with a future standard is trading technical debt for product debt.
+
+The alternative is more boring but more solid: **FHIR layer as an adapter**. Business domains (`Order`, `Payment`, `Patient`) don't get touched. What changes is how those domains project outward when a third party asks in FHIR format.
+
+Since we already work with Clean Architecture and DDD in Examya, the layer fits naturally: a new adapter in the infrastructure layer that maps domain entities to FHIR resources (`Bundle`, `ServiceRequest`, `Patient`, `Coverage`). Existing controllers keep serving our own JSON for the mobile app; a new set of controllers serves FHIR to labs, MINSAL, and any external integrator.
+
+## Where we are today
+
+The Examya stack is a monorepo with pnpm workspaces. Backend NestJS 11, Prisma 6, PostgreSQL with pgvector for semantic search, Flutter for mobile. Communication is classic REST.
+
+The main flow: a photo of a medical order arrives via WhatsApp, goes through OCR with OpenAI Vision in `whatsapp-webhook.controller.ts`, gets transformed into a structured order, and ends with FONASA quote + payment. Post-payment runs on Bull jobs: `process-payment-confirmation` orchestrates notification, PDF, and delivery.
+
+That entire flow lives in our Prisma schema. None of that changes. What gets added is a FHIR projection of the same data:
+
+```ts
+// src/infra/fhir/adapters/service-request.adapter.ts
+export function toServiceRequest(order: Order): ServiceRequest {
+  return {
+    resourceType: 'ServiceRequest',
+    status: mapStatus(order.state),
+    intent: 'order',
+    subject: { reference: `Patient/${order.patient.fhirId}` },
+    code: { coding: order.items.map(toLoincCoding) },
+    requester: { reference: `Practitioner/${order.requester.fhirId}` },
+    authoredOn: order.createdAt.toISOString(),
+  };
+}
+```
+
+The adapter is pure mapping. Medical, pricing, and payment logic stay intact in the use cases.
+
+## pgvector as an unexpected advantage
+
+It turns out that pgvector, which we originally added for semantic search inside the agents, also solves one of FHIR's most underestimated pains: **terminology coding**.
+
+FHIR resources demand standard coding (SNOMED CT, LOINC, ICD-10). When a Chilean doctor writes "complete blood count" in an order, no system magically knows that's LOINC `58410-2`. Traditionally two paths: manual dictionaries (fragile, incomplete) or paid terminology services.
+
+Our alternative: embed the free text and search by similarity against a vector index of pre-loaded LOINC codes.
+
+```sql
+SELECT loinc_code, display
+FROM terminology_loinc
+ORDER BY embedding <=> $1::vector
+LIMIT 3;
+```
+
+The top-3 gets sent by an agent to human validation in the first weeks, and the result feeds back into the index. Not a silver bullet, but it dramatically reduces the manual mapping work and improves over time without us doing anything new.
+
+This is the kind of architectural decision you don't see coming when you decide to add pgvector for something else. One of those "positive side effects" that justifies building with generic blocks instead of vertical solutions.
+
+## DeepEval to validate FHIR Bundles
+
+One thing that gives me peace of mind is that the evaluation layer is already there. We have DeepEval running with custom metrics to validate FONASA extraction and Chilean RUT check digit. The 13 E2E integration tests cover the complete flow: photo → OCR → RUT/email → order → payment → delivery.
+
+Adding FHIR on top of that is additive:
+
+1. Every existing E2E test now also emits the generated FHIR `Bundle`.
+2. A custom evaluator validates the Bundle against the Chilean MINSAL profile (when available) or against the official HL7 validator.
+3. If an E2E test passes, the FHIR Bundle that accompanies that flow **must** be valid. There's no business flow without its correct FHIR counterpart.
+
+The advantage is we're not inventing a FHIR test pipeline from scratch. We're hooking one more assert into the pipeline we already trust.
+
+## Flow separation: each one is a different resource
+
+The current architecture already separates two paths that until now were "the same problem": the OCR quote flow (`IMAGE → handleOcrExtraction() → fixed price → isQuotation: true`) and the purchase flow through Shuri (`TEXT → PurchaseHandler → dynamic pricing`). In FHIR that stops being an internal detail and starts mattering outward.
+
+- OCR quote → `ServiceRequest` with `intent: 'proposal'` (it's a proposal of service, not a firm order).
+- Confirmed purchase → `ServiceRequest` with `intent: 'order'` + associated `Task` to track execution.
+- Lab result → `DiagnosticReport` + `Observation` per parameter.
+
+This separation already existed for product reasons. Now it turns out it maps one-to-one with FHIR's `intent`. Again the pattern: decisions made for internal clarity pay interest when an external standard arrives.
+
+## What I learned so far
+
+Three things that weren't obvious at the start:
+
+**Adapter > rewrite, as long as your domain is healthy**. If your internal model is chaotic, FHIR will amplify it. If your internal model is clean, FHIR is just another port. DDD + Clean Architecture are not "overkill for startups" — they're what makes complying with a new law a ticket instead of a project.
+
+**Standards reward decisions taken before they existed**. pgvector for something else, quote vs purchase separation for UX reasons, DeepEval to validate RUT. All of that, taken months earlier, today becomes a FHIR advantage. Building with general blocks pays off when a requirement you didn't see coming shows up.
+
+**The hard part isn't FHIR, it's terminology**. Generating a well-formed `Bundle` is tooling. Mapping "complete blood count" to LOINC is product. Most projects underestimate that second part.
+
+## What's next
+
+We're in design phase. The coming weeks:
+
+1. Define the Chilean FHIR profile relevant to lab orders (joint work with CENS and whatever comes out of the HL7 Chile Connectathon).
+2. Implement adapters in NestJS, one service per FHIR resource.
+3. Add FHIR validation tests to the CI pipeline on GitHub Actions.
+4. Expose a read-only FHIR endpoint so the first pilot labs can consume orders directly.
+
+Not trivial work. But the architecture we've been building gives us a head start. When enforcement arrives, Examya will be ready — and much of the work is already done without us having called it that.
+
+---
+
+If you work on health interoperability in Chile or LATAM, or you have a lab that needs to connect without an internal engineering team, reach out:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

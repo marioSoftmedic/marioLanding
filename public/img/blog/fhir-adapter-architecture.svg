@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="Inter, system-ui, -apple-system, sans-serif">
+  <rect width="1200" height="720" fill="#0b1220"/>
+  <text x="600" y="50" fill="#e2e8f0" font-size="28" font-weight="700" text-anchor="middle">FHIR como adapter sobre el stack actual de Examya</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="15" text-anchor="middle">Ley 21.668 — sin reescribir, solo agregando una capa</text>
+  <g>
+    <rect x="60" y="120" width="1080" height="90" rx="12" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+    <text x="90" y="150" fill="#cbd5e1" font-size="14" font-weight="600">Consumidores externos (FHIR R4)</text>
+    <rect x="100" y="160" width="180" height="38" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="190" y="184" fill="#e2e8f0" font-size="13" text-anchor="middle">Laboratorios clínicos</text>
+    <rect x="310" y="160" width="180" height="38" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="400" y="184" fill="#e2e8f0" font-size="13" text-anchor="middle">MINSAL / CENS</text>
+    <rect x="520" y="160" width="180" height="38" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="610" y="184" fill="#e2e8f0" font-size="13" text-anchor="middle">Integradores terceros</text>
+    <rect x="730" y="160" width="180" height="38" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="820" y="184" fill="#e2e8f0" font-size="13" text-anchor="middle">Connectathon HL7 CL</text>
+    <rect x="940" y="160" width="180" height="38" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="1030" y="184" fill="#e2e8f0" font-size="13" text-anchor="middle">Agentes MCP externos</text>
+  </g>
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <line x1="190" y1="198" x2="190" y2="240" marker-end="url(#arrow)"/>
+    <line x1="400" y1="198" x2="400" y2="240" marker-end="url(#arrow)"/>
+    <line x1="610" y1="198" x2="610" y2="240" marker-end="url(#arrow)"/>
+    <line x1="820" y1="198" x2="820" y2="240" marker-end="url(#arrow)"/>
+    <line x1="1030" y1="198" x2="1030" y2="240" marker-end="url(#arrow)"/>
+  </g>
+  <g>
+    <rect x="60" y="245" width="1080" height="115" rx="12" fill="#0c4a6e" stroke="#0ea5e9" stroke-width="2"/>
+    <text x="90" y="275" fill="#7dd3fc" font-size="14" font-weight="700">Capa FHIR Adapter  ·  NUEVA</text>
+    <text x="1130" y="275" fill="#7dd3fc" font-size="12" text-anchor="end">src/infra/fhir/</text>
+    <rect x="100" y="290" width="180" height="54" rx="8" fill="#075985" stroke="#38bdf8"/>
+    <text x="190" y="312" fill="#e0f2fe" font-size="13" text-anchor="middle" font-weight="600">ServiceRequest</text>
+    <text x="190" y="331" fill="#bae6fd" font-size="11" text-anchor="middle">intent: proposal | order</text>
+    <rect x="310" y="290" width="180" height="54" rx="8" fill="#075985" stroke="#38bdf8"/>
+    <text x="400" y="312" fill="#e0f2fe" font-size="13" text-anchor="middle" font-weight="600">Patient + Coverage</text>
+    <text x="400" y="331" fill="#bae6fd" font-size="11" text-anchor="middle">RUT → identifier | FONASA</text>
+    <rect x="520" y="290" width="180" height="54" rx="8" fill="#075985" stroke="#38bdf8"/>
+    <text x="610" y="312" fill="#e0f2fe" font-size="13" text-anchor="middle" font-weight="600">DiagnosticReport</text>
+    <text x="610" y="331" fill="#bae6fd" font-size="11" text-anchor="middle">+ Observation[] por parámetro</text>
+    <rect x="730" y="290" width="180" height="54" rx="8" fill="#075985" stroke="#38bdf8"/>
+    <text x="820" y="312" fill="#e0f2fe" font-size="13" text-anchor="middle" font-weight="600">Bundle + Task</text>
+    <text x="820" y="331" fill="#bae6fd" font-size="11" text-anchor="middle">transacción + tracking</text>
+    <rect x="940" y="290" width="180" height="54" rx="8" fill="#075985" stroke="#38bdf8"/>
+    <text x="1030" y="312" fill="#e0f2fe" font-size="13" text-anchor="middle" font-weight="600">Terminology</text>
+    <text x="1030" y="331" fill="#bae6fd" font-size="11" text-anchor="middle">LOINC · SNOMED · CIE-10</text>
+  </g>
+  <g>
+    <path d="M 1030 344 Q 1030 390 940 415" stroke="#facc15" stroke-width="2" fill="none" stroke-dasharray="4,4"/>
+    <text x="1090" y="395" fill="#facc15" font-size="11" text-anchor="end">embedding &lt;=&gt; LOINC</text>
+  </g>
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <line x1="400" y1="360" x2="400" y2="405" marker-end="url(#arrow)"/>
+    <line x1="610" y1="360" x2="610" y2="405" marker-end="url(#arrow)"/>
+    <line x1="820" y1="360" x2="820" y2="405" marker-end="url(#arrow)"/>
+  </g>
+  <g>
+    <rect x="60" y="410" width="1080" height="115" rx="12" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+    <text x="90" y="440" fill="#cbd5e1" font-size="14" font-weight="700">Dominio Examya  ·  SIN CAMBIOS</text>
+    <text x="1130" y="440" fill="#94a3b8" font-size="12" text-anchor="end">DDD · Clean Architecture</text>
+    <rect x="100" y="455" width="180" height="54" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="190" y="478" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">Order · Patient</text>
+    <text x="190" y="496" fill="#94a3b8" font-size="11" text-anchor="middle">agregados del dominio</text>
+    <rect x="310" y="455" width="180" height="54" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="400" y="478" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">OCR + Vision</text>
+    <text x="400" y="496" fill="#94a3b8" font-size="11" text-anchor="middle">handleOcrExtraction()</text>
+    <rect x="520" y="455" width="180" height="54" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="610" y="478" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">Pricing FONASA</text>
+    <text x="610" y="496" fill="#94a3b8" font-size="11" text-anchor="middle">tramos A · B · C · D</text>
+    <rect x="730" y="455" width="180" height="54" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="820" y="478" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">PurchaseHandler</text>
+    <text x="820" y="496" fill="#94a3b8" font-size="11" text-anchor="middle">Shuri · pricing dinámico</text>
+    <rect x="940" y="455" width="180" height="54" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="1030" y="478" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">Bull jobs</text>
+    <text x="1030" y="496" fill="#94a3b8" font-size="11" text-anchor="middle">process-payment-confirmation</text>
+  </g>
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <line x1="300" y1="525" x2="300" y2="575" marker-end="url(#arrow)"/>
+    <line x1="600" y1="525" x2="600" y2="575" marker-end="url(#arrow)"/>
+    <line x1="900" y1="525" x2="900" y2="575" marker-end="url(#arrow)"/>
+  </g>
+  <g>
+    <rect x="60" y="580" width="1080" height="110" rx="12" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+    <text x="90" y="610" fill="#cbd5e1" font-size="14" font-weight="700">Infraestructura</text>
+    <text x="1130" y="610" fill="#94a3b8" font-size="12" text-anchor="end">NestJS 11 · monorepo pnpm</text>
+    <rect x="100" y="625" width="260" height="50" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="230" y="647" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">Prisma 6 + PostgreSQL</text>
+    <text x="230" y="664" fill="#94a3b8" font-size="11" text-anchor="middle">esquema propio, sin migración forzada</text>
+    <rect x="390" y="625" width="260" height="50" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="520" y="647" fill="#fde68a" font-size="13" text-anchor="middle" font-weight="600">pgvector</text>
+    <text x="520" y="664" fill="#94a3b8" font-size="11" text-anchor="middle">mapeo semántico texto → LOINC/SNOMED</text>
+    <rect x="680" y="625" width="260" height="50" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="810" y="647" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">DeepEval</text>
+    <text x="810" y="664" fill="#94a3b8" font-size="11" text-anchor="middle">13 E2E + assert Bundle FHIR válido</text>
+    <rect x="970" y="625" width="150" height="50" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="1045" y="647" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">CI GitHub</text>
+    <text x="1045" y="664" fill="#94a3b8" font-size="11" text-anchor="middle">Actions</text>
+  </g>
+  <g>
+    <rect x="60" y="698" width="14" height="14" fill="#0c4a6e" stroke="#0ea5e9"/>
+    <text x="82" y="710" fill="#94a3b8" font-size="11">Capa nueva (FHIR)</text>
+    <rect x="220" y="698" width="14" height="14" fill="#1e293b" stroke="#475569"/>
+    <text x="242" y="710" fill="#94a3b8" font-size="11">Stack existente sin cambios</text>
+    <line x1="430" y1="705" x2="454" y2="705" stroke="#facc15" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="462" y="710" fill="#94a3b8" font-size="11">Búsqueda vectorial (LOINC)</text>
+  </g>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+</svg>

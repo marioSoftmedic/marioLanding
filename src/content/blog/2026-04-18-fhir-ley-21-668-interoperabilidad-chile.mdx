@@ -1,0 +1,116 @@
+---
+title: "FHIR + Ley 21.668: cómo Examya se prepara para la interoperabilidad obligatoria en Chile"
+date: 2026-04-18
+lang: "es"
+description: "Cómo estamos agregando una capa FHIR sobre el stack actual de Examya (NestJS + Prisma + pgvector) para cumplir con la Ley 21.668 sin reescribir todo."
+tags: ["FHIR", "Ley 21.668", "Interoperabilidad", "Salud Digital", "Chile", "Examya", "HL7", "NestJS", "pgvector"]
+image: "/img/blog/fhir-adapter-architecture.svg"
+draft: false
+---
+
+Hace dos días publiqué por qué la Ley 21.668 cambia las reglas del juego en salud digital, y ayer sobre los 245 laboratorios que mapeamos para entender el terreno. Hoy me toca lo más concreto: cómo estamos preparando el stack de Examya para hablar FHIR de verdad, sin volver a empezar de cero.
+
+Este post es para quien ya entiende qué es FHIR y la Ley 21.668 y se está preguntando: *¿cómo se implementa esto encima de una app que ya está en producción?*
+
+## La tentación peligrosa: reescribir todo
+
+Cuando llega un estándar nuevo la primera reacción es fácil: "rehagamos el modelo de datos en FHIR nativo". Error carísimo. Tu app funciona, tus tests pasan, tus usuarios dependen del flujo actual. Romper eso para cumplir un estándar futuro es cambiar deuda técnica por deuda de producto.
+
+La alternativa es más aburrida pero más sólida: **capa FHIR como adapter**. Los dominios de negocio (`Order`, `Payment`, `Patient`) no se tocan. Lo que cambia es cómo esos dominios se proyectan hacia afuera cuando un tercero pregunta en formato FHIR.
+
+Como ya trabajamos con Clean Architecture y DDD en Examya, la capa encaja naturalmente: un nuevo adapter en la capa de infraestructura que mapea entidades del dominio a recursos FHIR (`Bundle`, `ServiceRequest`, `Patient`, `Coverage`). Los controllers existentes siguen sirviendo JSON propio para la app móvil; un nuevo conjunto de controllers sirve FHIR para laboratorios, MINSAL, y cualquier integrador externo.
+
+## Dónde estamos hoy
+
+El stack de Examya es un monorepo con pnpm workspaces. Backend NestJS 11, Prisma 6, PostgreSQL con pgvector para búsqueda semántica, Flutter para mobile. La comunicación es REST clásica.
+
+El flujo principal: una foto de orden médica llega por WhatsApp, pasa por OCR con OpenAI Vision en `whatsapp-webhook.controller.ts`, se transforma en una orden estructurada, y termina con cotización FONASA + pago. El post-pago corre sobre jobs de Bull: `process-payment-confirmation` orquesta notificación, PDF y delivery.
+
+Todo ese flujo vive en nuestro esquema Prisma. Nada de eso cambia. Lo que se agrega es una proyección FHIR del mismo dato:
+
+```ts
+// src/infra/fhir/adapters/service-request.adapter.ts
+export function toServiceRequest(order: Order): ServiceRequest {
+  return {
+    resourceType: 'ServiceRequest',
+    status: mapStatus(order.state),
+    intent: 'order',
+    subject: { reference: `Patient/${order.patient.fhirId}` },
+    code: { coding: order.items.map(toLoincCoding) },
+    requester: { reference: `Practitioner/${order.requester.fhirId}` },
+    authoredOn: order.createdAt.toISOString(),
+  };
+}
+```
+
+El adapter es puro mapeo. La lógica médica, de pricing y de pago sigue intacta en los casos de uso.
+
+## pgvector como ventaja inesperada
+
+Resulta que pgvector, que agregamos originalmente para búsqueda semántica dentro de los agentes, también resuelve uno de los dolores más subestimados de FHIR: **la codificación de terminologías**.
+
+Los recursos FHIR exigen codificación estándar (SNOMED CT, LOINC, CIE-10). Cuando un médico chileno escribe "hemograma completo" en una orden, ningún sistema sabe mágicamente que eso es LOINC `58410-2`. Tradicionalmente hay dos caminos: diccionarios manuales (frágiles, incompletos) o servicios de terminología pagos.
+
+Nuestra alternativa: embeber el texto libre y buscar por similitud contra un índice vectorial de códigos LOINC precargado.
+
+```sql
+SELECT loinc_code, display
+FROM terminology_loinc
+ORDER BY embedding <=> $1::vector
+LIMIT 3;
+```
+
+El top-3 lo manda un agente a validación humana las primeras semanas, y el resultado retroalimenta el índice. No es bala de plata, pero reduce dramáticamente el trabajo manual de mapeo y mejora sobre el tiempo sin que hagamos nada nuevo.
+
+Esto es el tipo de decisión arquitectónica que no se ve venir cuando decidís agregar pgvector para otra cosa. Uno de esos "efectos colaterales positivos" que justifican construir con bloques genéricos en vez de soluciones verticales.
+
+## DeepEval para validar Bundles FHIR
+
+Un punto que me tranquiliza es que la capa de evaluación ya está. Tenemos DeepEval corriendo con métricas custom para validar extracción FONASA y dígito verificador de RUT. Los 13 tests de integración E2E cubren el flujo completo: foto → OCR → RUT/email → orden → pago → delivery.
+
+Agregar FHIR encima de eso es aditivo:
+
+1. Cada test E2E existente ahora emite también el `Bundle` FHIR generado.
+2. Un evaluador custom valida el Bundle contra el perfil chileno del MINSAL (cuando esté disponible) o contra el validador oficial de HL7.
+3. Si un test E2E pasa, el Bundle FHIR que acompaña a ese flujo **tiene que** ser válido. No hay flujo de negocio sin su contraparte FHIR correcta.
+
+La ventaja es que no estamos inventando un pipeline de tests FHIR desde cero. Estamos enganchando un assert más al pipeline que ya confiamos.
+
+## Separación de flujos: cada uno es un recurso distinto
+
+La arquitectura actual ya separa dos caminos que hasta ahora eran "el mismo problema": el flujo de cotización por OCR (`IMAGE → handleOcrExtraction() → precio fijo → isQuotation: true`) y el flujo de compra por Shuri (`TEXT → PurchaseHandler → pricing dinámico`). En FHIR eso deja de ser un detalle interno y empieza a importar hacia afuera.
+
+- Cotización OCR → `ServiceRequest` con `intent: 'proposal'` (es una propuesta de servicio, no una orden firme).
+- Compra confirmada → `ServiceRequest` con `intent: 'order'` + `Task` asociado para trackear la ejecución.
+- Resultado del laboratorio → `DiagnosticReport` + `Observation` por cada parámetro.
+
+Esta separación ya existía por razones de producto. Ahora resulta que encaja uno a uno con los `intent` de FHIR. Otra vez el patrón: decisiones tomadas por claridad interna que pagan interés cuando llega un estándar externo.
+
+## Lo que aprendí hasta acá
+
+Tres cosas que no eran obvias al empezar:
+
+**Adapter > reescritura, siempre que tu dominio esté sano**. Si tu modelo interno es caótico, FHIR lo va a amplificar. Si tu modelo interno está limpio, FHIR es un puerto más. DDD + Clean Architecture no son "overkill para startups" — son lo que hace que cumplir una ley nueva sea un ticket y no un proyecto.
+
+**Los estándares premian decisiones tomadas antes de que existieran**. pgvector para otra cosa, separación de cotización vs compra por razones de UX, DeepEval para validar RUT. Todo eso, tomado meses antes, hoy se convierte en ventaja FHIR. Construir con bloques generales rinde cuando aparece un requisito que no viste venir.
+
+**La parte dura no es FHIR, es la terminología**. Generar un `Bundle` bien formado es tooling. Mapear "hemograma completo" a LOINC es producto. La mayoría de los proyectos subestima esa segunda parte.
+
+## Lo que viene
+
+Estamos en fase de diseño. Las próximas semanas:
+
+1. Definir el perfil FHIR chileno relevante para órdenes de laboratorio (trabajo conjunto con CENS y lo que salga del Connectathon HL7 Chile).
+2. Implementar los adapters en NestJS, un servicio por recurso FHIR.
+3. Agregar tests de validación FHIR al pipeline de CI en GitHub Actions.
+4. Exponer un endpoint FHIR de solo lectura para que los primeros laboratorios piloto consuman órdenes directo.
+
+No es trabajo trivial. Pero la arquitectura que fuimos construyendo nos da pie derecho. Cuando la fiscalización llegue, Examya va a estar listo — y buena parte del trabajo ya está hecho sin haberlo llamado así.
+
+---
+
+Si trabajás en interoperabilidad en salud en Chile o LATAM, o tenés un laboratorio que necesita conectarse sin tener equipo de ingeniería interno, me escribís:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
