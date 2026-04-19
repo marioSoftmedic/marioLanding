@@ -1,0 +1,183 @@
+---
+title: "From 0 to WhatsApp Payments: Mercado Pago + Stripe from a Single Conversation"
+date: 2026-04-18
+lang: "en"
+canonicalSlug: "2026-04-18-de-0-a-pagos-whatsapp-mercadopago-stripe-desde-una-conversacion"
+description: "How I built a payment system embedded in WhatsApp that processes medical orders and charges automatically with Mercado Pago and Stripe."
+tags: [WhatsApp, Payments, Mercado Pago, Stripe, Examya, Integration, Architecture]
+image: "/img/blog/pagos-whatsapp-mercadopago-stripe.png"
+draft: false
+---
+
+A patient sends a WhatsApp message. They attach a medical test. The system processes the image, extracts data, calculates the price, and wraps it all in an automatic payment flow. Simple? Behind the scenes, there's architecture.
+
+## The real challenge
+
+WhatsApp payment flows aren't just buttons. They're a complex puzzle with moving pieces:
+
+- Medical document detection from images
+- Data extraction with OCR
+- Price calculation based on test type
+- Identity validation with RUT
+- Integration with two different payment providers
+- Complex state management in conversations
+- PDF receipt generation
+- Immediate notification on payment confirmation
+
+The key isn't in a single component. It's in how they all connect without the user noticing.
+
+## Payment flow architecture
+
+The architecture follows a stage-gate model. First we validate that the document is medical. Then we process based on type.
+
+### Stage 1: Document classification
+
+The system receives an image and verifies three things:
+
+- Is it a medical document? (document classifier)
+- Is it a test order or results? (key differentiation)
+- What specific test type? (blood count, lipids, glucose, etc.)
+
+This stage uses a classifier that detects the document type before processing. If it's not medical, the system politely rejects it.
+
+```typescript
+// Basic classification flow
+documentClassifier.classifyDocumentFromStorage()
+```
+
+The system learned that confusing blood counts with urine tests was a critical error. Tests found false positives that led to incorrect flows.
+
+### Stage 2: OCR processing
+
+If the document is valid, the system extracts data. There are two paths depending on document type:
+
+**For test orders:**
+- Extract patient name
+- Validate RUT (required in Chile)
+- Identify requested tests
+- Calculate price based on catalog
+
+**For test results:**
+- Extract test type
+- Validate normal vs pathological ranges
+- Generate automatic interpretation
+- Send results with digital signature
+
+The OCR uses both OpenAI Vision and local models. The key is in specific prompts for each medical document type.
+
+## Payment provider integration
+
+This is where the real complexity lives. Two different payment systems that must behave as one from the user's perspective.
+
+### Mercado Pago: the Chilean favorite
+
+Mercado Pago dominates the Chilean market thanks to its WhatsApp Business integration. The flow is:
+
+1. Generate payment preference with amount and description
+2. Send payment button with custom URL
+3. Wait for payment confirmation webhook
+4. Automatically release services on confirmation
+
+```typescript
+// Simplified flow for Mercado Pago
+await mercadopago.preferences.create({
+  items: [{
+    title: exam.name,
+    unit_price: exam.price,
+    currency_id: 'CLP'
+  }]
+})
+```
+
+### Stripe: for international payments
+
+Stripe requires a different approach. Although it supports WhatsApp, its integration is more complex:
+
+1. Create PaymentIntent with amount and currency
+2. Generate Checkout Session URL
+3. Redirect user to Stripe's secure interface
+4. Server-side webhook for confirmation
+
+The challenge is maintaining the WhatsApp experience while redirecting to a secure external environment.
+
+## Conversation state
+
+WhatsApp conversations are stateless by nature. The system must remember context between messages.
+
+We use an in-memory cache with specific patterns:
+
+```typescript
+// Pattern: pendingOcr to capture multiple documents
+const contextCache = new Map<string, string>()
+
+function savePendingOcr(userId: string, ocrData: string) {
+  contextCache.set(`pending_ocr_${userId}`, ocrData)
+}
+
+function getPendingOcr(userId: string): string | undefined {
+  return contextCache.get(`pending_ocr_${userId}`)
+}
+```
+
+This system allows receiving multiple images in sequence and processing them as part of the same order.
+
+## Identity validation
+
+In Chile, the RUT is fundamental. We validate identity before any payment:
+
+1. User sends RUT or document number
+2. System validates format and check digit
+3. If valid, proceed with payment
+4. If invalid, request correct format
+
+Validation happens in the background to avoid interrupting the conversation.
+
+## Error handling and retries
+
+Payments fail for many reasons: expired card, insufficient funds, network issues.
+
+The system implements:
+
+- Automatic retries with exponential backoff
+- Friendly failure notifications
+- Option to change payment method
+- Detailed logging for debugging
+
+We can't leave the user in uncertainty when something fails.
+
+## User transparency
+
+The key is keeping the user informed without overwhelming them:
+
+- Immediate confirmation when receiving a document
+- Real processing progress
+- Real-time payment status
+- PDF receipt sent automatically
+
+The user always knows what's happening.
+
+## Lessons learned
+
+Building this system taught several important things.
+
+First, flow separation is critical. Test orders and results must be processed with different logic. An error here causes incorrect flows and loss of trust.
+
+Second, payment providers behave very differently. Mercado Pago works better for quick payments within Chile. Stripe is necessary for international but breaks the fluid WhatsApp experience.
+
+Third, integration tests are mandatory. We created 13 tests that simulate complete conversations: from the first message to payment confirmation. Without them, problems appear in production.
+
+## Future: full interoperability
+
+The next step is connecting this with existing health systems. FHIR, HL7, and Chile's Law 21.668 require us to interoperate with clinics, laboratories, and insurers.
+
+The current architecture allows for this expansion. We can integrate with any system using medical standards.
+
+## The real value
+
+A patient can request tests from their phone, pay without complications, and get results without paperwork. All in one natural conversation. At Examya we process this flow with two payment providers and an average response time of 8 seconds from image arrival to payment button display.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/marioHealthBits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
