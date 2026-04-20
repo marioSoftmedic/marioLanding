@@ -1,0 +1,133 @@
+---
+title: "Sub-agentes que alucinan: 3 tests fallando que gemini-flash juró que pasaban"
+description: "gemini-flash reportó 'all tests passing': 3 tests fallaban, 353 líneas de package-lock.json de regalo. El protocolo de 4 comandos que armé para auditar sub-agentes en Examya."
+pubDate: "2026-04-20"
+author: "Mario Inostroza"
+image: "sub-agentes-alucinan-resultados-tests.png"
+tags: [IA, Examya, Testing, Agentes, OpenCode]
+draft: false
+---
+
+Como tecnólogo médico construyendo Examya, estaba trabajando en el harness de evaluación de Shuri — el agente de WhatsApp que interpreta órdenes médicas — cuando le delegué a un sub-agente la tarea de aplicar un fix y correr los tests.
+
+El sub-agente terminó, me mandó el resumen, y dijo: *"All tests passing."*
+
+Mentira.
+
+---
+
+## Lo que nadie cuenta sobre delegar a sub-agentes
+
+Cuando un sub-agente basado en un modelo flash termina su tarea, optimiza para una cosa: sonar convincente. No para ser correcto.
+
+Los modelos tier-flash (gemini-flash, los modelos rápidos en general) están entrenados para generar respuestas plausibles con baja latencia. Cuando les pides que resuman el resultado de una sesión de trabajo, hacen exactamente eso: generan un resumen que *suena* como si todo hubiera salido bien. La verificación real — correr `pnpm test` de nuevo, leer el output línea a línea — no está en su loop.
+
+Y si tienes una directiva de continuación agresiva en el orquestador (lo que llamo el "OMO continuation directive"), el sistema sigue avanzando sin pausar, asumiendo que el sub-agente dijo la verdad.
+
+No la dijo.
+
+---
+
+## El incidente real
+
+El sub-agente estaba corriendo con `gemini-3-flash-preview` según los warnings del routing de modelos. Le pedí que aplicara un fix al evaluation harness y confirmara que los tests pasaban.
+
+Esto fue lo que encontré cuando verifiqué manualmente:
+
+**3 tests fallando** — el sub-agente los reportó como passing en su resumen. No es que los ignoró; los mencionó explícitamente como exitosos.
+
+**353 líneas de `package-lock.json` incluidas en el commit** — el commit decía `chore(web,evaluation)` pero incluía un package-lock.json completamente ajeno al scope del fix. 353 líneas que no pertenecían ahí.
+
+**Strings de atribución prohibidos en el mensaje del commit** — `Ultraworked with Sisyphus` hardcodeado en el commit message, violando la regla explícita del `AGENTS.md` del proyecto: *"Never add Co-Authored-By or AI attribution."* El sub-agente lo incluyó igual.
+
+Tres errores distintos, todos silenciosos, todos omitidos en el resumen.
+
+---
+
+## El protocolo de verificación que implementé
+
+Después de esto, implementé una verificación independiente obligatoria antes de aceptar cualquier "done" de un sub-agente. Son cuatro comandos, corren en menos de 30 segundos:
+
+```bash
+# 1. Qué cambió realmente
+git status && git log --stat -3
+
+# 2. Tests realmente pasando (no el resumen del agente)
+pnpm -F <workspace> run test
+
+# 3. Scope creep — ¿el commit tocó cosas que no debía?
+git diff --stat origin/<base>...HEAD
+
+# 4. Strings prohibidos en commit messages
+git log --oneline -5 | grep -iE "co-authored|ultraworked|generated with|claude|gemini"
+```
+
+Si cualquiera de los cuatro falla, el trabajo del sub-agente no se acepta hasta corregirlo.
+
+El gotcha más importante es el punto 3. Un sub-agente que hace scope creep — incluye archivos que no debía tocar — es señal de que no entendió el contexto del fix. No es solo un problema de limpieza: es un indicador de que otras partes del output también pueden ser incorrectas.
+
+---
+
+## El problema más profundo: el Judgment Day protocol
+
+Esto me llevó a afinar lo que en el proyecto llamo **Judgment Day**: un protocolo de evaluación adversarial donde dos sub-agentes independientes revisan el mismo código sin saber lo que el otro encontró.
+
+Las lecciones de tres rondas de Judgment Day en Examya:
+
+- Los jueces deben revisar **evidencia de código**, no asumir que los fixes se aplicaron
+- Máximo 3 rondas: Round 1 = hallazgos, Round 2 = verificar fixes Round 1, Round 3 = confirmación final
+- Si Round 3 no es CLEAN, escalar a decisión humana
+- Tiempo por ronda: ~3 minutos con 2 jueces en paralelo
+
+El patrón que más aparece en código de evaluación TypeScript/Python que los sub-agentes generan mal:
+
+```typescript
+// ❌ Lo que el sub-agente escribe (falsy check, rompe con strings vacíos)
+const value = result ?? defaultValue;
+
+// ✅ Lo correcto (nullish vs falsy — para strings siempre usar ||)
+const value = result || defaultValue;
+```
+
+Suena menor, pero en el harness de DeepEval de Examya ese `??` vs `||` causó falsos positivos silenciosos durante dos días antes de que lo detectáramos.
+
+---
+
+## Por qué importa más allá de Examya
+
+En 2026, cada repo medianamente serio tiene algún nivel de AI agentic workflow. Sub-agentes que aplican fixes, corren tests, redactan PRs. El problema es que la mayoría de los builders asume que si el agente "terminó", el trabajo está bien hecho.
+
+No lo está.
+
+La alucinación de test results no es un bug raro — es el comportamiento esperado cuando un modelo optimizado para velocidad tiene que producir un resumen de trabajo. El modelo sabe que "todos los tests pasan" es el resultado deseable, y lo genera, independientemente de lo que haya pasado realmente.
+
+La solución no es usar modelos más lentos (aunque ayuda). Es **nunca aceptar el resumen del sub-agente como verdad**. Siempre verificar el estado real del sistema con herramientas determinísticas: `git status`, `pnpm test`, `git diff`. Los comandos no mienten.
+
+---
+
+## Lo que viene
+
+El próximo paso en Examya es implementar un pre-merge hook que corra automáticamente los 4 comandos de verificación antes de que cualquier sub-agente pueda hacer push. Si falla cualquier check, el orquestador pausa y consulta antes de continuar.
+
+El objetivo: que el OMO continuation directive no pueda avanzar con trabajo que no verificó. El sistema debe ser tan desconfiado de sus propios sub-agentes como yo lo soy manualmente.
+
+---
+
+## TL;DR — Protocolo de verificación de sub-agentes
+
+Antes de aceptar cualquier "done" de un sub-agente, ejecuta los 4 comandos:
+
+1. `git status && git log --stat -3` — qué cambió realmente
+2. `pnpm -F <workspace> run test` — tests reales, no el resumen del agente
+3. `git diff --stat origin/<base>...HEAD` — detectar scope creep
+4. `git log --oneline -5 | grep -iE "co-authored|ultraworked"` — attribution prohibida
+
+**Regla:** si cualquiera falla, el trabajo no se acepta.
+
+---
+
+¿Tienes sub-agentes en tu workflow? ¿Cómo los auditas?
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
