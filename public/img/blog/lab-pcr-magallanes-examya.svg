@@ -1,1 +1,118 @@
-²ø1šYì
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#020617"/>
+      <stop offset="100%" style="stop-color:#0d1117"/>
+    </linearGradient>
+    <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f2027;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="glowCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22d3ee;stop-opacity:0"/>
+      <stop offset="50%" style="stop-color:#22d3ee;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#22d3ee;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.4"/>
+  <polygon points="0,630 0,420 80,320 160,380 240,260 340,340 420,200 500,310 580,240 650,630" fill="url(#mountainGrad)" opacity="0.5"/>
+  <polygon points="550,630 600,280 680,350 760,230 850,310 920,180 1000,270 1080,200 1200,300 1200,630" fill="url(#mountainGrad)" opacity="0.35"/>
+  <circle cx="100" cy="80" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="250" cy="100" r="1.5" fill="white" opacity="0.7"/>
+  <circle cx="420" cy="70" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="600" cy="55" r="1" fill="white" opacity="0.5"/>
+  <circle cx="800" cy="75" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="1000" cy="60" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="1150" cy="90" r="1" fill="white" opacity="0.6"/>
+  <text x="600" y="56" font-family="Courier New,monospace" font-size="21" fill="white" text-anchor="middle" font-weight="bold">Como instale el primer lab PCR privado de Magallanes</text>
+  <text x="600" y="82" font-family="Courier New,monospace" font-size="15" fill="#94a3b8" text-anchor="middle">(y por que termine construyendo IA)</text>
+  <line x1="300" y1="100" x2="900" y2="100" stroke="#22d3ee" stroke-width="0.8" opacity="0.4"/>
+  <rect x="510" y="110" width="180" height="22" rx="11" fill="rgba(8,51,68,0.5)" stroke="#22d3ee" stroke-width="1"/>
+  <text x="600" y="125" font-family="Courier New,monospace" font-size="9" fill="#22d3ee" text-anchor="middle">mariohealthbits.dev</text>
+  <rect x="40" y="295" width="120" height="165" rx="4" fill="#0a1628" stroke="#334155" stroke-width="1.5"/>
+  <rect x="55" y="310" width="25" height="20" rx="2" fill="#fbbf24" opacity="0.7"/>
+  <rect x="90" y="310" width="25" height="20" rx="2" fill="#fbbf24" opacity="0.3"/>
+  <rect x="55" y="340" width="25" height="20" rx="2" fill="#fbbf24" opacity="0.9"/>
+  <rect x="90" y="340" width="25" height="20" rx="2" fill="#fbbf24" opacity="0.5"/>
+  <rect x="78" y="420" width="40" height="40" rx="2" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <line x1="200" y1="190" x2="200" y2="440" stroke="#475569" stroke-width="3"/>
+  <line x1="135" y1="190" x2="320" y2="190" stroke="#475569" stroke-width="3"/>
+  <line x1="200" y1="190" x2="135" y2="270" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="270" y1="190" x2="270" y2="278" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="244" y="278" width="56" height="48" rx="3" fill="#0f2027" stroke="#34d399" stroke-width="1.5"/>
+  <text x="272" y="297" font-family="Courier New,monospace" font-size="8" fill="#34d399" text-anchor="middle">BSC TYPE II</text>
+  <text x="272" y="314" font-family="Courier New,monospace" font-size="11" fill="#fbbf24" text-anchor="middle" font-weight="bold">300 kg</text>
+  <rect x="30" y="175" width="210" height="76" rx="6" fill="rgba(6,78,59,0.15)" stroke="#34d399" stroke-width="1"/>
+  <text x="135" y="196" font-family="Courier New,monospace" font-size="11" fill="#34d399" text-anchor="middle" font-weight="bold">MARZO 2021</text>
+  <text x="135" y="214" font-family="Courier New,monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Cuarentena Fase 2</text>
+  <text x="135" y="231" font-family="Courier New,monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Puerto Natales, Patagonia</text>
+  <text x="135" y="245" font-family="Courier New,monospace" font-size="8" fill="#64748b" text-anchor="middle">Primer lab PCR privado de Magallanes</text>
+  <rect x="30" y="472" width="210" height="50" rx="4" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-width="1"/>
+  <text x="44" y="491" font-family="Courier New,monospace" font-size="9" fill="#fbbf24">Mayo 2021: 1er lab privado PCR</text>
+  <text x="44" y="506" font-family="Courier New,monospace" font-size="8" fill="#94a3b8">Region de Magallanes</text>
+  <text x="44" y="517" font-family="Courier New,monospace" font-size="8" fill="#64748b">2-3 meses antes que Punta Arenas</text>
+  <line x1="360" y1="310" x2="815" y2="310" stroke="#22d3ee" stroke-width="1" opacity="0.4"/>
+  <circle cx="360" cy="310" r="6" fill="#020617" stroke="#fbbf24" stroke-width="2"/>
+  <text x="360" y="330" font-family="Courier New,monospace" font-size="9" fill="#fbbf24" text-anchor="middle">Mar 2021</text>
+  <text x="360" y="343" font-family="Courier New,monospace" font-size="8" fill="#64748b" text-anchor="middle">Lab instalado</text>
+  <circle cx="500" cy="310" r="6" fill="#020617" stroke="#34d399" stroke-width="2"/>
+  <text x="500" y="330" font-family="Courier New,monospace" font-size="9" fill="#34d399" text-anchor="middle">May 2021</text>
+  <text x="500" y="343" font-family="Courier New,monospace" font-size="8" fill="#64748b" text-anchor="middle">1ras muestras PCR</text>
+  <circle cx="655" cy="310" r="6" fill="#020617" stroke="#a78bfa" stroke-width="2"/>
+  <text x="655" y="330" font-family="Courier New,monospace" font-size="9" fill="#a78bfa" text-anchor="middle">Noche a noche</text>
+  <text x="655" y="343" font-family="Courier New,monospace" font-size="8" fill="#64748b" text-anchor="middle">1 AM  8 AM</text>
+  <circle cx="815" cy="310" r="6" fill="#020617" stroke="#22d3ee" stroke-width="2"/>
+  <text x="815" y="330" font-family="Courier New,monospace" font-size="9" fill="#22d3ee" text-anchor="middle">2026</text>
+  <text x="815" y="343" font-family="Courier New,monospace" font-size="8" fill="#64748b" text-anchor="middle">Examya</text>
+  <rect x="358" y="368" width="432" height="108" rx="6" fill="rgba(30,41,59,0.5)" stroke="#1e293b" stroke-width="1"/>
+  <rect x="358" y="368" width="432" height="20" fill="#0f172a" rx="0"/>
+  <text x="370" y="382" font-family="Courier New,monospace" font-size="8" fill="#64748b">RUT</text>
+  <text x="445" y="382" font-family="Courier New,monospace" font-size="8" fill="#64748b">MUESTRA</text>
+  <text x="550" y="382" font-family="Courier New,monospace" font-size="8" fill="#64748b">RESULTADO</text>
+  <text x="680" y="382" font-family="Courier New,monospace" font-size="8" fill="#64748b">HORA</text>
+  <line x1="358" y1="388" x2="790" y2="388" stroke="#1e293b" stroke-width="1"/>
+  <line x1="358" y1="406" x2="790" y2="406" stroke="#1e293b" stroke-width="1"/>
+  <line x1="358" y1="424" x2="790" y2="424" stroke="#1e293b" stroke-width="1"/>
+  <text x="366" y="401" font-family="Courier New,monospace" font-size="7.5" fill="#475569">12.345.678-9</text>
+  <text x="445" y="401" font-family="Courier New,monospace" font-size="7.5" fill="#475569">PCR-001</text>
+  <text x="550" y="401" font-family="Courier New,monospace" font-size="7.5" fill="#34d399">NEGATIVO</text>
+  <text x="680" y="401" font-family="Courier New,monospace" font-size="7.5" fill="#fbbf24">00:47</text>
+  <text x="366" y="419" font-family="Courier New,monospace" font-size="7.5" fill="#475569">9.876.543-2</text>
+  <text x="445" y="419" font-family="Courier New,monospace" font-size="7.5" fill="#475569">PCR-002</text>
+  <text x="550" y="419" font-family="Courier New,monospace" font-size="7.5" fill="#fb7185">POSITIVO</text>
+  <text x="680" y="419" font-family="Courier New,monospace" font-size="7.5" fill="#fbbf24">01:03</text>
+  <text x="366" y="437" font-family="Courier New,monospace" font-size="7.5" fill="#475569">15.432.100-K</text>
+  <text x="445" y="437" font-family="Courier New,monospace" font-size="7.5" fill="#475569">PCR-003</text>
+  <text x="550" y="437" font-family="Courier New,monospace" font-size="7.5" fill="#34d399">NEGATIVO</text>
+  <text x="680" y="437" font-family="Courier New,monospace" font-size="7.5" fill="#fbbf24">01:18</text>
+  <text x="366" y="466" font-family="Courier New,monospace" font-size="8" fill="#fbbf24">01:18 AM - planilla enviada al MINSAL a mano</text>
+  <rect x="898" y="192" width="268" height="296" rx="8" fill="rgba(8,51,68,0.35)" stroke="#22d3ee" stroke-width="1.5"/>
+  <rect x="898" y="192" width="268" height="34" rx="8" fill="rgba(8,51,68,0.6)"/>
+  <rect x="898" y="214" width="268" height="12" fill="rgba(8,51,68,0.6)"/>
+  <text x="1032" y="216" font-family="Courier New,monospace" font-size="14" fill="#22d3ee" text-anchor="middle" font-weight="bold">EXAMYA</text>
+  <rect x="914" y="240" width="236" height="40" rx="4" fill="rgba(6,78,59,0.3)" stroke="#34d399" stroke-width="1"/>
+  <text x="924" y="257" font-family="Courier New,monospace" font-size="9" fill="#34d399">WhatsApp - Orden medica</text>
+  <text x="924" y="272" font-family="Courier New,monospace" font-size="8" fill="#64748b">OCR automatico - sin papel</text>
+  <rect x="914" y="292" width="236" height="40" rx="4" fill="rgba(76,29,149,0.3)" stroke="#a78bfa" stroke-width="1"/>
+  <text x="924" y="309" font-family="Courier New,monospace" font-size="9" fill="#a78bfa">Agente Shuri</text>
+  <text x="924" y="324" font-family="Courier New,monospace" font-size="8" fill="#64748b">Cotizacion FONASA - trazabilidad</text>
+  <rect x="914" y="344" width="236" height="40" rx="4" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+  <text x="924" y="361" font-family="Courier New,monospace" font-size="9" fill="#fbbf24">Sin planillas - sin 1 AM</text>
+  <text x="924" y="376" font-family="Courier New,monospace" font-size="8" fill="#64748b">Resultado en segundos</text>
+  <rect x="914" y="396" width="236" height="40" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
+  <text x="924" y="413" font-family="Courier New,monospace" font-size="9" fill="#94a3b8">Trazabilidad automatica</text>
+  <text x="924" y="428" font-family="Courier New,monospace" font-size="8" fill="#64748b">Lo que haciamos a mano, ahora es IA</text>
+  <line x1="830" y1="310" x2="892" y2="310" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)" opacity="0.9"/>
+  <text x="600" y="590" font-family="Courier New,monospace" font-size="9" fill="#334155" text-anchor="middle">Puerto Natales, Patagonia - Biohealth 2021 - Examya 2026</text>
+</svg>
