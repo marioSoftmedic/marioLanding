@@ -22,7 +22,7 @@ const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description}>
+<Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description} image={post.data.image}>
   <article class="py-24 px-4">
     <div class="max-w-3xl mx-auto">
 
