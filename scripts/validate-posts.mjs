@@ -2,18 +2,21 @@
 /**
  * validate-posts.mjs
  *
- * Checks every EN blog post (src/content/blog/*.en.mdx or *.en.md) has a
- * `canonicalSlug` in its YAML frontmatter.
+ * Two checks per post:
  *
- * Why: src/pages/en/blog/[slug].astro builds URLs from
- * `post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '')`.
- * Astro 6's content loader doesn't always produce a post.id that matches the
- * clean URL we want — so EN posts without canonicalSlug 404 in production.
+ * 1. Every EN blog post (src/content/blog/*.en.{md,mdx}) MUST have a
+ *    `canonicalSlug` in its YAML frontmatter.
+ *    Why: src/pages/en/blog/[slug].astro builds URLs from
+ *    `post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '')`.
+ *    Astro 6's content loader doesn't always produce a post.id matching the
+ *    clean URL we want, so EN posts without canonicalSlug 404 in production.
  *
- * This guard catches that before it ships.
+ * 2. Every blog post (ES + EN) MUST only use tags that exist in the canonical
+ *    taxonomy (src/lib/tags.ts). Without this, "IA" vs "AI" vs "ia" each
+ *    create their own /blog/tags/<slug> page with one post — useless.
  *
  * Usage:
- *   node scripts/validate-posts.mjs          # validate all EN posts
+ *   node scripts/validate-posts.mjs          # validate all blog posts
  *   node scripts/validate-posts.mjs file...  # validate specific files only
  *
  * Exit codes: 0 ok, 1 validation failed, 2 config/IO error.
@@ -25,8 +28,8 @@ import { join, resolve, relative, basename } from 'node:path';
 const ROOT = resolve(process.cwd());
 const BLOG_DIR = join(ROOT, 'src', 'content', 'blog');
 const EN_PATTERN = /\.en\.(md|mdx)$/;
+const ANY_POST_PATTERN = /\.(md|mdx)$/;
 
-// ANSI colors (only when TTY)
 const tty = process.stdout.isTTY;
 const red = (s) => (tty ? `\x1b[31m${s}\x1b[0m` : s);
 const green = (s) => (tty ? `\x1b[32m${s}\x1b[0m` : s);
@@ -34,35 +37,120 @@ const yellow = (s) => (tty ? `\x1b[33m${s}\x1b[0m` : s);
 const bold = (s) => (tty ? `\x1b[1m${s}\x1b[0m` : s);
 
 /**
- * Extract YAML frontmatter block from a post. Returns the raw YAML string
- * between the opening `---` and the closing `---`, or null if none.
+ * Load the tag taxonomy by parsing src/lib/tags.ts as text.
+ *
+ * Strategy: extract only the `slug:` and `aliases:` fields from each TagDef
+ * entry with two narrow regexes. This avoids evaluating TypeScript at all,
+ * which means no tsx/ts-node dev dep AND no fragility from type annotations.
+ *
+ * The trade-off: if you add a TagDef in a wildly different shape (computed
+ * keys, spread, etc.), this parser will silently miss aliases. The taxonomy
+ * file documents the shape it expects.
+ *
+ * Returns a Set of every accepted alias (lowercased) plus an isKnownTag()
+ * helper that mirrors the runtime behavior of src/lib/tags.ts.
  */
+function loadTaxonomy() {
+  const tagsTs = join(ROOT, 'src', 'lib', 'tags.ts');
+  let source;
+  try {
+    source = readFileSync(tagsTs, 'utf8');
+  } catch (err) {
+    console.error(red(`[validate-posts] Could not read tags taxonomy at ${tagsTs}: ${err.message}`));
+    process.exit(2);
+  }
+
+  const acceptedLower = new Set();
+  const aliasArrayRe = /aliases\s*:\s*\[([^\]]*)\]/g;
+  let m;
+  while ((m = aliasArrayRe.exec(source)) !== null) {
+    const inner = m[1];
+    const stringRe = /["']([^"']+)["']/g;
+    let s;
+    while ((s = stringRe.exec(inner)) !== null) {
+      acceptedLower.add(s[1].toLowerCase().trim());
+    }
+  }
+
+  const slugRe = /slug\s*:\s*["']([^"']+)["']/g;
+  let sm;
+  while ((sm = slugRe.exec(source)) !== null) {
+    acceptedLower.add(sm[1].toLowerCase().trim());
+  }
+
+  if (acceptedLower.size === 0) {
+    console.error(red(`[validate-posts] Parsed 0 tags from ${tagsTs} — the taxonomy parser is broken or the file is empty.`));
+    process.exit(2);
+  }
+
+  return {
+    isKnownTag: (raw) => acceptedLower.has(String(raw).toLowerCase().trim()),
+    size: acceptedLower.size,
+  };
+}
+
 function extractFrontmatter(source) {
-  // Must start with ---\n (allow BOM + leading whitespace defensively)
   const trimmed = source.replace(/^\uFEFF/, '');
   if (!trimmed.startsWith('---')) return null;
   const afterOpen = trimmed.slice(3);
-  // Find the closing fence on its own line
   const closeMatch = afterOpen.match(/\r?\n---\s*(\r?\n|$)/);
   if (!closeMatch) return null;
   return afterOpen.slice(0, closeMatch.index);
 }
 
-/**
- * Minimal frontmatter field check: looks for `canonicalSlug:` at the start
- * of a line (ignoring leading whitespace) with a non-empty value.
- * Intentionally avoids a full YAML parser — no runtime deps, and the rule
- * is simple enough that a regex is sound.
- */
 function hasCanonicalSlug(frontmatter) {
   const re = /^\s*canonicalSlug\s*:\s*(["']?)([^"'\n\r]+)\1\s*$/m;
   const m = frontmatter.match(re);
   if (!m) return false;
-  const value = m[2].trim();
-  return value.length > 0;
+  return m[2].trim().length > 0;
 }
 
-function listEnPosts() {
+/**
+ * Extract the `tags:` array from frontmatter as a list of raw strings.
+ * Supports both inline `tags: ["a", "b"]` and `tags: [a, b]` plus the YAML
+ * block form:
+ *   tags:
+ *     - foo
+ *     - "bar baz"
+ *
+ * Returns [] if no tags field is found (consistent with the schema default).
+ */
+function extractTags(frontmatter) {
+  // Inline form on the same line
+  const inlineMatch = frontmatter.match(/^\s*tags\s*:\s*\[([^\]]*)\]\s*$/m);
+  if (inlineMatch) {
+    const inner = inlineMatch[1].trim();
+    if (inner === '') return [];
+    return inner
+      .split(',')
+      .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+      .filter((s) => s.length > 0);
+  }
+
+  // Block form across multiple lines
+  const blockHeaderRe = /^\s*tags\s*:\s*$/m;
+  const headerMatch = frontmatter.match(blockHeaderRe);
+  if (headerMatch) {
+    const after = frontmatter.slice(headerMatch.index + headerMatch[0].length);
+    const lines = after.split(/\r?\n/);
+    const tags = [];
+    for (const line of lines) {
+      const itemMatch = line.match(/^\s*-\s*(["']?)([^"'\n\r]+)\1\s*$/);
+      if (itemMatch) {
+        tags.push(itemMatch[2].trim());
+      } else if (line.trim() === '' || /^\s*-/.test(line)) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    return tags;
+  }
+
+  return [];
+}
+
+function listAllPosts() {
   let entries;
   try {
     entries = readdirSync(BLOG_DIR, { withFileTypes: true });
@@ -71,67 +159,82 @@ function listEnPosts() {
     process.exit(2);
   }
   return entries
-    .filter((e) => e.isFile() && EN_PATTERN.test(e.name))
+    .filter((e) => e.isFile() && ANY_POST_PATTERN.test(e.name))
     .map((e) => join(BLOG_DIR, e.name));
 }
 
-/**
- * Filter a list of file paths down to EN blog posts only.
- * Used when the script is invoked from a git hook with specific staged files.
- */
-function filterEnPosts(paths) {
+function filterPosts(paths) {
   return paths
     .map((p) => resolve(p))
     .filter((p) => {
       const rel = relative(ROOT, p);
-      return rel.startsWith(join('src', 'content', 'blog') + '/') && EN_PATTERN.test(basename(p));
+      return rel.startsWith(join('src', 'content', 'blog') + '/') && ANY_POST_PATTERN.test(basename(p));
     });
 }
 
-function validatePost(filePath) {
+function isEnPost(filePath) {
+  return EN_PATTERN.test(basename(filePath));
+}
+
+function validatePost(filePath, taxonomy) {
   let source;
   try {
     source = readFileSync(filePath, 'utf8');
   } catch (err) {
-    return { ok: false, file: filePath, error: `cannot read: ${err.message}` };
+    return [{ ok: false, file: filePath, error: `cannot read: ${err.message}` }];
   }
   const fm = extractFrontmatter(source);
   if (fm === null) {
-    return { ok: false, file: filePath, error: 'no YAML frontmatter found (expected --- ... --- block at top)' };
+    return [{ ok: false, file: filePath, error: 'no YAML frontmatter found (expected --- ... --- block at top)' }];
   }
-  if (!hasCanonicalSlug(fm)) {
-    return { ok: false, file: filePath, error: 'missing required field `canonicalSlug`' };
+
+  const errors = [];
+
+  if (isEnPost(filePath) && !hasCanonicalSlug(fm)) {
+    errors.push({ ok: false, file: filePath, error: 'missing required field `canonicalSlug` (EN posts only)' });
   }
-  return { ok: true, file: filePath };
+
+  const rawTags = extractTags(fm);
+  const unknownTags = rawTags.filter((t) => !taxonomy.isKnownTag(t));
+  if (unknownTags.length > 0) {
+    errors.push({
+      ok: false,
+      file: filePath,
+      error: `unknown tag(s) not in taxonomy: ${unknownTags.map((t) => `"${t}"`).join(', ')}`,
+    });
+  }
+
+  if (errors.length === 0) return [{ ok: true, file: filePath }];
+  return errors;
 }
 
 function main() {
+  const taxonomy = loadTaxonomy();
   const argv = process.argv.slice(2);
   let targets;
   if (argv.length > 0) {
-    targets = filterEnPosts(argv);
+    targets = filterPosts(argv);
     if (targets.length === 0) {
-      // Nothing EN-shaped was passed — not our problem, exit clean.
       process.exit(0);
     }
   } else {
-    targets = listEnPosts();
+    targets = listAllPosts();
   }
 
   if (targets.length === 0) {
-    console.log(yellow('[validate-posts] No EN blog posts found. Nothing to validate.'));
+    console.log(yellow('[validate-posts] No blog posts found. Nothing to validate.'));
     process.exit(0);
   }
 
-  const results = targets.map(validatePost);
-  const failures = results.filter((r) => !r.ok);
+  const allResults = targets.flatMap((f) => validatePost(f, taxonomy));
+  const failures = allResults.filter((r) => !r.ok);
 
   if (failures.length === 0) {
-    console.log(green(`[validate-posts] ✓ ${results.length} EN post(s) validated — all have canonicalSlug.`));
+    console.log(green(`[validate-posts] ✓ ${targets.length} post(s) validated — canonicalSlug + taxonomy OK.`));
     process.exit(0);
   }
 
-  console.error(bold(red(`\n[validate-posts] ✗ ${failures.length} EN post(s) failed validation:\n`)));
+  console.error(bold(red(`\n[validate-posts] ✗ ${failures.length} validation issue(s):\n`)));
   for (const f of failures) {
     const rel = relative(ROOT, f.file);
     console.error(`  ${red('✗')} ${bold(rel)}`);
@@ -139,8 +242,10 @@ function main() {
   }
   console.error(
     yellow(
-      '\nFix: add a `canonicalSlug: "YYYY-MM-DD-your-slug"` line to the frontmatter of each failing file.\n' +
-        'Without it, /en/blog/<slug> 404s in production — the fallback path that Astro generates does not match the expected URL.\n'
+      '\nFix instructions:\n' +
+        '  • Missing canonicalSlug → add `canonicalSlug: "YYYY-MM-DD-your-slug"` to the EN post frontmatter.\n' +
+        '  • Unknown tag → either fix the tag in the post (use a taxonomy alias) or add it to TAG_TAXONOMY in src/lib/tags.ts.\n' +
+        '    See _TAXONOMY.md in the Obsidian vault for the canonical list of allowed tags.\n'
     )
   );
   process.exit(1);

@@ -61,11 +61,44 @@ These rules exist because production deploys failed. The automated guard is `scr
    ---
    ```
 
-2. **Run the validator before asking for a deploy.** `npm run validate-posts` should exit 0. The pre-commit hook runs it automatically on staged EN posts; CI re-runs it on every PR and main-branch push. If CI fails, the fix is almost always "add canonicalSlug to the failing file."
+2. **Run the validator before asking for a deploy.** `npm run validate-posts` should exit 0. The pre-commit hook runs it automatically on staged EN posts; CI re-runs it on every PR and main-branch push. If CI fails, the fix is one of:
+   - missing `canonicalSlug` on an EN post
+   - a tag in the post that does not exist in the taxonomy (see "Tag taxonomy" below)
 
 3. **ES posts do not need `canonicalSlug`.** Only `.en.mdx` files — the Spanish URLs don't go through the same fallback path.
 
 4. **Never bypass the hook** (`git commit --no-verify`). The CI check will still fail and block the deploy; you just lose local signal.
+
+### Post relations: tags, series, and `related` (the linking model)
+
+Every post can be connected to others via three layered mechanisms, applied in this priority order at render time (`src/lib/relations.ts`):
+
+1. **`related: [slug]`** — explicit author choice. Author lists 0-3 slugs of posts that should be surfaced together with this one. Highest priority.
+2. **`series: <slug>` + `seriesOrder: N`** — narrative arc. All posts sharing a `series` value render a "Part N of M" box at the bottom in seriesOrder, plus appear in each other's related panel.
+3. **Tag similarity** — automatic fallback. Posts sharing canonical tag slugs are scored by Jaccard similarity and the top matches fill remaining related slots.
+
+The `RelatedPosts.astro` component is included at the end of every post automatically. Authors don't have to do anything for the tag-similarity fallback to work — it just happens.
+
+When adding a post: ask "does this continue an existing arc?" → set `series`. Ask "is there one specific older post the reader MUST read after this?" → set `related`. Otherwise leave both empty and let tags do the work.
+
+### Tag taxonomy (controlled vocabulary)
+
+`src/lib/tags.ts` is the single source of truth for all tags that may appear in any blog post. It maps a list of human-written aliases (e.g. `"IA"`, `"AI"`, `"ia"`, `"inteligencia artificial"`) to a single canonical slug (`ai`) plus per-language display labels (`{ es: 'IA', en: 'AI' }`).
+
+**Why this exists**: before, "Ley21668" / "Ley 21.668" / "Law 21.668" / "SaludDigital" / "Salud Digital" were treated as different tags. Each became its own page with one post — useless navigation.
+
+**Rules:**
+- A post may only use tags whose lowercased trimmed value matches a slug or alias in `TAG_TAXONOMY`. The validator (`scripts/validate-posts.mjs`) rejects unknown tags in pre-commit and CI.
+- The mirror documentation for humans/Cotocha lives at `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/_TAXONOMY.md` — keep them in sync when editing.
+- To add a new tag: edit `TAG_TAXONOMY` in `src/lib/tags.ts` AND mirror the entry in `_TAXONOMY.md` in the vault. Then run `npm run validate-posts`.
+
+### Tag pages (clickable navigation)
+
+- Every canonical tag has an auto-generated page at `/blog/tags/<slug>` (ES) and `/en/blog/tags/<slug>` (EN), built by `src/pages/blog/tags/[tag].astro` and the EN twin.
+- The index `/blog/tags` is a tag cloud sized by post count, linked from the blog index header.
+- Tags shown in the post header (hero) link to their tag page. Tags in the post listing cards do NOT link (the card itself is already the link to the post — nesting `<a>` is invalid HTML).
+
+When adding a brand new tag, the tag page appears automatically on the next build. No routing changes needed.
 
 ## Commands
 

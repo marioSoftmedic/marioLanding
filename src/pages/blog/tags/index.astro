@@ -1,0 +1,63 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { tagsForPost, tagDisplay } from '../../../lib/tags';
+import { useTranslations, basePath } from '../../../i18n/utils';
+import { postsForLang } from '../../../lib/relations';
+
+const lang = 'es' as const;
+const t = useTranslations(lang);
+const base = basePath(lang);
+
+const allPosts = await getCollection('blog');
+const posts = postsForLang(allPosts, lang);
+
+const counts = new Map<string, number>();
+for (const p of posts) {
+  for (const slug of tagsForPost(p.data.tags)) {
+    counts.set(slug, (counts.get(slug) ?? 0) + 1);
+  }
+}
+
+const entries = [...counts.entries()]
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+const maxCount = entries[0]?.[1] ?? 1;
+const sizeFor = (n: number) => {
+  const ratio = n / maxCount;
+  if (ratio > 0.66) return 'text-2xl';
+  if (ratio > 0.33) return 'text-xl';
+  return 'text-base';
+};
+---
+
+<Base title={t('blog.tags.meta.title')} description={t('blog.tags.meta.desc')}>
+  <section class="py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+      <div class="mb-14">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">
+          {t('blog.tags.label')}
+        </p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">{t('blog.tags.heading')}</h1>
+        <p class="mt-3 text-lg" style="color: var(--text-muted);">{t('blog.tags.subtitle')}</p>
+      </div>
+
+      {entries.length === 0 ? (
+        <p class="text-lg" style="color: var(--text-faint);">{t('blog.tags.empty')}</p>
+      ) : (
+        <div class="flex flex-wrap gap-3 items-baseline">
+          {entries.map(([slug, count]) => (
+            <a
+              href={`${base}/blog/tags/${slug}`}
+              class={`${sizeFor(count)} font-semibold px-3 py-1.5 rounded-lg transition-colors duration-200 hover:opacity-80`}
+              style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);"
+            >
+              {tagDisplay(slug, lang)}
+              <span class="text-xs font-mono ml-1.5" style="color: var(--text-faint);">{count}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</Base>

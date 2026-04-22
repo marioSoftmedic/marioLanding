@@ -2,11 +2,12 @@
 import Base from '../../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
 import { useTranslations, basePath } from '../../../i18n/utils';
+import { tagsForPost, tagDisplay } from '../../../lib/tags';
+import RelatedPosts from '../../../components/RelatedPosts.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'en');
   return posts.map((post) => ({
-    // Strip .en suffix for clean URLs: post-slug.en.mdx → /en/blog/post-slug
     params: { slug: post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '') },
     props: { post },
   }));
@@ -17,6 +18,7 @@ const { Content } = await render(post);
 
 const t = useTranslations('en');
 const base = basePath('en');
+const tagSlugs = tagsForPost(post.data.tags);
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
@@ -40,10 +42,14 @@ const formatDate = (date: Date) =>
       )}
 
       <header class="mb-10">
-        {post.data.tags.length > 0 && (
+        {tagSlugs.length > 0 && (
           <div class="flex flex-wrap gap-2 mb-4">
-            {post.data.tags.map((tag) => (
-              <span class="px-2.5 py-1 text-xs rounded-md font-medium" style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);">{tag}</span>
+            {tagSlugs.map((slug) => (
+              <a
+                href={`${base}/blog/tags/${slug}`}
+                class="px-2.5 py-1 text-xs rounded-md font-medium transition-opacity hover:opacity-80"
+                style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);"
+              >{tagDisplay(slug, 'en')}</a>
             ))}
           </div>
         )}
@@ -63,6 +69,8 @@ const formatDate = (date: Date) =>
       <div class="prose-blog">
         <Content />
       </div>
+
+      <RelatedPosts post={post} lang="en" />
 
     </div>
   </article>

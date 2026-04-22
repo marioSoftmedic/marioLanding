@@ -2,6 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 import { useTranslations, basePath } from '../../../i18n/utils';
+import { tagsForPost, tagDisplay } from '../../../lib/tags';
 
 const lang = 'en' as const;
 const t = useTranslations(lang);
@@ -24,6 +25,14 @@ const formatDate = (date: Date) =>
         <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">{t('blog.page.label')}</p>
         <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">{t('blog.page.heading')}</h1>
         <p class="mt-3 text-lg" style="color: var(--text-muted);">{t('blog.page.subtitle')}</p>
+        <a
+          href={`${base}/blog/tags`}
+          class="inline-flex items-center gap-1.5 mt-4 text-sm transition-colors"
+          style="color: var(--accent-cyan);"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          {t('blog.tags.heading')}
+        </a>
       </div>
 
       {posts.length === 0 ? (
@@ -52,10 +61,10 @@ const formatDate = (date: Date) =>
                     {post.data.title}
                   </h2>
                   <p class="text-sm line-clamp-2 mb-3" style="color: var(--text-muted);">{post.data.description}</p>
-                  {post.data.tags.length > 0 && (
+                  {tagsForPost(post.data.tags).length > 0 && (
                     <div class="flex flex-wrap gap-1.5">
-                      {post.data.tags.map((tag) => (
-                        <span class="px-2 py-0.5 text-xs rounded-md font-medium" style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);">{tag}</span>
+                      {tagsForPost(post.data.tags).map((slug) => (
+                        <span class="px-2 py-0.5 text-xs rounded-md font-medium" style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);">{tagDisplay(slug, lang)}</span>
                       ))}
                     </div>
                   )}

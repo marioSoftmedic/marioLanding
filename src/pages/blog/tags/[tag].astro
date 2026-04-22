@@ -1,0 +1,102 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { tagsForPost, tagDisplay, tagDescription } from '../../../lib/tags';
+import { useTranslations, basePath } from '../../../i18n/utils';
+import { postsForLang, postUrl } from '../../../lib/relations';
+
+export async function getStaticPaths() {
+  const allPosts = await getCollection('blog');
+  const lang = 'es' as const;
+  const posts = postsForLang(allPosts, lang);
+
+  const byTag = new Map<string, typeof posts>();
+  for (const p of posts) {
+    for (const slug of tagsForPost(p.data.tags)) {
+      const list = byTag.get(slug) ?? [];
+      list.push(p);
+      byTag.set(slug, list);
+    }
+  }
+
+  return [...byTag.entries()].map(([slug, postsForTag]) => ({
+    params: { tag: slug },
+    props: {
+      tagSlug: slug,
+      posts: postsForTag.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()),
+    },
+  }));
+}
+
+const { tagSlug, posts } = Astro.props;
+const lang = 'es' as const;
+const t = useTranslations(lang);
+const base = basePath(lang);
+
+const display = tagDisplay(tagSlug, lang);
+const description = tagDescription(tagSlug, lang);
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base
+  title={`${display} — ${t('blog.tag.meta.suffix')}`}
+  description={description ?? t('blog.tag.meta.desc').replace('{tag}', display)}
+>
+  <section class="py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+      <div class="mb-4">
+        <a
+          href={`${base}/blog/tags`}
+          class="inline-flex items-center gap-2 text-sm transition-colors duration-200"
+          style="color: var(--text-faint);"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          {t('blog.tag.back')}
+        </a>
+      </div>
+
+      <div class="mb-12">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">
+          {t('blog.tag.label')}
+        </p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">{display}</h1>
+        {description && (
+          <p class="mt-3 text-lg" style="color: var(--text-muted);">{description}</p>
+        )}
+        <p class="mt-2 text-sm font-mono" style="color: var(--text-faint);">
+          {posts.length} {posts.length === 1 ? t('blog.tag.count.one') : t('blog.tag.count.many')}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        {posts.map((post) => (
+          <a
+            href={postUrl(post, base)}
+            class="group flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-8 py-6 border-b border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors duration-200"
+          >
+            <time
+              datetime={post.data.date.toISOString()}
+              class="text-sm shrink-0 pt-0.5 tabular-nums"
+              style="color: var(--text-faint); min-width: 7rem;"
+            >
+              {formatDate(post.data.date)}
+            </time>
+            <div class="flex-1 min-w-0">
+              <h2
+                class="text-lg font-semibold mb-1 group-hover:text-gradient transition-colors duration-200"
+                style="color: var(--text-primary);"
+              >
+                {post.data.title}
+              </h2>
+              <p class="text-sm line-clamp-2" style="color: var(--text-muted);">
+                {post.data.description}
+              </p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

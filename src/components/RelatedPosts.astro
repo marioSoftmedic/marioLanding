@@ -1,0 +1,115 @@
+---
+import { getCollection } from 'astro:content';
+import { getRelated, postUrl, getSeriesPosts } from '../lib/relations';
+import type { Lang } from '../lib/tags';
+import { useTranslations, basePath } from '../i18n/utils';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+  lang: Lang;
+  limit?: number;
+}
+
+const { post, lang, limit = 3 } = Astro.props;
+const t = useTranslations(lang);
+const base = basePath(lang);
+
+const allPosts = await getCollection('blog');
+const related = getRelated(post, allPosts, lang, limit);
+
+const seriesPosts = post.data.series
+  ? getSeriesPosts(post.data.series, allPosts, lang)
+  : [];
+const seriesIndex = post.data.series
+  ? seriesPosts.findIndex((p) => p.id === post.id)
+  : -1;
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'short', day: 'numeric' });
+
+const reasonLabel = (reason: 'related' | 'series' | 'tags') => {
+  if (reason === 'related') return t('blog.related.reason.related');
+  if (reason === 'series') return t('blog.related.reason.series');
+  return t('blog.related.reason.tags');
+};
+---
+
+{seriesPosts.length > 1 && seriesIndex >= 0 && (
+  <aside
+    class="my-12 p-5 rounded-xl"
+    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+  >
+    <p class="text-xs font-medium tracking-widest uppercase mb-2" style="color: var(--accent-cyan);">
+      {t('blog.series.label')} · {post.data.series}
+    </p>
+    <p class="text-sm mb-4" style="color: var(--text-muted);">
+      {t('blog.series.position')
+        .replace('{n}', String(seriesIndex + 1))
+        .replace('{total}', String(seriesPosts.length))}
+    </p>
+    <ol class="flex flex-col gap-2">
+      {seriesPosts.map((p, i) => {
+        const isCurrent = p.id === post.id;
+        return (
+          <li class="flex items-baseline gap-3 text-sm">
+            <span
+              class="tabular-nums shrink-0 font-mono text-xs"
+              style={`color: ${isCurrent ? 'var(--accent-cyan)' : 'var(--text-faint)'};`}
+            >
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            {isCurrent ? (
+              <span style="color: var(--text-primary); font-weight: 600;">{p.data.title}</span>
+            ) : (
+              <a
+                href={postUrl(p, base)}
+                class="hover:underline transition-colors"
+                style="color: var(--text-secondary);"
+              >
+                {p.data.title}
+              </a>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  </aside>
+)}
+
+{related.length > 0 && (
+  <section class="mt-16 pt-10 border-t border-[var(--border-subtle)]">
+    <h2 class="text-xs font-medium tracking-widest uppercase mb-6" style="color: var(--accent-orange);">
+      {t('blog.related.heading')}
+    </h2>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {related.map(({ post: p, reason }) => (
+        <a
+          href={postUrl(p, base)}
+          class="group block p-5 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+        >
+          <p class="text-[10px] font-medium tracking-widest uppercase mb-2" style="color: var(--text-faint);">
+            {reasonLabel(reason)}
+          </p>
+          <h3
+            class="text-base font-semibold mb-2 line-clamp-2 group-hover:text-gradient transition-colors"
+            style="color: var(--text-primary);"
+          >
+            {p.data.title}
+          </h3>
+          <p class="text-sm line-clamp-2" style="color: var(--text-muted);">
+            {p.data.description}
+          </p>
+          <time
+            datetime={p.data.date.toISOString()}
+            class="text-xs block mt-3 tabular-nums"
+            style="color: var(--text-faint);"
+          >
+            {formatDate(p.data.date)}
+          </time>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
