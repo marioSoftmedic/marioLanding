@@ -1,0 +1,92 @@
+---
+title: "Engram bidireccional: un cerebro digital unificado entre Mac y VPS"
+date: 2026-04-10
+lang: "es"
+description: "Cómo implementé un sistema de sincronización bidireccional de memoria entre mi MacBook Pro y mi VPS usando Engram, git y Obsidian."
+tags: ["Engram", "Obsidian", "Sincronización", "Infraestructura", "Karpathy"]
+image: ""
+draft: true
+series: "cerebro-digital"
+seriesOrder: 5
+---
+
+En el mundo distribuido del desarrollo con IA, mantener una memoria consistente entre múltiples entornos ha sido uno de los mayores desafíos. Por meses estuve peleando con la fragmentación de conocimiento entre mi MacBook Pro (donde hago la mayoría del desarrollo) y mi VPS (donde Cotocha corre 24/7).
+
+El problema: dos cerebros digitales trabajando con información sin sincronizar, decisiones duplicadas y aprendizajes aislados.
+
+La solución: un pipeline de memoria bidireccional que crea un cerebro unificado en tiempo real.
+
+## Arquitectura del sistema
+
+El sistema tiene dos flujos principales operando en horarios separados para evitar conflictos:
+
+**Flujo Mac → VPS (Import)**
+- Cada 2 horas en el VPS: un cron job ejecuta `git pull` desde el repo obsidian-vault
+- Después corre `engram sync --import` para absorber memorias nuevas desde los chunks
+- Por último, un script bridge transforma las observaciones en archivos .md accesibles para QMD
+
+**Flujo VPS → Mac (Export)**
+- Cada 4 horas en el VPS: otro cron exporta sesiones de OpenClaw a chunks de Engram
+- Los chunks se comprimen y se pushean al mismo repo obsidian-vault vía git push
+- En el Mac, el script `engram-sync.sh` absorbe los chunks nuevos a las 7:30 AM automáticamente
+
+## Componentes clave
+
+### 1. Repositorio central como bridge
+
+El repo `marioSoftmedic/obsidian-vault` es el medio de transporte entre ambos entornos. Almacena no solo las notas de Obsidian, sino también los chunks de memoria comprimidos en `.engram/chunks/`.
+
+```
+obsidian-v/
+├── .engram/chunks/
+│   ├── sessions-2026-04-10.jsonl.gz
+│   ├── observations-2026-04-10.jsonl.gz
+│   └── prompts-2026-04-10.jsonl.gz
+├── Proyectos/
+│   └── 05_Blog/
+│       └── _INDEX.md
+└── 10_Investigación/
+    └── Wiki/
+        └── _INDEX.md
+```
+
+### 2. Scripts de sincronización
+
+**En Mac (`engram-sync.sh`):**
+```bash
+#!/bin/bash
+# Exportar chunks desde el vault y pushear al repo
+cd ~/.engram
+engram sync --all --export
+cd ~/repos/obsidian-vault
+git add .engram/
+git commit -m "sync: engram chunk $(date +%Y-%m-%d)"
+git push
+```
+
+**En el VPS (scripts bridge):**
+- `bridge-openclaw-engram.py`: parsea sesiones JSONL y genera chunks
+- `bridge-engram-to-qmd.py`: convierte chunks a .md para búsqueda semántica
+
+### 3. Resolución de conflictos
+
+El mayor desafío fue resolver las divergencias en la historia de git. En un momento, el repo local del Mac tenía solo 4 commits sin un ancestro común con el remoto (el VPS tenía 133).
+
+La solución fue usar `git reset --soft obsidian-vault/main`, que mantiene todos los cambios locales pero los posiciona sobre el HEAD del remoto, permitiendo un commit limpio.
+
+## Beneficios del sistema
+
+1. **Memoria unificada**: las decisiones técnicas, las decisiones arquitectónicas y los avances de proyectos están disponibles en ambos entornos
+2. **Menos duplicación**: elimina la necesidad de documentar dos veces o de tratar de recordar qué se hizo en el otro entorno
+3. **Búsqueda semántica cruzada**: QMD puede indexar tanto las notas de Obsidian como las sesiones de OpenClaw
+4. **Continuidad de trabajo**: puedo continuar sesiones donde las dejé sin perder contexto
+
+## Próximo paso: Karpathy Knowledge Base
+
+Este sistema es el componente fundamental para implementar el método de personal knowledge base de Karpathy. Con ingestión constante, procesamiento por LLM y publicación en una Wiki, estoy construyendo un sistema que aprende y compila conocimiento de forma automática.
+
+El siguiente paso es conectar este pipeline con el blog-writer, así las memorias recientes se convierten automáticamente en contenido público, cerrando el loop entre conocimiento privado y conocimiento público.
+
+---
+
+Si estás construyendo algo con sistemas de memoria personal o agentes IA distribuidos, me encantaría conversar. Escribime por [WhatsApp](https://wa.me/56962170366) o búscame en [X como @marioHealthBits](https://x.com/marioHealthBits).

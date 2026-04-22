@@ -1,0 +1,77 @@
+---
+title: "Cotocha: the agent orchestrator that runs my life from a VPS"
+date: 2026-04-01
+description: "How I built an AI agent system that handles infrastructure, alerts, databases, and blogging from a server in Germany. No middlemen, no fancy dashboards."
+tags: [AI, Agents, OpenClaw, Automation, Patagonia]
+image: ""
+draft: false
+lang: "en"
+canonicalSlug: "2026-04-01-cotocha-orquestador-agentes-ia"
+series: "cerebro-digital"
+seriesOrder: 1
+---
+
+I have a VPS in Germany that costs less than a coffee per month. That is where Cotocha lives, an AI agent orchestrator that wakes up on its own, checks that everything is running, alerts me if something fails, and even drafts blog posts.
+
+It is not a toy project. It is the backbone of how I operate three AI products from Puerto Natales, Patagonia.
+
+## The problem with dashboards
+
+Before Cotocha, my morning looked like this: open Telegram, open Slack, open GitHub, open Railway, open the Contabo console. Five tabs before 9am just to find out if something had broken overnight.
+
+Monitoring dashboards show you metrics. They do not tell you what to do. They do not solve the problem. They force you to be the orchestrator.
+
+I did not want to be the orchestrator. I wanted something else to be it.
+
+## What Cotocha actually is
+
+Cotocha is a main agent that coordinates a squad of specialists. Each one has a clear role:
+
+- **Stark** watches infrastructure and runs periodic health checks
+- **Shuri** is the software engineer working on Examya's code
+- **Loki** handles financial operations
+- **Vision** does market research and compiles intelligence
+- **Banner** analyzes clinical data
+- **Rocket** takes care of sales and leads
+
+When a Telegram message arrives, Cotocha classifies, delegates, consolidates, and follows up. All of it without my intervention unless it is necessary.
+
+The key piece: Cotocha runs on OpenClaw, an open source agent gateway. It is not a wrapper on top of ChatGPT. It is a system that persists state, has cron jobs, accesses the filesystem, and runs commands.
+
+## 24/7 without intervening
+
+What surprised me most was not building it. It was waking up one morning and finding out that Cotocha had already:
+
+- Run 20 cron jobs overnight without errors
+- Detected that VPS memory was at 33% (within the safe threshold)
+- Read Hacker News and prepared a briefing of the 10 most relevant stories
+- Extracted action items from medical summaries in the Examya database
+- Synced the Obsidian vault with the previous day's notes
+
+I did nothing. The system kept itself alive.
+
+## The memory that makes it possible
+
+An agent without memory is a chatbot with nostalgia. Cotocha uses QMD, a vector backend with semantic search. Each session learns something and stores it. The next session can search that information before acting.
+
+This means Cotocha does not repeat mistakes. If in March it discovered a bug in Shuri's payment confirmation flow, that information is available to the next session that touches that code.
+
+## Why not N8N or Make
+
+People always ask me. The short answer: full control.
+
+No-code platforms give you nodes and wires. It works for simple flows. But when your agent needs to read a file, run a git pull, query a database, generate text with a specific model, and notify via Telegram with interactive buttons, the nodes turn into a maze.
+
+With OpenClaw, the agent has direct access to the system. It can run any command, read any file, call any API. The flexibility is radically different.
+
+## What I built is not complicated
+
+Three AI products. One VPS. One orchestrator. None of this requires a 20-person team or millions in funding. It requires understanding what can be automated and what cannot, and having the discipline to let the system operate.
+
+If you are building something with AI and you are still the one opening the five tabs every morning, ask yourself: could an agent do this for you?
+
+Probably yes.
+
+---
+
+If you are building something with AI agents from a remote place, I would love to chat. Reach me on [WhatsApp](https://wa.me/56962170366) or find me on [X as @marioHealthBits](https://x.com/marioHealthBits).
