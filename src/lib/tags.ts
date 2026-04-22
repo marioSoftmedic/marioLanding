@@ -317,7 +317,12 @@ export const TAG_TAXONOMY: TagDef[] = [
   {
     slug: 'healthcare',
     label: { es: 'Salud', en: 'Healthcare' },
-    aliases: ['healthcare'],
+    aliases: ['healthcare', 'health'],
+  },
+  {
+    slug: 'covid',
+    label: { es: 'COVID', en: 'COVID' },
+    aliases: ['covid', 'covid-19', 'covid19', 'sars-cov-2'],
   },
   {
     slug: 'crowdsourcing',
