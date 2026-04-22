@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import LangSwitch from '../components/LangSwitch.astro';
 import { getLang, getAlternatePath, basePath, useTranslations } from '../i18n/utils';
+import { alternateExists } from '../lib/translations';
 
 interface Props {
   title?: string;
@@ -15,6 +16,7 @@ const t = useTranslations(lang);
 const base = basePath(lang);
 const alternatePath = getAlternatePath(pathname, lang);
 const alternateLang = lang === 'es' ? 'en' : 'es';
+const hasAlternate = await alternateExists(pathname, lang);
 
 const {
   title = t('meta.title'),
@@ -56,9 +58,16 @@ const ogImage = image ? `${siteUrl}${image}` : `${siteUrl}/og-default.png`;
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
-    <link rel="alternate" hreflang="es" href={lang === 'es' ? canonicalUrl : alternateUrl} />
-    <link rel="alternate" hreflang="en" href={lang === 'en' ? canonicalUrl : alternateUrl} />
-    <link rel="alternate" hreflang="x-default" href={`${siteUrl}${lang === 'es' ? pathname : alternatePath}`} />
+    <link rel="alternate" hreflang={lang} href={canonicalUrl} />
+    {hasAlternate && (
+      <>
+        <link rel="alternate" hreflang={alternateLang} href={alternateUrl} />
+        <link rel="alternate" hreflang="x-default" href={`${siteUrl}${lang === 'es' ? pathname : alternatePath}`} />
+      </>
+    )}
+    {!hasAlternate && (
+      <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+    )}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -80,10 +89,10 @@ const ogImage = image ? `${siteUrl}${image}` : `${siteUrl}/og-default.png`;
           <a href={base + '/blog'} class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:text-[var(--text-primary)] transition-colors duration-200">{t('nav.blog')}</a>
           <a href={base + '/news'} class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:text-[var(--text-primary)] transition-colors duration-200">{t('nav.news')}</a>
           <a href={base + '/#contacto'} class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:text-[var(--text-primary)] transition-colors duration-200">{t('nav.contact')}</a>
-          <LangSwitch />
+          <LangSwitch alternateAvailable={hasAlternate} />
         </div>
         <div class="flex items-center gap-3 md:hidden">
-          <LangSwitch />
+          <LangSwitch alternateAvailable={hasAlternate} />
           <button id="menu-toggle" class="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer" aria-label={t('nav.open-menu')} aria-expanded="false" aria-controls="mobile-menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>

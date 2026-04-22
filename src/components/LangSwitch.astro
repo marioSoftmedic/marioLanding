@@ -1,13 +1,21 @@
 ---
 import { getLang, getAlternatePath } from '../i18n/utils';
 
+interface Props {
+  alternateAvailable?: boolean;
+}
+
+const { alternateAvailable = true } = Astro.props;
+
 const pathname = Astro.url.pathname;
 const lang = getLang(pathname);
 const isEn = lang === 'en';
 
-// Paths for each language
 const esPath = isEn ? getAlternatePath(pathname, 'en') : pathname;
 const enPath = isEn ? pathname : getAlternatePath(pathname, 'es');
+
+const esUnavailable = isEn && !alternateAvailable;
+const enUnavailable = !isEn && !alternateAvailable;
 ---
 
 <div
@@ -16,24 +24,42 @@ const enPath = isEn ? pathname : getAlternatePath(pathname, 'es');
   class="flex items-center gap-0.5 rounded-lg p-1"
   style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
 >
-  <a
-    href={esPath}
-    hreflang="es"
-    aria-label="Ver sitio en Español"
-    aria-current={!isEn ? 'true' : undefined}
-    class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
-    style={!isEn
-      ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
-      : 'color: var(--text-muted);'}
-  >ES</a>
-  <a
-    href={enPath}
-    hreflang="en"
-    aria-label="View site in English"
-    aria-current={isEn ? 'true' : undefined}
-    class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
-    style={isEn
-      ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
-      : 'color: var(--text-muted);'}
-  >EN</a>
+  {esUnavailable ? (
+    <span
+      aria-disabled="true"
+      title="Solo disponible en inglés"
+      class="px-2.5 py-1 text-xs font-semibold rounded-md min-w-[2rem] text-center cursor-not-allowed opacity-40"
+      style="color: var(--text-faint);"
+    >ES</span>
+  ) : (
+    <a
+      href={esPath}
+      hreflang="es"
+      aria-label="Ver sitio en Español"
+      aria-current={!isEn ? 'true' : undefined}
+      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
+      style={!isEn
+        ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
+        : 'color: var(--text-muted);'}
+    >ES</a>
+  )}
+  {enUnavailable ? (
+    <span
+      aria-disabled="true"
+      title="Only available in Spanish"
+      class="px-2.5 py-1 text-xs font-semibold rounded-md min-w-[2rem] text-center cursor-not-allowed opacity-40"
+      style="color: var(--text-faint);"
+    >EN</span>
+  ) : (
+    <a
+      href={enPath}
+      hreflang="en"
+      aria-label="View site in English"
+      aria-current={isEn ? 'true' : undefined}
+      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[2rem] text-center"
+      style={isEn
+        ? 'background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default);'
+        : 'color: var(--text-muted);'}
+    >EN</a>
+  )}
 </div>
