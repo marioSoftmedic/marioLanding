@@ -1,0 +1,62 @@
+---
+title: "WhatsApp Discovery: cómo un agente autónomo scrapea prospectos de clínicas por todo Chile"
+date: 2026-04-27
+lang: "es"
+description: "Construí un agente autónomo que scrapea WhatsApp de laboratorios clínicos en Chile. Sistema rotativo de estrategias, B2B lead generation y 59.6% de cobertura."
+tags: [WhatsApp, entrepreneurship, Agentes, Automatización, Chile, Examya]
+image: ""
+draft: true
+---
+
+## Problema
+
+Chile tiene más de 200 laboratorios clínicos. Ningún sistema centralizado tiene sus números de WhatsApp. Las empresas necesitan contactarlos para ofrecer servicios médicos. Obtener estos datos manualmente toma semanas.
+
+## Lo que construí
+
+WhatsApp Discovery es un agente autónomo que scrapea números de WhatsApp de laboratorios clínicos en Chile. Sistema rotativo de estrategias, reportes automáticos y base de datos centralizada.
+
+El sistema corre cada 4 horas como cron job. Procesa 10 laboratorios por round. Ha completado 141 rounds procesando más de 1,400 prospectos.
+
+## Cómo funciona
+
+**Estrategias rotativas:**
+- Google Business Profile API con técnicas de bypass
+- Web scraping avanzado + descubrimiento en redes sociales
+- Búsqueda manual en Instagram y perfiles profesionales
+- Análisis semántico de sitios web de laboratorios
+
+**Pipeline automatizado:**
+1. db_monitor PostgreSQL lista prospectos pendientes
+2. Rotación de estrategias según configuración en HEARTBEAT.md
+3. Procesamiento con técnicas anti-bots y validación de formato +569
+4. Inserción en tabla prospects con estados detallados
+5. Reporte automático a Slack thread con estadísticas
+
+**Sistema de estados:**
+- `pending`: esperando procesamiento
+- `found`: WhatsApp encontrado y validado
+- `not_found`: no tiene WhatsApp o no encontrado
+- `error`: falló el procesamiento
+
+## Lo que aprendí
+
+**59.6% de cobertura actual.** 146 laboratorios con WhatsApp de 245 totales. No es perfecto, pero escala.
+
+**Rotación de estrategias es crucial.** Google Business Profile falla con laboratorios periféricos. Las estrategias sociales funcionan mejor en ciudades pequeñas. La mezcla da mejores resultados.
+
+**Validación de números es compleja.** Muchos sitios web tienen números obsoletos. El sistema valida formato +569 y descarta números de línea fija.
+
+**Auto-corrección dinámica.** Cuando una estrategia falla consecutivamente, el sistema rota automáticamente a la siguiente. Sin intervención humana.
+
+## Lo que viene
+
+Próximo: integración con CRM automático. Cuando un prospecto tiene WhatsApp, el sistema envía mensaje de bienvenida con integración Examya.
+
+También: análisis de engagement. No solo tener el número, saber si responde y qué servicios necesitan.
+
+La meta: 80% de cobertura para fines de 2026. Chile tiene muchos laboratorios pequeños en zonas rurales. Requiere nuevas estrategias de descubrimiento.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
