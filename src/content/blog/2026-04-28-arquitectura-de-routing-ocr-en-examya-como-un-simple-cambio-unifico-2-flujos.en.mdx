@@ -1,0 +1,92 @@
+---
+title: "OCR Routing Architecture in Examya: How One Simple Change Unified 2 Flows"
+date: 2026-04-28
+lang: "en"
+canonicalSlug: "2026-04-28-arquitectura-de-routing-ocr-en-examya-como-un-simple-cambio-unifico-2-flujos"
+description: "The story of how we eliminated duplication in medical result processing and optimized the WhatsApp OCR flow with a single technical decision."
+tags: [examya, whatsapp, ocr, architecture, agents, interoperability]
+image: ""
+draft: true
+---
+
+The medical order processing system via WhatsApp in Examya had a subtle but critical issue: two separate paths for interpreting medical exam results. In a world where medical accuracy is what's at stake, this duplication wasn't just a technical problem—it was a potential risk for patients.
+
+## The Problem: Two Parallel Worlds
+
+When a patient sent a photo of exam results via WhatsApp, our system could take two completely different paths depending on a seemingly minor detail:
+
+**Path A** (new, stage-gated):
+- GPT-4o + MINSAL guides + corrected parser + Chilean reference ranges
+- High quality, precise, contextualized
+
+**Path B** (old, classifier-gated): 
+- GPT-4o-mini, generic prompt, no MINSAL guides, no parser fixes
+- Lower quality, potentially imprecise
+
+A patient who sent a results photo without first requesting "interpret results" would get Path B. It wasn't a critical error, but it wasn't optimal either. More importantly: we maintained duplicated code in two different services with similar but not identical logic.
+
+The question we asked ourselves: why have two paths when we can have one that's excellent?
+
+## The Solution: Unification Under a Single Decision Point
+
+The answer wasn't to combine both paths, but to eliminate one completely. In `whatsapp-webhook.controller.ts` at lines 1189-1227, we implemented a single decision point that replaced complex logic with something elegant:
+
+```typescript
+// Before: two separate paths
+if (stage == 'awaiting_results_photo') {
+  handleResultsPhotoOcr(); // Path A
+} else {
+  const classification = documentClassifier.classifyDocumentFromStorage();
+  if (classification === 'exam_result') {
+    ExamResultWhatsappService.interpretAndSend(); // Path B duplicated
+  }
+}
+
+// After: unification
+if (stage == 'awaiting_results_photo' || classification === 'exam_result') {
+  handleResultsPhotoOcr(); // Only one excellent path
+}
+```
+
+This change seems simple, but it implies several fundamental technical decisions:
+
+1. **Stage has priority over classifier**: if the user is in the waiting-for-results state, we don't need to classify—we go directly to high-quality interpretation.
+
+2. **Elimination of Path B**: the old `ExamResultWhatsappService.interpretAndSend()` service was completely removed. Its logic now lives only in `handleResultsPhotoOcr()`.
+
+3. **Open classification handling**: when the classifier fails open as `medical_order`, non-medical documents go to quotation, never interpretation. This protects against false positives.
+
+## Impact on Service Quality
+
+This change didn't just resolve code duplication. It directly impacted service quality:
+
+- **Improved accuracy**: all results now process with GPT-4o + MINSAL guides
+- **Consistency**: no more difference between "types" of users
+- **Maintainability**: single point of logic to modify, test, and debug
+- **Reduced risk**: eliminated the possibility of patients receiving inferior interpretations
+
+## Lessons Learned
+
+The implementation left us several important takeaways:
+
+**1. Simplicity is power**: eliminating duplicated code is sometimes more valuable than adding new functionality. A single clear, excellent path is better than two mediocre paths.
+
+**2. Stage management is key**: in conversational systems, user state is more valuable than standalone document classification. Prioritizing state gave us a better experience.
+
+**3. Classifiers can fail**: when an AI classifier fails open, it's better to be conservative (send to quotation) than risk incorrect interpretations.
+
+## What's Next?
+
+With this unified foundation, we can think about the next level:
+
+- **FHIR integration**: standardized results can flow directly to clinical systems
+- **Range personalization**: adjustment of reference ranges based on patient profile
+- **Smart alerts**: detection of abnormal results requiring immediate medical attention
+
+The OCR routing architecture is now an example of how technical simplicity can translate into better clinical experience. In a system where every result counts, we can't afford mediocre paths.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

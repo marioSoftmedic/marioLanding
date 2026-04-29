@@ -1,0 +1,70 @@
+---
+title: "WhatsApp Discovery: Sistema Autónomo de Scraping B2B para Laboratorios Clínicos en Chile"
+date: 2026-04-28
+lang: "es"
+description: "Cómo construí un sistema autónomo que scrapea prospectos B2B de laboratorios clínicos en Chile usando rotación de estrategias y 59.6% de cobertura nacional"
+tags: [WhatsApp, Scraping, B2B, Automatización, Examya, Chile, IA]
+image: ""
+draft: true
+---
+
+Los números de WhatsApp de los laboratorios clínicos en Chile son el oro de la automatización B2B. Pero cómo encontrarlos cuando no están disponibles públicamente? Los laboratorios no publican sus números porque no quieren ser bombardeados con mensajes, pero para Examya — plataforma de órdenes médicas — esos contactos son cruciales.
+
+El problema: solo el 59.6% de los 245 laboratorios en nuestra base tenían WhatsApp cuando iniciamos esta campaña. Necesitábamos llegar al 90% para que los médicos pudieran enviar órdenes de examen directamente desde WhatsApp.
+
+## El sistema: 140+ rondas de scraping autónomo
+
+Construí un sistema que ejecuta 140+ rondas automatizadas de scraping, rotando estrategias cada 10-15 rondas. Cada ronda procesa 10-15 laboratorios buscando números de WhatsApp en múltiples fuentes:
+
+**Google Business Profile API:** Extracción avanzada con técnicas de bypass para evitar bloqueos
+**Scraping web manual:** Análisis de sitios web en busca de números de teléfono con formato +569
+**Búsqueda en redes sociales:** Instagram, Facebook, LinkedIn buscando perfiles de laboratorios
+**Directorios médicos:** Plataformas como Doctoralia, Saludmap, Guía del Profesor
+
+## ¿Por qué fallan las estrategias estáticas?
+
+Intenté primero el scraping web básico. Falló miserablemente: laboratorios usan formularios de contacto, no números públicos. Luego probé Google Maps: muchos tienen perfiles pero sin números visibles.
+
+La solución clave: rotación estratégica. Cuando una técnica da 0% de éxito como pasó en la ronda 100, automáticamente rotamos a otra estrategia. Esto mantiene la cobertura creciendo consistentemente.
+
+## Técnicas de bypass que funcionan
+
+Los laboratorios implementan anti-bot measures. Las técnicas que realmente funcionan:
+
+**Bypass de captchas mediante rotación de user agents:** Cada solicitud viene desde un contexto diferente
+**Extracción de datos del DOM:** No confiar en el HTML crudo, sino en renderizado dinámico
+**Filtros de formato estricto:** Solo aceptar números +569 (móviles chilenos)
+**Validación doble:** Verificar número en sitio oficial antes de guardar
+
+## El stack técnico
+
+**Python + Playwright:** Para scraping con JavaScript dinámico
+**PostgreSQL + db_monitor:** Base de datos centralizada con seguimiento de estado
+**Rotación de estrategias:** Cada 10 rondas cambia técnica automáticamente
+**Notificaciones Slack en tiempo real:** Thread dedicado para monitoreo progreso
+
+## Resultados concretos
+
+**146 laboratorios con WhatsApp** de 245 totales (59.6%)
+**140+ rondas consecutivas** sin interrupción
+**Procesamiento de 15 laboratorios por ronda** máximo para no bloquear IPs
+**Rotación automática de estrategias** cuando éxito cae a 0%
+
+## ¿Qué aprendí?
+
+1. **La paciencia es técnica:** El scraping B2B no es cuestión de un día, sino de semanas de consistencia
+2. **La diversificación de fuentes es obligatoria:** Depender de una fuente te deja vulnerable
+3. **La rotación es clave:** Cuando una técnica falla, otra probablemente funcione
+4. **La validación humana sigue siendo necesaria:** Un 10% requiere revisión manual
+
+## Próximos pasos
+
+**Alcanzar el 90%:** Falta el 40.4% restante. Con la velocidad actual, llegaremos en 3-4 meses.
+**Integración con CRM:** Los números encontrados se integran automáticamente con la campaña de WhatsApp de Examya
+**Monitoreo de números inválidos:** Sistema de verificación periódica para mantener la base limpia
+
+Este sistema es el motor de crecimiento B2B de Examya. Sin estos contactos, los médicos no podrían enviar órdenes de examen directamente desde WhatsApp, y eso rompería nuestra promesa de "órdenes médicas en minutos".
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

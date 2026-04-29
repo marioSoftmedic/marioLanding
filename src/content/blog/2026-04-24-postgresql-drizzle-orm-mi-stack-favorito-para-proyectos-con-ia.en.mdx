@@ -1,0 +1,174 @@
+---
+title: "PostgreSQL + Drizzle ORM: My Favorite Stack for AI Projects"
+date: 2026-04-24
+lang: "en"
+description: "Why PostgreSQL with Drizzle ORM has become my preferred stack for AI projects, with lessons learned from building Examya and OpenClaw."
+tags: [PostgreSQL, Drizzle, AI, Backend, Databases, Architecture]
+image: "/img/blog/postgresql-drizzle-orm-ia.png"
+draft: true
+canonicalSlug: "2026-04-24-postgresql-drizzle-orm-ia"
+---
+AI projects have unique needs. Beyond models and prompts, the underlying infrastructure must support complex queries, vector embeddings, and unpredictable scalability.
+
+Throughout my journey building Examya and other AI systems, I've experimented with multiple stacks: SQLAlchemy with Python, Prisma with Node.js, and even NoSQL databases for specific use cases. Today I share why PostgreSQL + Drizzle ORM has solidified as my favorite stack.
+
+## The Problem: Relational Data Complexity in AI
+
+AI agents like Shuri in Examya handle complex structured information. A medical exam involves:
+
+- ServiceRequest (exam order)
+- Specimen (biological sample) 
+- Observation[] (individual results)
+- DiagnosticReport (clinical summary)
+
+With Prisma, the code became verbose and migrations slow. With SQLAlchemy, we lost the strong typing we value so much in TypeScript.
+
+## The Solution: PostgreSQL as a Vector Database
+
+The key decision was using PostgreSQL with the pgvector extension. This combination gives us:
+
+**1. Native semantic search**
+```sql
+-- Similarity search using cosine similarity
+SELECT * FROM observations 
+ORDER BY embedding <=> '[0.1, 0.2, 0.3...]' 
+LIMIT 5;
+```
+
+**2. ACID consistency for critical data**
+Medical results can't be lost or corrupted. PostgreSQL ensures every transaction is atomic.
+
+**3. JSONB for flexibility**
+Exam metadata varies by type. JSONB lets us store structured data without altering the schema.
+
+## Drizzle ORM: The Perfect Balance
+
+Drizzle ORM solved Prisma's pains without sacrificing productivity:
+
+### Incremental and Fast Migrations
+
+```typescript
+// drizzle/schema.ts
+export const orders = pgTable('orders', {
+  id: serial('id').primaryKey(),
+  patientId: integer('patient_id').notNull(),
+  status: varchar('status', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Non-breaking auto-migration
+await db.schema.alterTable('orders')
+  .addColumn('priority', integer('priority').default(1))
+  .execute();
+```
+
+### Fully Typed Queries
+
+```typescript
+// Drizzle automatically infers types
+const pendingOrders = await db
+  .select()
+  .from(orders)
+  .where(eq(orders.status, 'pending'))
+  .where(gte(orders.createdAt, new Date('2026-01-01')));
+```
+
+### Drizzle Kit: The Productivity Secret
+
+`drizzle-kit` automatically generates migrations and TypeScript types. In Examya, this saves us hours of work:
+
+```bash
+# Detects schema changes and generates migration
+npx drizzle-kit generate
+
+# Syncs types with schema
+npx drizzle-kit generate:typescript
+```
+
+## Real World Case: Medical Reasoning System
+
+In Examya, we use this combination for:
+
+1. **Symptom embeddings**: stored as vectors in PostgreSQL
+2. **Patient history**: complex relational queries
+3. **FHIR rules**: structured data validation
+4. **Result caching**: JSONB for fast responses
+
+```typescript
+// Example: similar diagnosis search
+async function findSimilarDiagnoses(symptoms: number[][]) {
+  return await db.select()
+    .from(diagnoses)
+    .where(or(
+      symptoms.map(sym => 
+        drizzle.vector.similarity('embedding', sym, 0.8)
+      )
+    ));
+}
+```
+
+## Lessons Learned
+
+### Key Advantages
+
+**1. Simple deployment**
+Just need Docker + PostgreSQL. No complex dependencies.
+
+**2. Easy debugging**
+SQL queries are transparent. When something fails, we can see exactly what executed.
+
+**3. Horizontal scalability**
+While PostgreSQL is relational, it can be distributed with Citus for very high loads.
+
+**4. Active community**
+Drizzle's ecosystem grows fast with constant updates.
+
+### Limitations to Consider
+
+**1. Complex migrations**
+Foreign key relationship changes require careful planning.
+
+**2. No native graph support**
+For pure graph cases, Neo4j is still better.
+
+**3. Learning curve**
+Drizzle has its own conventions that need to be learned.
+
+## Comparison with Other Stacks
+
+| Feature | PostgreSQL + Drizzle | MongoDB | Prisma | Firebase |
+|---|---|---|---|---|
+| Strong typing | ✅ | ❌ | ✅ | ⚠️ |
+| Vector search | ✅ | ❌ | ❌ | ✅ |
+| Migrations | Automatic | Manual | Automatic | Automatic |
+| Cost | Open source | Expensive | Open source | Expensive |
+| Full control | ✅ | ⚠️ | ⚠️ | ❌ |
+
+## The Future: PostgreSQL as an AI Platform
+
+With tools like Supabase and EdgeDB, PostgreSQL is transforming into a complete AI platform:
+
+- **Native vector search**: pgvector + search extensions
+- **Edge computing**: Supabase Edge Functions
+- **Real-time data**: Listeners and subscriptions
+- **ML integration**: Extensions like Apache MADlib
+
+For upcoming projects, I'm exploring:
+
+1. **Custom vector functions**
+2. **Automatic embedding indexing**
+3. **Query caching with Redis + PostgreSQL**
+
+## What's Next
+
+In future posts, I'll dive deeper into:
+
+- Optimizing vector queries for high concurrency
+- Caching patterns with Redis + PostgreSQL
+- Migrating from Prisma to Drizzle in existing projects
+
+What database stack do you use for your AI projects? I'd love to hear your experiences in the comments.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

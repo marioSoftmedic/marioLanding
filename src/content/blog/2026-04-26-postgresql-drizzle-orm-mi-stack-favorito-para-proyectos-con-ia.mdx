@@ -1,0 +1,161 @@
+---
+title: "PostgreSQL + Drizzle ORM: mi stack favorito para proyectos con IA"
+date: 2026-04-26
+lang: "es"
+description: "Por qué PostgreSQL con Drizzle ORM es mi combinación preferida para construir aplicaciones con IA en producción, lecciones desde Examya."
+tags: ["PostgreSQL", "Drizzle ORM", "IA", "Backend", "TypeScript", "Examya"]
+image: "/img/blog/postgresql-drizzle-orm-mi-stack-favorito-para-proyectos-con-ia.png"
+draft: true
+---
+
+## El problema: bases de datos para productos de IA
+
+Construir un producto de IA como Examya me enfrentó a un desafío clásico: necesito una base de datos que soporte datos complejos, consultas rápidas, y que sea mantenible por un equipo pequeño. La combinación de PostgreSQL con Drizzle ORM ha sido la respuesta.
+
+Durante el desarrollo de Examya, probé varias opciones. Prisma era tentador por su generación automática de tipos, pero su abstracción a veces ocultaba lo que realmente pasaba en la base de datos. Sequelize es robusto pero demasiado pesado para mis necesidades.
+
+PostgreSQL con Drizzle ORM me dio lo mejor de ambos mundos: el poder y flexibilidad de PostgreSQL con una API TypeScript moderna que se siente como una extensión del lenguaje.
+
+## Lo que construí: la base de datos de Examya
+
+La arquitectura de datos de Examya es compleja. Tenemos órdenes médicas, resultados de laboratorio, usuarios, y relaciones entre ellos todo en una base PostgreSQL gestionada con Drizzle.
+
+```typescript
+import { sql } from 'drizzle-orm';
+import { pgTable, serial, varchar, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+
+export const medicalOrders = pgTable('medical_orders', {
+  id: serial('id').primaryKey(),
+  rut: varchar('rut', { length: 12 }).notNull(),
+  orderNumber: varchar('order_number', { length: 50 }).unique().notNull(),
+  examType: varchar('exam_type', { length: 100 }).notNull(),
+  status: text('status').default('pending').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  processedAt: timestamp('processed_at'),
+  resultUrl: text('result_url'),
+  clinicId: serial('clinic_id').references(() => clinics.id),
+});
+```
+
+Esta estructura me permite definir relaciones complejas de forma explícita, sin las magias negras de otros ORM. Cada campo tiene su tipo correcto y las relaciones se definen claramente.
+
+## Cómo funciona: lo que me encanta de Drizzle
+
+### 1. Tipado completo en TypeScript
+
+Drizzle genera tipos TypeScript automáticamente desde tu esquema. Esto elimina errores comunes de tipos en tiempo de desarrollo y me da autocompletado inteligente en VSCode.
+
+```typescript
+// El tipo se genera automáticamente
+type MedicalOrder = typeof medicalOrders.$inferSelect;
+
+// Las operaciones de consulta tienen tipado completo
+const orders = await db.select()
+  .from(medicalOrders)
+  .where(eq(medicalOrders.status, 'pending'))
+  .limit(10);
+```
+
+### 2. Migraciones predecibles
+
+Las migraciones de Drizzle son declarativas. Cuando modifico el esquema, sé exactamente qué cambios se aplicarán a la base de datos. Esto evita la pesadilla de migraciones que se ejecutan en orden incorrecto.
+
+```typescript
+// migrations/001_initial_schema.ts
+import { pgTable, serial, varchar } from 'drizzle-orm/pg-core';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }).unique().notNull(),
+});
+```
+
+### 3. Consultas eficientes y flexibles
+
+Drizzle no me obliga a usar su API si necesito algo más complejo. Puedo escribir SQL nativo cuando lo necesito, manteniendo la integración con el resto del ORM.
+
+```typescript
+// Consulta complejo con SQL nativo
+const results = await db.execute(sql`
+  SELECT 
+    m.id,
+    m.rut,
+    c.name as clinic_name,
+    COUNT(*) as total_orders
+  FROM medical_orders m
+  JOIN clinics c ON m.clinic_id = c.id
+  GROUP BY m.id, c.name
+  HAVING COUNT(*) > 5
+`);
+```
+
+## Lo que aprendí: lecciones del campo
+
+### 1. La base de datos es el cuello de botella
+
+En un proyecto de IA, los modelos pueden mejorar, pero una base de datos mal diseñada te frenará cada vez. Con Examya, aprendí que el rendimiento de las consultas es crítico cuando procesas cientos de órdenes médicas al día.
+
+Los índices correctos han sido clave. En lugar de depender del ORM para crearlos, los definimos manualmente para consultas específicas.
+
+```typescript
+// Índices para consultas frecuentes
+await db.execute(sql`
+  CREATE INDEX IF NOT EXISTS idx_orders_status 
+  ON medical_orders (status, created_at)
+`);
+
+await db.execute(sql`
+  CREATE INDEX IF NOT EXISTS idx_orders_clinic 
+  ON medical_orders (clinic_id, status)
+`);
+```
+
+### 2. Las transacciones son tu mejor amiga
+
+Cuando procesas órdenes médicas, no puedes permitir inconsistencias. Drizzle maneja transacciones de forma elegante.
+
+```typescript
+await db.transaction(async (tx) => {
+  // Actualizar el estado de la orden
+  await tx.update(medicalOrders)
+    .set({ status: 'processing', processedAt: new Date() })
+    .where(eq(medicalOrders.id, orderId));
+  
+  // Registrar el inicio del procesamiento
+  await tx.insert(processingLogs).values({
+    orderId,
+    action: 'started_processing',
+    timestamp: new Date(),
+  });
+});
+```
+
+### 3. La migración desde Prisma valió la pena
+
+Inicialmente usaba Prisma en Examya. La migración a Drizzle fue trabajo, pero valió la pena. El código es más expresivo y las consultas más predecibles. La diferencia en el tiempo de desarrollo ha sido significativa.
+
+## Lo que viene: el futuro del stack
+
+Drizzle está evolucionando rápidamente. Estoy especialmente interesado en:
+
+- **Drizzle Studio**: Una herramienta de administración similar a Prisma Studio pero más ligera
+- **Better TypeScript support**: El sistema de tipos ya es bueno, pero sigue mejorando
+- **Performance optimizations**: Las consultas generadas son eficientes, pero siempre hay margen de mejora
+
+Para proyectos futuros, seguiré usando este stack. La combinación de PostgreSQL con Drizzle ORM me da el control que necesito para aplicaciones complejas, con la productividad que espero como desarrollador.
+
+## Conclusión
+
+PostgreSQL + Drizzle ORM ha sido la combinación perfecta para construir Examya. Me da el poder de una base de datos relacional tradicional con la experiencia de desarrollo moderna de TypeScript. Las consultas son rápidas, las migraciones son predecibles, y el tipado completo reduce errores en producción.
+
+Si estás construyendo una aplicación con IA que necesita persistencia de datos robusta, te recomiendo esta combinación. Es especialmente potente cuando trabajas con datos complejos y relaciones no triviales.
+
+El balance entre control y abstracción que Drizzle proporciona es difícil de encontrar en otros stacks, y eso lo hace mi elección preferida para proyectos serios con IA.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,71 @@
+---
+title: "WhatsApp Discovery: Autonomous B2B Scraping System for Clinical Labs in Chile"
+date: 2026-04-28
+lang: "en"
+description: "How I built an autonomous system that scrapes B2B leads from clinical labs in Chile using strategy rotation and 59.6% national coverage"
+tags: [WhatsApp, Automation, Examya, Chile, AI]
+image: ""
+draft: true
+canonicalSlug: "2026-04-28-whatsapp-discovery-autonomous-b2b-scraping-system"
+---
+
+WhatsApp numbers for clinical laboratories in Chile are the gold standard of B2B automation. But how to find them when they're not publicly available? Labs don't publish their numbers because they don't want to be bombarded with messages, but for Examya — a medical order processing platform — these contacts are crucial.
+
+The problem: only 59.6% of the 245 labs in our database had WhatsApp when we started this campaign. We needed to reach 90% so doctors could send exam orders directly from WhatsApp.
+
+## The system: 140+ autonomous scraping rounds
+
+I built a system that runs 140+ automated scraping rounds, rotating strategies every 10-15 rounds. Each round processes 10-15 labs looking for WhatsApp numbers across multiple sources:
+
+**Google Business Profile API:** Advanced extraction with bypass techniques to avoid blocks
+**Manual web scraping:** Analyzing lab websites for +569 formatted phone numbers
+**Social media search:** Instagram, Facebook, LinkedIn searching for lab profiles
+**Medical directories:** Platforms like Doctoralia, Saludmap, Guía del Profesor
+
+## Why do static strategies fail?
+
+I first tried basic web scraping. It failed miserably: labs use contact forms, not public numbers. Then I tested Google Maps: many have profiles but no visible numbers.
+
+The key solution: strategic rotation. When one technique gives 0% success like it did in round 100, we automatically switch to another strategy. This keeps coverage growing consistently.
+
+## Bypass techniques that work
+
+Labs implement anti-bot measures. The techniques that actually work:
+
+**Captcha bypass through user agent rotation:** Each request comes from a different context
+**DOM data extraction:** Don't trust raw HTML, rely on dynamic rendering
+**Strict format filtering:** Only accept +569 numbers (Chilean mobiles)
+**Double validation:** Verify number on official site before saving
+
+## Technical stack
+
+**Python + Playwright:** For scraping with JavaScript rendering
+**PostgreSQL + db_monitor:** Centralized database with status tracking
+**Strategy rotation:** Changes technique automatically every 10 rounds
+**Real-time Slack notifications:** Dedicated thread for progress monitoring
+
+## Concrete results
+
+**146 labs with WhatsApp** out of 245 total (59.6%)
+**140+ consecutive rounds** without interruption
+**15 labs per round maximum** processing to avoid IP blocking
+**Automatic strategy rotation** when success drops to 0%
+
+## What I learned
+
+1. **Patience is technical:** B2B scraping isn't about one day, it's weeks of consistency
+2. **Source diversification is mandatory:** Relying on one source leaves you vulnerable
+3. **Rotation is key:** When one technique fails, another probably works
+4. **Human validation is still needed:** 10% still requires manual review
+
+## Next steps
+
+**Reach 90%:** Still need the remaining 40.4%. At current speed, we'll get there in 3-4 months.
+**CRM integration:** Found numbers automatically integrate with Examya's WhatsApp campaign
+**Invalid number monitoring:** Periodic verification system to keep the database clean
+
+This system is Examya's B2B growth engine. Without these contacts, doctors couldn't send exam orders directly from WhatsApp, and that would break our promise of "medical orders in minutes."
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

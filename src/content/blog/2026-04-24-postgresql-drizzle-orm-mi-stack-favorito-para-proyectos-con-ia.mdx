@@ -1,0 +1,175 @@
+---
+title: "PostgreSQL + Drizzle ORM: mi stack favorito para proyectos con IA"
+date: 2026-04-24
+lang: "es"
+description: "Por qué PostgreSQL con Drizzle ORM se ha convertido en mi stack predilecto para proyectos de IA, con lecciones aprendidas en Examya y OpenClaw."
+tags: [PostgreSQL, Drizzle, IA, Backend, Bases de Datos, Arquitectura]
+image: "/img/blog/postgresql-drizzle-orm-ia.png"
+draft: true
+---
+Los proyectos de IA tienen necesidades únicas. Más allá de los modelos y los prompts, la infraestructura subyacente debe soportar queries complejas, embeddings vectoriales, y una escalabilidad impredecible.
+
+Durante mi trayectoria construyendo Examya y otros sistemas de IA, he experimentado con múltiples stacks: SQLAlchemy con Python, Prisma con Node.js, y hasta bases de datos NoSQL para casos específicos. Hoy les compierto por qué PostgreSQL + Drizzle ORM se ha consolidado como mi stack favorito.
+
+## El problema: complejidad de datos relacionales en IA
+
+Los agentes de IA como Shuri en Examya manejan información estructurada compleja. Un examen médico implica:
+
+- ServiceRequest (orden de examen)
+- Specimen (muestra biológica) 
+- Observation[] (resultados individuales)
+- DiagnosticReport (resumen clínico)
+
+Con Prisma, el código se volvía verboso y las migraciones, lentas. Con SQLAlchemy, perdíamos el tipado fuerte que tanto valoramos en TypeScript.
+
+## La solución: PostgreSQL como base de datos vectorial
+
+La decisión clave fue usar PostgreSQL con la extensión pgvector. Esta combinación nos da:
+
+**1. Búsquedas semánticas nativas**
+```sql
+-- Búsqueda de similares usando cosine similarity
+SELECT * FROM observations 
+ORDER BY embedding <=> '[0.1, 0.2, 0.3...]' 
+LIMIT 5;
+```
+
+**2. Consistencia ACID para datos críticos**
+Los resultados médicos no pueden perderse ni corromperse. PostgreSQL garantiza que cada transacción sea atómica.
+
+**3. JSONB para flexibilidad**
+Los metadatos de exámenes varían según el tipo. JSONB nos permite almacenar datos estructurados sin alterar el schema.
+
+## Drizzle ORM: el equilibrio perfecto
+
+Drizzle ORM resolvió los dolores de Prisma sin sacrificar productividad:
+
+### Migraciones incrementales y rápidas
+
+```typescript
+// drizzle/schema.ts
+export const orders = pgTable('orders', {
+  id: serial('id').primaryKey(),
+  patientId: integer('patient_id').notNull(),
+  status: varchar('status', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Migración automática sin romper existentes
+await db.schema.alterTable('orders')
+  .addColumn('priority', integer('priority').default(1))
+  .execute();
+```
+
+### Queries con tipado completo
+
+```typescript
+// Drizzle infiere el tipo automáticamente
+const pendingOrders = await db
+  .select()
+  .from(orders)
+  .where(eq(orders.status, 'pending'))
+  .where(gte(orders.createdAt, new Date('2026-01-01')));
+```
+
+### Drizzle Kit: el secreto de la productividad
+
+`drizzle-kit` genera migraciones y tipos TypeScript automáticamente. En Examya, esto nos ahorra horas de trabajo:
+
+```bash
+# Detecta cambios en el schema y genera migración
+npx drizzle-kit generate
+
+# Sincroniza types con el schema
+npx drizzle-kit generate:typescript
+```
+
+## Caso real: el sistema de razonamiento médico
+
+En Examya, usamos esta combinación para:
+
+1. **Embeddings de síntomas**: almacenados como vector en PostgreSQL
+2. **Historial de pacientes**: consultas relacionales complejas
+3. **Reglas FHIR**: validación de datos estructurados
+4. **Caching de resultados**: JSONB para respuestas rápidas
+
+```typescript
+// Ejemplo: búsqueda de diagnósticos similares
+async function findSimilarDiagnoses(symptoms: number[][]) {
+  return await db.select()
+    .from(diagnoses)
+    .where(or(
+      symptoms.map(sym => 
+        drizzle.vector.similarity('embedding', sym, 0.8)
+      )
+    ));
+}
+```
+
+## Lecciones aprendidas
+
+### Ventajas clave
+
+**1. Despliegue simple**
+Solo necesitamos Docker + PostgreSQL. Sin dependencias complejas.
+
+**2. Debugging fácil**
+Las queries SQL son transparentes. Cuando algo falla, podemos ver exactamente qué se ejecutó.
+
+**3. Escala horizontal**
+Aunque PostgreSQL es relacional, puede distribuirse con Citus para cargas muy altas.
+
+**4. Comunidad activa**
+El ecosistema de Drizzle crece rápido con actualizaciones constantes.
+
+### Limitaciones a considerar
+
+**1. Migraciones complejas**
+Cambios en relaciones foráneas requieren planning cuidadoso.
+
+**2. Sin soporte nativo de grafos**
+Para casos de grafos puros, Neo4j sigue siendo mejor.
+
+**3. Curva de aprendizaje**
+Drizzle tiene sus propias convenciones que hay que aprender.
+
+## Comparativa con otros stacks
+
+| Característica | PostgreSQL + Drizzle | MongoDB | Prisma | Firebase |
+|---|---|---|---|---|
+| Tipado fuerte | ✅ | ❌ | ✅ | ⚠️ |
+| Búsquedas vectoriales | ✅ | ❌ | ❌ | ✅ |
+| Migraciones | Automáticas | Manuales | Automáticas | Automáticas |
+| Costo | Open source | Costoso | Open source | Costoso |
+| Control total | ✅ | ⚠️ | ⚠️ | ❌ |
+
+## El futuro: PostgreSQL como plataforma de IA
+
+Con herramientas como Supabase y EdgeDB, PostgreSQL se está transformando en una plataforma de IA completa:
+
+- **Vector search nativo**: pgvector + extensiones de búsqueda
+- **Edge computing**: Supabase Edge Functions
+- **Real-time data**: Listeners y suscripciones
+- **ML integrado**:Extensiones como Apache MADlib
+
+Para los próximos proyectos, estoy explorando:
+
+1. **Funciones vectoriales personalizadas**
+2. **Indexación automática de embeddings**
+3. **Cache de consultas con Redis + PostgreSQL**
+
+El stack de datos sigue siendo la base sobre la que construyen todos los sistemas de IA. Con PostgreSQL + Drizzle, tenemos un equilibrio entre control, productividad y potencia que difícilmente igualarán otras opciones.
+
+## Lo que viene
+
+En próximos posts, profundizaré en:
+
+- Cómo optimizar las queries vectoriales para alta concurrencia
+- Patrones de caché con Redis + PostgreSQL
+- Migración de Prisma a Drizzle en proyectos existentes
+
+¿Qué stack de bases de datos usan en sus proyectos de IA? Les leo sus experiencias en los comentarios.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
