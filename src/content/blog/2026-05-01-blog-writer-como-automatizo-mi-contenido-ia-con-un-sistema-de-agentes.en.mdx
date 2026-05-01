@@ -1,0 +1,91 @@
+---
+title: "Blog Writer: How I Automate My AI Content with an Agent System"
+date: 2026-05-01
+lang: "en"
+description: "Technical details of the blog-writer skill that orchestrates automatic post creation using memory, bidirectional sync, and multilingual publishing."
+tags: [AI, Agents, Automation, Obsidian, Engram, Blog]
+image: ""
+canonicalSlug: "2026-05-01-blog-writer-automatizacion-contenido-ia"
+draft: true
+---
+
+## Problem
+
+Writing and publishing high-quality technical content is a complex process. It requires research, writing, translation, editing, and publishing across multiple platforms. The manual process consumes valuable hours and creates inconsistencies.
+
+## What I Built
+
+An automated blog post creation system that converts work memories into published content. The complete flow:
+
+**Input**: Daily work observations from Engram.
+**Processing**: Topic analysis, repetition avoidance, draft generation.
+**Output**: Spanish and English posts, ready for publication.
+
+The system works as a specialized agent that coordinates multiple technical tasks:
+
+1. **Repository sync**: Gets latest state from obsidian-vault and marioLanding
+2. **Anti-repetition**: Reads `_INDEX.md` to avoid covering already published topics
+3. **Real-time context**: Extracts recent memories from the Engram pipeline
+4. **Bilingual generation**: Creates drafts in Spanish and English simultaneously
+5. **Automatic publishing**: Saves to both repos and does automatic push
+
+## How It Works
+
+The system is built as an OpenClaw skill with a carefully orchestrated workflow:
+
+**Initial sync**:
+```bash
+cd ~/repos/obsidian-vault && git pull
+cd ~/repos/marioLanding && git pull
+```
+
+**Context extraction**:
+- Analyzes `_INDEX.md` to identify covered and available topics
+- Extracts the 10 most recent observations from the Engram pipeline
+- Generates a unique topic that doesn't repeat
+
+**Content generation**:
+- Uses ZAI GLM-5 Turbo model to create content in Spanish
+- Automatically translates to English while maintaining MDX structure
+- Applies all required style and structure rules
+
+**Saving and publishing**:
+- Creates 3 files: draft in Obsidian, Spanish MDX, English MDX
+- Updates the pending posts index
+- Does automatic push to both repos
+- Logs the action in Engram for traceability
+
+## What I Learned
+
+**Memory as asset**: Daily observations are much more than records. They are the foundation of authentic, up-to-date content. The system converts real work into public knowledge.
+
+**Intelligent automation**: Not about replacing the creator, but amplifying their capabilities. Automation handles the technical aspects (sync, push, formats) so creators can focus on quality.
+
+**Bidirectional sync**: The Mac→VPS→Mac flow with Engram creates a feedback loop where published content feeds back into the knowledge system.
+
+**Strict rules**: Complex systems need clear protocols. Frontmatter rules, content structure, and anti-repetition are essential for consistency.
+
+## What's Next
+
+The next step is integrating automatic social media publishing. The system already generates drafts, the next phase is:
+
+1. **Automatic X publishing**: Generates 4-tweet threads adapted to platform format
+2. **LinkedIn**: Content optimized for professional network with appropriate hashtags
+3. **Monitoring**: Engagement tracking and metrics to optimize future posts
+
+Automation doesn't end with blog publication. It will extend content reach to social media intelligently and contextually.
+
+## Technical Structure
+
+The system runs as a cron job on the Contabo VPS with multiple interconnected components:
+
+**Database**: Engram as single source of truth for memories
+**Repositories**: obsidian-vault (source) and marioLanding (publication)
+**Skills**: blog-writer as orchestrator, memory-miner for context
+**Publishing**: Bilingual pipeline with automatic validation
+
+## Contact
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
