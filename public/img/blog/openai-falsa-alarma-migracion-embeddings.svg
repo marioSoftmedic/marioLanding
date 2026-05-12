@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" style="background-color: #020617; font-family: 'JetBrains Mono', monospace;">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" style="background-color: #020617; font-family: 'JetBrains Mono', monospace;">
   <defs>
     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
       <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
@@ -41,7 +41,7 @@
   <rect x="260" y="160" width="160" height="80" rx="6" fill="#0f172a"/>
   <rect x="260" y="160" width="160" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
   <text x="340" y="195" fill="white" font-size="12" font-weight="600" text-anchor="middle">Examya Agent (Shuri)</text>
-  <text x="340" y="210" fill="#34d399" font-size="9" text-anchor="middle">Orchestration & Reasoning</text>
+  <text x="340" y="210" fill="#34d399" font-size="9" text-anchor="middle">Orchestration &amp; Reasoning</text>
   <text x="340" y="225" fill="#94a3b8" font-size="9" text-anchor="middle">NestJS</text>
 
   <!-- External: OpenAI API -->
