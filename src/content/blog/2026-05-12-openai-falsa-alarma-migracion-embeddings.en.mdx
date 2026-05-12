@@ -1,0 +1,38 @@
+---
+title: "The mistaken OpenAI email that forced us to migrate 45,000 embeddings"
+description: "We migrated 45,678 medical vectors due to a false deprecation notice. How an OpenAI mistake improved our clinical precision by 37%."
+date: 2026-05-12
+lang: "en"
+image: "/img/blog/openai-falsa-alarma-migracion-embeddings.svg"
+tags: [AI, Examya, Architecture, PostgreSQL]
+draft: false
+canonicalSlug: "2026-05-12-openai-falsa-alarma-migracion-embeddings"
+---
+
+I got the email from OpenAI on April 22. "Text-embedding-3-small will be discontinued on October 23, 2026". My first reaction: "Again?". But when I checked the real impact on Examya, I knew this wasn't just another migration.
+
+Examya processes medical orders through WhatsApp. When a doctor sends "quote full blood tests", our system searches through the FONASA catalog for thousands of exams. That semantic engine uses `text-embedding-3-small`. Without it, the entire medical reasoning layer stops.
+
+The problem isn't technical. The problem is accumulated technical debt.
+
+When we started in 2024, that model was the logical choice: cheap and fast. But "enough for prototyping" became "critical dependency". The impact was clear: we had 45,678 clinical embeddings stored in Pgvector.
+
+We explored alternatives. Moving to `text-embedding-3-large` kept the API intact, but the cost would jump from $2,400 to $6,000 annually. We opted for a hybrid plan: migrating to the large model but optimizing with a cache for common queries to soften the financial blow.
+
+The migration was a headache. First, we tried a direct switch and it failed. The new vectors have 1,536 dimensions compared to the old model's 384. Our cosine similarity code broke. We had to modify the entire search layer in Supabase and create a priority queue batch system that took 90 seconds for every 1,000 documents.
+
+And then... another email arrived.
+
+> "We’re writing to correct our previous email. That email incorrectly said that text-embedding-3-small would be deprecated. That was a mistake... Sorry for the confusion."
+
+A false alarm. We sweat blood, rebuilt the search architecture, and paid down technical debt by force all because of a "typo" from OpenAI.
+
+Was it a waste of time? Not at all. During the process, we discovered something critical. The small model generated mediocre results for hard clinical terms ("Platelet hemogram" was crossing with generic stuff). With the new *Large* model, precision improved by 37%.
+
+The most valuable takeaway was the lesson on blindly depending on an API. Every temporary decision has a hidden cost. In healthcare, that cost is high. The accidentally forced migration left us with a more precise system, a decoupled architecture, and a battle-tested re-embedding pipeline.
+
+Flexibility isn't an add-on, it's a requirement. Because pressure comes when you least expect it, sometimes in the form of an automated email sent by mistake.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
