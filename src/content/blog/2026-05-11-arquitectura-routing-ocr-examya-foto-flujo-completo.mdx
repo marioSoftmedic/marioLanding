@@ -1,0 +1,110 @@
+---
+title: "Arquitectura de Routing OCR en Examya: cómo un foto decide el flujo completo"
+date: 2026-05-11
+lang: "es"
+description: "Análisis profundo de la arquitectura de routing OCR en Examya: cómo un foto médica decide entre cotización e interpretación de resultados."
+tags: ["IA", "Examya", "WhatsApp", "Arquitectura", "OCR", "FONASA"]
+image: "/img/blog/ocr-routing-arquitectura-examya.png"
+draft: false
+status: published
+---
+
+El WhatsApp de Examya recibe fotos médicas todos los días. Pero ¿cómo decide el sistema si es una cotización o un resultado de laboratorio? La respuesta está en una arquitectura de routing sorprendentemente simple pero robusta que aprendí construyendo este sistema.
+
+El problema inicial era caótico: fotos entraban y se perdían entre múltiples caminos de procesamiento. Hoy tenemos un sistema claro donde una sola decisión en `whatsapp-webhook.controller.ts` (línea 1189-1227) dirige toda la lógica.
+
+## Flujo de Routing: Etapa → Clasificador → Flujo Específico
+
+### 1. Check de Etapa (Prioridad Absoluta)
+
+El primer paso es verificar si el usuario está esperando resultados:
+
+```typescript
+if (stage === 'awaiting_results_photo') {
+  return handleResultsPhotoOcr(); // Salta directamente al interpreter
+}
+```
+
+Esto es poderoso: si un usuario ya pasó por el flujo de "interpretar resultados", cualquier foto posterior se asume como resultado. No hay ambigüedad.
+
+### 2. Clasificador Documental (Inteligencia Central)
+
+Si no hay etapa específica, el sistema usa `documentClassifier.classifyDocumentFromStorage()`:
+
+- `exam_result` → flujo de interpretación (unificado con el anterior)
+- `medical_order` → flujo de cotización OCR  
+- `!isMedical` → rechazo amable
+- FAIL OPEN → asume medical_order (nunca exam_result)
+
+La regla clave: **el clasificador falla abriendo como medical_order, nunca exam_result**. Esto evita falsos positivos en interpretación.
+
+## ¿Por qué esta separación es crítica?
+
+### Costo de Procesamiento
+- **Cotización**: $2,000 pesos fijos (WHATSAPP_QUOTE_PRICE)
+- **Interpretación**: Proceso completo con gpt-4o, MINSAL guides, rangos de referencia
+
+### Riesgo Legal
+- **Cotización**: Documento comercial, no médico
+- **Interpretación**: Diagnóstico potencial con implicaciones legales
+
+### Experiencia de Usuario
+- **Cotización**: Rápida, automática, precio transparente
+- **Interpretación**: Requiere contexto, tiempo de procesamiento, explicaciones
+
+## El Bug que Descubrimos
+
+Durante construcción, detectamos un problema grave: **contaminación de estado** en PurchaseHandler cuando el clasificador fallaba. Una foto médica mal clasificada como pedido generaba:
+
+1. Intento de procesamiento como orden
+2. Falla en enrichment (porque era realmente un resultado)
+3. Estado inconsistente en pendingOcr
+4. Experiencia rota para el usuario
+
+La solución fue aislar completamente los flujos: **OCR Quotation** y **Shuri Purchase** ahora son completamente independientes.
+
+## Código Clave: La Decisión Central
+
+```typescript
+// Línea 1190: stage tiene prioridad
+if (stage === 'awaiting_results_photo') {
+  return handleResultsPhotoOcr(); 
+}
+
+// Línea 1195: clasificador solo si no hay stage
+const classification = documentClassifier.classifyDocumentFromStorage();
+
+// Regla de oro: NEVER interpretar sin stage explícito
+// Si el clasificador falla OPEN, va a quotation, no interpretation
+if (classification === 'exam_result' || stage === 'awaiting_results_photo') {
+  return handleResultsPhotoOcr(); // Flujo unificado
+}
+```
+
+## Lo que Aprendimos
+
+### 1. Simplicidad vs Complejidad
+A veces, la mejor arquitectura es la más simple. Una única función de routing con reglas claras es mejor que múltiples sistemas complejos.
+
+### 2. Fail Open para Seguridad
+Failing open como `medical_order` (no `exam_result`) es la decisión correcta. Es mejor generar una cotización errónea que una interpretación médica incorrecta.
+
+### 3. Testeo Estatal
+Creamos tests integrales con estado en memoria: `Map<string, string>` para simular `prismaAgents.whatsappContext`. Esto nos permite testear el flujo completo sin depender de la base de datos.
+
+### 4. La Importancia de las Etapas
+El sistema de etapas (`awaiting_results_photo`, `awaiting_order_photo`, etc.) no es solo UX: es la base del routing correcto. Sin etapas, el sistema sería caótico.
+
+## Lo que Viene
+
+Próximamente implementaremos:
+
+1. **Clasificador mejorado**: Usando embeddings para fotos médicas más complejas
+2. **Routing inteligente**: Basado en historial del usuario, no solo en la foto actual  
+3. **Fallback humano**: Cuando el sistema no puede decidir, derivar a médico humano
+
+La arquitectura de routing OCR es un ejemplo perfecto de cómo un problema complejo (fotos médicas ambiguas) puede resolverse con decisiones claras y separación de responsabilidades. Cada foto que entra tiene un destino definido, gracias a este sistema simple pero poderoso.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
