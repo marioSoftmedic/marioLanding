@@ -1,0 +1,186 @@
+---
+title: "Prisma Schema Migration: How to Survive Local Hell in a Health Monorepo"
+date: 2026-05-15
+lang: "en"
+description: "Field lessons on the pitfalls of schema migrations in a medical monorepo with multiple databases and development environments."
+tags: [ai, postgresql, prisma, development, examya]
+image: "/img/blog/migracion-prisma-esquemas-infierno-local.png"
+draft: false
+series: agentes
+seriesOrder: 6
+canonicalSlug: "2026-05-15-migracion-esquemas-prisma-infierno-local-monorepo-salud"
+---
+
+A couple of weeks ago, I faced a situation that every developer dreads: "everything worked yesterday, and today it doesn't." In Examya's case, this translated into 7 test flows of the medical bot failing locally after applying fixes that worked perfectly in production.
+
+What I discovered was a Prisma schema migration hell in a monorepo with multiple services, multiple databases, and multiple development environments. This is the story of how I solved the problems and the lessons I learned in the process.
+
+## The Problem: Why Were Local Tests Failing?
+
+It all started with PR #323, which fixed critical bugs in the ExamIA medical bot. Production tests passed without issues, but running them locally resulted in strange errors:
+
+- `NotFoundError: No exam_catalog table in public schema`
+- `relation "whatsapp_context" does not exist`
+- `Invalid prismaMain` in the agents
+
+The root cause: out-of-sync database schemas between environments.
+
+## The Pain: Databases in a Complex Monorepo
+
+Examya is a monorepo with several services using different databases:
+
+**API Service (`apps/api/`):**
+- Uses `examya_dev` for the FONASA exam catalog, users, etc.
+- 80+ tables including `exam_catalog`, `user`, `user_phone`.
+
+**Agents Service (`apps/agents/`):**
+- Uses `examya_agents` for WhatsApp context, order processing.
+- Agent-specific tables like `whatsapp_context`, `exam_results`.
+
+**The problem:** Incorrect local configurations pointing to databases with outdated or erroneous schemas.
+
+## Lesson #1: Never Trust `db push` in Production
+
+The first big lesson came from practice: **never use `prisma db push` in production**. This command is only for rapid prototyping because it can cause data loss.
+
+In my local case, the problem was even more subtle:
+
+```typescript
+// apps/agents/.env INCORRECT
+DATABASE_URL=examya_agents          // ❌ This pointed to the wrong schema
+DATABASE_URL_AGENTS=examya_agents_test  // ❌ This wasn't the right schema either
+```
+
+The correct configuration should be:
+
+```typescript
+// apps/agents/.env CORRECT  
+DATABASE_URL=examya_dev              // ✅ For prismaMain (exam_catalog, users)
+DATABASE_URL_AGENTS=examya_agents    // ✅ For prismaAgents (whatsapp_context)
+```
+
+## Lesson #2: `node --watch` Is a Silent Enemy
+
+Another dangerous trap: using `node --watch` with services that depend on environment variables.
+
+```bash
+# Problematic command
+dotenv -e .env.local -- node -r ts-node/register -r tsconfig-paths/register src/main.ts --watch
+```
+
+When `prisma generate` regenerated Prisma clients, `node --watch` restarted the process but **without the environment variables**. The new process used default credentials from the `.env` file instead of local ones.
+
+The solution: always restart manually with the correct environment.
+
+```bash
+# Correct command (without --watch)
+dotenv -e .env.local -- node -r ts-node/register -r tsconfig-paths/register src/main.ts
+```
+
+## Lesson #3: The Trap of Duplicate Schemas
+
+Prisma generates different clients for different schemas:
+
+- `prismaMain` for the main schema in `prisma/schema.prisma`
+- `prismaAgents` for the agents schema in its own directory.
+
+The problem: if you only generate one, the other becomes obsolete. This caused "schema not applied" errors because the client files didn't match the actual schema in the database.
+
+## The Recovery Process
+
+### Step 1: Identify the Actual State of the Databases
+
+```bash
+# Verify schema in examya_dev
+psql $DATABASE_URL -c "\dt exam_catalog" 
+
+# Verify schema in examya_agents  
+psql $DATABASE_URL_AGENTS -c "\dt"
+
+# Verify pgvector extension
+psql $DATABASE_URL_AGENTS -c "SELECT extversion FROM pg_extension WHERE extname = 'pgvector';"
+```
+
+### Step 2: Apply the Full Schema
+
+The main schema of 80+ tables had never been correctly applied to the local `examya_dev`:
+
+```bash
+# Apply full schema accepting data loss
+cd apps/api
+DATABASE_URL=examya_dev npx prisma db push --accept-data-loss
+
+# Seed FONASA data
+npx tsx scripts/seed-fonasa-exams.ts
+```
+
+### Step 3: Correct URL Configuration
+
+Update `.env` in agents with the correct URLs:
+
+```bash
+# apps/agents/.env
+DATABASE_URL=examya_dev                            
+DATABASE_URL_AGENTS=examya_agents
+DIRECT_URL_AGENTS=postgresql://user:pass@localhost:5432/examya_agents
+```
+
+## Code That Broke (And How It Was Fixed)
+
+### Bug #1: Multi-exam Search with Commas
+
+The original code joined exam names with ", " and searched as a single string:
+
+```typescript
+// ❌ INCORRECT
+const examNames = exams.join(", "); // "HEMOGRAMA, PERFIL LIPÍDICO"
+const results = await prisma.exam_catalog.findMany({
+  where: { name: examNames }
+});
+// 0 results because "HEMOGRAMA, PERFIL LIPÍDICO" doesn't exist as a single record
+```
+
+The solution: search for each exam individually:
+
+```typescript
+// ✅ CORRECT
+const results = await Promise.all(
+  exams.map(exam => prisma.exam_catalog.findMany({
+    where: { name: exam.replace(/, /g, " ") }
+  }))
+);
+const flatResults = results.flat();
+```
+
+### Bug #2: Regex with Accented Characters
+
+JavaScript's `\b` regex doesn't work well with non-ASCII characters like "í":
+
+```typescript
+// ❌ INCORRECT  
+const isConfirmation = /\bsí\b/.test("sí, confirmo");
+// false because \b doesn't work with "í" in many JS environments
+```
+
+Solution: use an alternative boundary:
+
+```typescript
+// ✅ CORRECT
+const isConfirmation = /\bsí(?:[^a-z]|$)/.test("sí, confirmo");
+```
+
+## Lessons from the Field
+
+1. **Document the Local Environment**: Don't assume you'll remember how to configure the DBs in two months.
+2. **Validate Schemas Before Commit**: A pre-commit hook verifying critical tables' existence saves you hours of debugging.
+3. **Use Separate Environments per Service**: Each microservice or agent should have its own clear environment definition.
+
+## Conclusion: The Cost of Speed
+
+Learning these lessons cost me two frustrating days of work, but it saved me from production disasters. The temptation to use shortcuts like `db push` is strong when under pressure.
+
+But in software development, especially in critical systems like healthcare, quality and reliability are worth more than speed. As we say in the south: take it slow to make it steady.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
