@@ -6,8 +6,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const htmlPath = path.resolve(__dirname, '../public/img/blog/fonasa-mle-architecture.html');
-const pngPath = path.resolve(__dirname, '../public/img/blog/fonasa-mle-mcp.png');
+const args = process.argv.slice(2);
+const htmlPath = args[0] ? path.resolve(process.cwd(), args[0]) : path.resolve(__dirname, '../public/img/blog/fonasa-mle-architecture.html');
+const pngPath = args[1] ? path.resolve(process.cwd(), args[1]) : path.resolve(__dirname, '../public/img/blog/fonasa-mle-mcp.png');
 
 async function convert() {
   try {
