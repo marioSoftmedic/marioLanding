@@ -1,0 +1,72 @@
+---
+title: "100% Compliant: Cómo cerramos los 36 verificadores MINSAL en tiempo récord"
+description: "Cerrar la acreditación MINSAL (Ley 21.541) no es solo picar código. Te cuento cómo pasamos del 33% al 100% de cumplimiento en un solo fin de semana."
+date: 2026-05-19
+lang: "es"
+image: "/img/blog/acreditacion-minsal-100-cumplimiento.png"
+tags: [Salud, Examya, Compliance, Telemedicina, Arquitectura]
+series: interoperabilidad-chile
+seriesOrder: 5
+draft: false
+---
+
+Cerrar 36 de 36 verificadores de acreditación para Telemedicina no es solo un check en una lista. Es asegurar que la arquitectura de tu software soporta el peso de la responsabilidad médica y legal en Chile bajo la Ley N°21.541.
+
+En **Examya**, pasamos del 33% al 100% en el Scorecard de cumplimiento MINSAL en un solo fin de semana. Y te voy a ser muy honesto: no fue solo por picar código nuevo. Fue por **evidencia técnica**.
+
+## Lo que nadie cuenta sobre la acreditación
+
+Muchos builders creen que para acreditarse hay que construir sistemas nuevos desde cero. La realidad es que el cumplimiento es un 50% ingeniería y un 50% auditoría interna.
+
+El estándar MINSAL es riguroso. Divide la acreditación en tres pilares fundamentales:
+1. **Transversales (V1-V20)**: Seguridad, auditoría e identidad.
+2. **Ficha Clínica (V21-V28)**: Interoperabilidad real y terminologías.
+3. **Videoconsulta (V29-V36)**: Estabilidad y cifrado de la sesión.
+
+## Los datos reales del Scorecard
+
+El 10 de abril estábamos en un 33%. Teníamos las piezas, pero no la "traza". Para el 13 de abril, logramos el pleno. 
+
+¿Cómo lo hicimos? Atacamos los verificadores por grupos lógicos:
+- **IAM y Seguridad**: PostgreSQL para logs de auditoría inmutables.
+- **Interoperabilidad**: Mapeo a HL7 FHIR (SNOMED-CT y ICD-10/11).
+- **Infraestructura RTC**: Cifrado AES-256 en Agora con codecs VP8.
+
+## Lo que construimos (y lo que ya estaba)
+
+Un ejemplo concreto fue el verificador **V12** (idle timeout). Ya teníamos un hook `useIdleTimeout` funcionando en el frontend, con 7 de 7 tests unitarios pasando. Sin embargo, estaba marcado como *PARTIAL* porque no teníamos la documentación formal que demostrara el comportamiento ante el auditor.
+
+```typescript
+// apps/web/src/hooks/useIdleTimeout.ts
+// Este hook ya salvaba sesiones, pero la evidencia técnica fue lo que cerró el V12.
+export const useIdleTimeout = (timeoutMs: number, onTimeout: () => void) => {
+  useEffect(() => {
+    const timer = setTimeout(onTimeout, timeoutMs);
+    return () => clearTimeout(timer);
+  }, [timeoutMs, onTimeout]);
+};
+```
+
+Para el grupo de videoconsulta (**V32-V34**), el trabajo fue puramente de especificación técnica: formalizar los specs de latencia (< 150ms) y el cifrado end-to-end que nuestro proveedor (Agora) ya nos entregaba.
+
+## El Gotcha: La trampa del \"Funciona\"
+
+Como arquitectos, nos obsesionamos con que el sistema \"funcione\". En salud digital, eso no basta. El sistema debe **demostrar que funciona bajo norma**.
+
+Muchos componentes pasaron de *PARTIAL* a *COMPLIANT* simplemente formalizando la documentación de los specs y las trazas de los tests existentes. Si tu código es sólido pero no tienes evidencia auditable, para la ley no existe.
+
+## Zoom out: Por qué importa
+
+Chile está viviendo una transformación con la Ley 21.668 y la 21.541. Ya no basta con ser \"ágil\". Hay que ser robusto. 
+
+Alcanzar el 100% de cumplimiento posiciona a Examya no solo como una herramienta de WhatsApp con IA, sino como un actor serio en el ecosistema de salud. Estamos listos para la interoperabilidad obligatoria.
+
+## Lo que viene
+
+El compliance no es una foto, es un proceso. Ahora el foco es mantener ese 100% mientras escalamos las features de IA de Shuri. La gobernanza de datos (Ley 21.719) es nuestro próximo gran pilar.
+
+Seguimos construyendo.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

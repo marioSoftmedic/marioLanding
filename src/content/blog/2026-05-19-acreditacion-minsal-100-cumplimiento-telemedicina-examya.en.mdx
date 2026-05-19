@@ -1,0 +1,73 @@
+---
+title: "100% Compliant: How we closed all 36 MINSAL verifiers in record time"
+description: "Closing MINSAL accreditation (Law 21.541) isn't just about coding. Here's how we jumped from 33% to 100% compliance in a single weekend."
+date: 2026-05-19
+lang: "en"
+image: "/img/blog/acreditacion-minsal-100-cumplimiento.png"
+tags: [HealthTech, Examya, Compliance, Telemedicine, Architecture]
+series: interoperabilidad-chile
+seriesOrder: 5
+draft: false
+canonicalSlug: "2026-05-19-acreditacion-minsal-100-cumplimiento-telemedicina-examya"
+---
+
+Closing 36 out of 36 accreditation verifiers for Telemedicine is more than just checking items off a list. It’s ensuring that your software architecture can handle the weight of medical and legal responsibility in Chile under Law N°21,541.
+
+At **Examya**, we jumped from 33% to 100% on the MINSAL compliance Scorecard in a single weekend. And I’ll be honest: it wasn't just about writing new code. It was about **technical evidence**.
+
+## What no one tells you about accreditation
+
+Many builders think that accreditation requires building new systems from scratch. The reality is that compliance is 50% engineering and 50% internal auditing.
+
+The MINSAL standard is rigorous. it divides accreditation into three fundamental pillars:
+1. **Transversals (V1-V20)**: Security, auditing, and identity.
+2. **Clinical Record (V21-V28)**: Real interoperability and terminologies.
+3. **Video Consultation (V29-V36)**: Session stability and encryption.
+
+## The real Scorecard data
+
+On April 10, we were at 33%. We had the pieces, but not the \"trace.\" By April 13, we achieved the full score.
+
+How did we do it? We attacked the verifiers by logical groups:
+- **IAM and Security**: PostgreSQL for immutable audit logs.
+- **Interoperability**: Mapping to HL7 FHIR (SNOMED-CT and ICD-10/11).
+- **RTC Infrastructure**: AES-256 encryption in Agora with VP8 codecs.
+
+## What we built (and what was already there)
+
+A concrete example was verifier **V12** (idle timeout). We already had a `useIdleTimeout` hook working on the frontend, with 7 out of 7 unit tests passing. However, it was marked as *PARTIAL* because we lacked the formal documentation to prove its behavior to the auditor.
+
+```typescript
+// apps/web/src/hooks/useIdleTimeout.ts
+// This hook was already saving sessions, but technical evidence was what closed V12.
+export const useIdleTimeout = (timeoutMs: number, onTimeout: () => void) => {
+  useEffect(() => {
+    const timer = setTimeout(onTimeout, timeoutMs);
+    return () => clearTimeout(timer);
+  }, [timeoutMs, onTimeout]);
+};
+```
+
+For the video consultation group (**V32-V34**), the work was purely technical specification: formalizing latency specs (&lt; 150ms) and the end-to-end encryption that our provider (Agora) was already delivering.
+
+## The Gotcha: The \"It Works\" Trap
+
+As architects, we obsess over the system \"working.\" In digital health, that’s not enough. The system must **prove it works under the norm**.
+
+Many components went from *PARTIAL* to *COMPLIANT* simply by formalizing documentation of specs and existing test traces. If your code is solid but you lack auditable evidence, for the law, it doesn't exist.
+
+## Zoom out: Why it matters
+
+Chile is undergoing a transformation with Law 21,668 and 21,541. Being \"agile\" is no longer enough. You have to be robust.
+
+Reaching 100% compliance positions Examya not just as an AI WhatsApp tool, but as a serious player in the healthcare ecosystem. We are ready for mandatory interoperability.
+
+## What's next
+
+Compliance is not a photo; it’s a process. Now the focus is on maintaining that 100% while scaling Shuri's AI features. Data governance (Law 21,719) is our next big pillar.
+
+Keep building.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
