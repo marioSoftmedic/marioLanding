@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORFO: El Filtro de los 40 Segundos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #020617;
+            --card-bg: #0f172a;
+            --cyan: #22d3ee;
+            --emerald: #34d399;
+            --violet: #a78bfa;
+            --amber: #fbbf24;
+            --rose: #fb7185;
+            --slate: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            padding: 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--rose);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--rose);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            color: var(--slate);
+            font-size: 14px;
+        }
+
+        .diagram-container {
+            background-color: var(--card-bg);
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 1000px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .card-dot.amber { background-color: var(--amber); box-shadow: 0 0 8px var(--amber); }
+        .card-dot.violet { background-color: var(--violet); box-shadow: 0 0 8px var(--violet); }
+        .card-dot.cyan { background-color: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            font-size: 11px;
+            color: var(--slate);
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        footer {
+            margin-top: 40px;
+            font-size: 10px;
+            color: #475569;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blinker 1.5s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span class="status-dot"></span>EL FILTRO DE LOS 40 SEGUNDOS</h1>
+        <p class="subtitle">Anatomía de un rechazo CORFO y la capitalización de aprendizajes</p>
+    </header>
+
+    <div class="diagram-container">
+        <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background Grid -->
+            <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+                </pattern>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                </marker>
+            </defs>
+            <rect width="1000" height="500" fill="url(#grid)" />
+
+            <!-- Connection Arrows -->
+            <path d="M 250 150 L 350 150" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrowhead)" />
+            <path d="M 550 150 L 650 150" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrowhead)" />
+            
+            <!-- Fail Branch -->
+            <path d="M 550 170 L 550 300 L 650 300" stroke="#fb7185" stroke-width="2" stroke-dasharray="4,4" fill="none" marker-end="url(#arrowhead)" />
+            
+            <!-- Learning Loop -->
+            <path d="M 750 350 L 750 420 L 450 420 L 450 200" stroke="#fbbf24" stroke-width="2" stroke-dasharray="8,4" fill="none" marker-end="url(#arrowhead)" />
+
+            <!-- Input Box -->
+            <rect x="50" y="100" width="200" height="100" rx="6" fill="#0f172a" />
+            <rect x="50" y="100" width="200" height="100" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="150" y="140" fill="white" font-size="12" font-weight="600" text-anchor="middle">POSTULACIÓN EXAMYA</text>
+            <text x="150" y="160" fill="#94a3b8" font-size="9" text-anchor="middle">Tracción, Utilidad, Tech Stack</text>
+            <text x="150" y="175" fill="#94a3b8" font-size="9" text-anchor="middle">Video de 40 Segundos</text>
+
+            <!-- Funnel / Filter -->
+            <rect x="350" y="100" width="200" height="100" rx="6" fill="#0f172a" />
+            <rect x="350" y="100" width="200" height="100" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="450" y="140" fill="white" font-size="12" font-weight="600" text-anchor="middle">FILTRO DE 40s (VIDEO)</text>
+            <text x="450" y="160" fill="#fbbf24" font-size="9" text-anchor="middle">Evaluador en modo "Zapping"</text>
+            <text x="450" y="175" fill="#fbbf24" font-size="9" text-anchor="middle">¿Diferenciador Disruptivo?</text>
+
+            <!-- Success Box (Faded) -->
+            <rect x="650" y="100" width="200" height="100" rx="6" fill="#0f172a" />
+            <rect x="650" y="100" width="200" height="100" rx="6" fill="rgba(6, 78, 59, 0.2)" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.3"/>
+            <text x="750" y="140" fill="white" fill-opacity="0.4" font-size="12" font-weight="600" text-anchor="middle">ADJUDICACIÓN</text>
+            <text x="750" y="160" fill="#94a3b8" fill-opacity="0.4" font-size="9" text-anchor="middle">Semilla Inicia CORFO</text>
+
+            <!-- Rejection Box -->
+            <rect x="650" y="250" width="200" height="100" rx="6" fill="#0f172a" />
+            <rect x="650" y="250" width="200" height="100" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+            <text x="750" y="290" fill="white" font-size="12" font-weight="600" text-anchor="middle">RECHAZO (REBOTE)</text>
+            <text x="750" y="310" fill="#fb7185" font-size="9" text-anchor="middle">"Falta de innovación clara"</text>
+            <text x="750" y="325" fill="#fb7185" font-size="9" text-anchor="middle">Feedback de Auditoría</text>
+
+            <!-- The Real Equity -->
+            <text x="450" y="440" fill="#fbbf24" font-size="14" font-weight="700" text-anchor="middle">REAL EQUITY = LEARNING + ITERATION</text>
+            
+            <!-- Annotations -->
+            <text x="300" y="145" fill="#64748b" font-size="8" text-anchor="middle">Sometido a</text>
+            <text x="600" y="145" fill="#64748b" font-size="8" text-anchor="middle">Evaluación</text>
+            <text x="590" y="230" fill="#fb7185" font-size="8" text-anchor="middle">Fallo de Narrativa</text>
+        </svg>
+    </div>
+
+    <div class="summary-grid">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-dot amber"></div>
+                <h3>EL ERROR DEL BUILDER</h3>
+            </div>
+            <ul>
+                <li>• Asumir que Utilidad == Innovación</li>
+                <li>• Perderse en los detalles técnicos</li>
+                <li>• Ignorar el "Wow" inicial</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-dot violet"></div>
+                <h3>FEEDBACK AUDITADO</h3>
+            </div>
+            <ul>
+                <li>• Auditoría gratuita de propuesta</li>
+                <li>• Identificación de gaps de valor</li>
+                <li>• Refinamiento de narrativa disruptiva</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-dot cyan"></div>
+                <h3>ESTRATEGIA 2026</h3>
+            </div>
+            <ul>
+                <li>• Innovación tangible en 10 segs</li>
+                <li>• Resiliencia Regional (Patagonia)</li>
+                <li>• Iterar hasta ser inevitable</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        mariohealthbits.dev | Architecture & Business | Case: CORFO Semilla Inicia 2026
+    </footer>
+</body>
+</html>
