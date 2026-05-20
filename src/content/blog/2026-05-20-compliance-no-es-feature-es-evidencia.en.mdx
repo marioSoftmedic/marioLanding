@@ -1,0 +1,184 @@
+---
+title: "Compliance is not a feature: it's evidence"
+description: "In digital health, a working feature is not enough. Without auditable traceability, it does not exist for the regulator."
+date: 2026-05-20
+lang: "en"
+image: "/img/blog/compliance-evidencia-salud-digital.png"
+tags: [Digital Health, Examya, Compliance, Architecture, Production]
+series: interoperabilidad-chile
+seriesOrder: 6
+draft: false
+canonicalSlug: "2026-05-20-compliance-no-es-feature-es-evidencia"
+---
+
+In regular software, a feature is done when the user can complete the flow.
+
+In digital health, that is only the first floor.
+
+If you cannot prove who did what, when it happened, under which rule, with which evidence, and what was recorded, the system may work perfectly in a demo and still be incomplete for clinical production.
+
+That was one of the hardest lessons while reviewing compliance in Examya.
+
+It is not enough to say: “the flow works.”
+
+You need to prove it.
+
+## What no one tells you about compliance
+
+The common mistake is treating compliance as a feature checklist.
+
+- secure login,
+- session timeout,
+- audit logs,
+- encryption,
+- clinical record,
+- traceability.
+
+And yes, all of that matters. But the trap is believing each item is closed with code alone.
+
+In digital health, a feature is not truly closed until it leaves reviewable evidence.
+
+The architecture needs to answer uncomfortable questions:
+
+- Where is the action recorded?
+- Who can see it?
+- Who can modify it?
+- What happens if an auditor asks for the trace six months later?
+- Is the behavior tested, or just assumed?
+
+That is where the conversation changes.
+
+You are no longer designing only UX. You are designing operational trust.
+
+## The real data
+
+In the recent Examya compliance work, the learning did not come from one massive feature.
+
+It came from looking at compliance verifiers and realizing that several components already existed, but were not always connected to formal evidence.
+
+That nuance matters.
+
+It was not “we need to build everything.”
+
+It was more precise: “we need to prove it in an auditable way.”
+
+For example, you can have a working session timeout. You can have unit tests. You can have a stable frontend hook. But if there is no clear specification, trace, screenshot, report, or explicit mapping against the verifier, the compliance position is weak.
+
+The code does the work.
+
+The evidence proves the work exists.
+
+## The mental architecture we used
+
+The right way to look at it is not:
+
+```text
+feature -> done
+```
+
+It is closer to this:
+
+```text
+feature -> event -> trace -> evidence -> verifier -> audit
+```
+
+That pipeline changes how you build.
+
+Because it is no longer enough to ask “what should the system do?”.
+
+You also need to ask:
+
+- what should the system remember?,
+- what should it be able to explain?,
+- what should it be able to reconstruct?,
+- what should it be able to defend during an external review?
+
+<iframe src="/img/blog/compliance-evidencia-salud-digital.html" width="100%" height="620px" style="border:none; border-radius: 12px; margin: 2rem 0;"></iframe>
+
+In clinical applications, that evidence layer is not decoration.
+
+It is architecture.
+
+## What you are really building
+
+When you design for compliance, you are not only building screens and endpoints.
+
+You are building an explicit relationship between operation and proof.
+
+A clinical flow should leave something like this:
+
+```typescript
+type AuditEvidence = {
+  actorId: string;
+  action: string;
+  resourceType: 'clinical_record' | 'telemedicine_session' | 'exam_order';
+  occurredAt: Date;
+  ruleReference: string;
+  evidenceUri?: string;
+  immutableHash?: string;
+};
+```
+
+That structure is not there to look pretty.
+
+It is there so that, when someone asks “how do you know this happened?”, the system does not depend on human memory, loose screenshots, or good faith.
+
+It depends on traces.
+
+That is the difference between a system that “works” and one that can operate in a regulated clinical environment.
+
+## The gotcha: functional is not always auditable
+
+This is the point that is hardest to accept when you come from product.
+
+A feature can be well implemented and still not be ready for compliance.
+
+Not because the code is bad.
+
+Because evidence was not designed as part of the flow.
+
+It is like building a house with solid beams, proper wiring, and a good roof, but no blueprints, permits, or structural calculations.
+
+The house may be strong.
+
+But when inspection arrives, you have a problem.
+
+Digital health works the same way.
+
+The regulator does not evaluate intention alone. It evaluates demonstrability.
+
+## Zoom out: why this matters in Chile
+
+Chile is entering a stage where digital health can no longer operate as “fast software with a medical-looking interface.”
+
+With interoperability, telemedicine, electronic clinical records, and new data requirements, the bar is rising.
+
+That is good.
+
+It forces us to build better.
+
+But it also requires a different level of maturity: systems that not only automate tasks, but can explain their decisions, record their events, and sustain an audit.
+
+AI in healthcare will need that foundation.
+
+Because an agent can summarize, classify, or assist. But if the surrounding system does not leave evidence, operational risk gets hidden under a nice interface.
+
+And in healthcare, that is not acceptable.
+
+## What comes next
+
+In Examya, the next step is not only adding more AI capabilities.
+
+It is continuing to strengthen the governance layer: traceability, evidence, privacy, interoperability, and operational security.
+
+The thesis is simple:
+
+AI can accelerate the system.
+
+But architecture is what makes it trustworthy.
+
+And in digital health, trust without evidence is just a promise.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
