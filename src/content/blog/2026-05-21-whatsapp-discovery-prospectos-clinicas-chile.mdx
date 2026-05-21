@@ -1,0 +1,25 @@
+---
+title: "WhatsApp Discovery: cómo un agente autónomo scrapea prospectos de clínicas por todo Chile"
+date: 2026-05-21
+lang: "es"
+description: "Cómo construí un agente que scrapea prospectos de laboratorios clínicos en Chile usando WhatsApp Discovery"
+tags: [WhatsApp, IA, Automatización, Prospectos, Clínicas]
+image: ""
+draft: true
+---
+
+El problema era simple pero complejo. Tenía una base de datos de laboratorios clínicos en Chile pero faltaba información clave: números de WhatsApp para prospectos. Manualmente era imposible. 200 laboratorios, 25 regiones, ¿cómo escalar esto?
+
+Construí un agente autónomo que hace web scraping de prospectos de clínicas por todo Chile. El sistema encuentra sitios web, extrae números de WhatsApp y los valida en tiempo real. Esto transformó mi base de datos de Examya.
+
+El proceso tiene 4 etapas claras. Primero, el crawler encuentra URLs de laboratorios usando Google Search API. Segundo, un extractor de contenido analiza cada sitio buscando patrones de WhatsApp. Tercero, un validador verifica que los números funcionan. Finalmente, todo se guarda en PostgreSQL con tags por región.
+
+El corazón del sistema es un scraper que usa Requests + BeautifulSoup. Detecta números con regex `wa\.me/569[0-9]{8}`. Valida conectividad con un simple ping al servidor de WhatsApp. Maneja errores de timeout y bloqueos con retry logic exponencial.
+
+Aprendí que el 40% de los números rotan cada trimestre. La precisión real es del 65% no del 100% como esperaba. La clave fue agregar un sistema de scoring: frescura del sitio + validación + disponibilidad regional.
+
+El próximo paso es integrar esto con Examya. Automatizar el follow-up con Shuri, el agente médico. Que contacte a los prospectos y mida interés en interoperabilidad digital. Esto cierra el ciclo: encontrar prospectos → contactar → convertir en clientes.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
