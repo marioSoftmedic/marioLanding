@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" style="background-color: #020617; font-family: 'JetBrains Mono', monospace;">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#020617"/>
+  <rect width="100%" height="100%" fill="url(#grid)"/>
+
+  <!-- Headers -->
+  <text x="50" y="60" fill="#f8fafc" font-size="24" font-weight="bold">Examya Search Architecture</text>
+  <text x="50" y="85" fill="#94a3b8" font-size="14">Pgvector Embeddings Migration: From Small (384) to Large (1,536) Dimensions</text>
+
+  <!-- Connections (Drawn first so they stay behind opaque elements) -->
+  <!-- WhatsApp to Orchestrator -->
+  <path d="M 180 200 L 260 200" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+  
+  <!-- Orchestrator to OpenAI -->
+  <path d="M 420 200 L 520 200" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  
+  <!-- Orchestrator to Supabase -->
+  <path d="M 340 240 L 340 380" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  
+  <!-- Supabase to Cache -->
+  <path d="M 500 420 L 580 420" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+  <!-- Components -->
+  
+  <!-- Client: WhatsApp -->
+  <rect x="50" y="160" width="130" height="80" rx="6" fill="#0f172a"/>
+  <rect x="50" y="160" width="130" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="115" y="200" fill="white" font-size="12" font-weight="600" text-anchor="middle">WhatsApp Client</text>
+  <text x="115" y="215" fill="#94a3b8" font-size="9" text-anchor="middle">Input: "Cotizar perfil lipídico"</text>
+
+  <!-- Backend: Orchestrator / Shuri -->
+  <rect x="260" y="160" width="160" height="80" rx="6" fill="#0f172a"/>
+  <rect x="260" y="160" width="160" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="340" y="195" fill="white" font-size="12" font-weight="600" text-anchor="middle">Examya Agent (Shuri)</text>
+  <text x="340" y="210" fill="#34d399" font-size="9" text-anchor="middle">Orchestration &amp; Reasoning</text>
+  <text x="340" y="225" fill="#94a3b8" font-size="9" text-anchor="middle">NestJS</text>
+
+  <!-- External: OpenAI API -->
+  <rect x="520" y="160" width="180" height="80" rx="6" fill="#0f172a"/>
+  <rect x="520" y="160" width="180" height="80" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="610" y="195" fill="white" font-size="12" font-weight="600" text-anchor="middle">OpenAI API</text>
+  <text x="610" y="210" fill="#fbbf24" font-size="9" text-anchor="middle">text-embedding-3-large</text>
+  <text x="610" y="225" fill="#94a3b8" font-size="9" text-anchor="middle">Generates 1,536 dim vector</text>
+
+  <!-- Database: Supabase Pgvector -->
+  <rect x="220" y="380" width="280" height="120" rx="6" fill="#0f172a"/>
+  <rect x="220" y="380" width="280" height="120" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="360" y="420" fill="white" font-size="14" font-weight="600" text-anchor="middle">Supabase PostgreSQL</text>
+  <text x="360" y="440" fill="#a78bfa" font-size="11" text-anchor="middle">pgvector / Cosine Similarity</text>
+  <text x="360" y="460" fill="#94a3b8" font-size="10" text-anchor="middle">45,678 medical exams (FONASA)</text>
+  <text x="360" y="475" fill="#94a3b8" font-size="10" text-anchor="middle">Vectors migrated to 1,536 dims</text>
+
+  <!-- Cache Layer -->
+  <rect x="580" y="390" width="160" height="100" rx="6" fill="#0f172a"/>
+  <rect x="580" y="390" width="160" height="100" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="660" y="430" fill="white" font-size="12" font-weight="600" text-anchor="middle">Semantic Cache</text>
+  <text x="660" y="450" fill="#fb923c" font-size="10" text-anchor="middle">Cost Optimization</text>
+  <text x="660" y="465" fill="#94a3b8" font-size="9" text-anchor="middle">Avoids calling OpenAI</text>
+  <text x="660" y="478" fill="#94a3b8" font-size="9" text-anchor="middle">for identical queries</text>
+
+  <!-- Legend -->
+  <rect x="50" y="580" width="180" height="70" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="60" y="605" fill="white" font-size="10" font-weight="600">Old State (Deprecation Warning)</text>
+  <text x="60" y="620" fill="#fb7185" font-size="9">Model: text-embedding-3-small</text>
+  <text x="60" y="635" fill="#94a3b8" font-size="9">Dims: 384 | Precision: Baseline</text>
+
+  <rect x="250" y="580" width="180" height="70" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="260" y="605" fill="white" font-size="10" font-weight="600">New State (Migrated)</text>
+  <text x="260" y="620" fill="#34d399" font-size="9">Model: text-embedding-3-large</text>
+  <text x="260" y="635" fill="#94a3b8" font-size="9">Dims: 1,536 | Precision: +37%</text>
+
+  <rect x="450" y="580" width="180" height="70" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="460" y="605" fill="white" font-size="10" font-weight="600">The False Alarm</text>
+  <text x="460" y="620" fill="#fbbf24" font-size="9">OpenAI corrected the deprecation.</text>
+  <text x="460" y="635" fill="#94a3b8" font-size="9">Migration forced early technical</text>
+  <text x="460" y="648" fill="#94a3b8" font-size="9">debt payment.</text>
+
+</svg>

@@ -1,0 +1,142 @@
+---
+title: "Unit Testing and TDD in AI Agents: Lessons from the Examya Battlefield"
+date: 2026-04-29
+lang: "en"
+description: "How I implemented unit testing and TDD in my medical AI agent, the challenges faced, and the solutions that actually work in production."
+tags: ["AI", "Agents", "TDD", "Testing", "Examya", "OpenCode", "Development"]
+image: "/img/blog/2026-04-29-tdd-agentes-ia.png"
+canonicalSlug: "2026-04-29-pruebas-unitarias-tdd-agentes-ia-lecciones-campo-batalla-examya"
+draft: true
+---
+
+## The problem: agents that hallucinate
+
+Three weeks ago, gemini-flash swore my Examya unit tests were passing. 100% sure. They failed in production.
+
+As an AI agent developer in Patagonia, I can't afford these errors. A medical agent processing lab orders can't fail. But writing tests for code that depends on language models is like trying to catch smoke with your bare hands.
+
+## What I built: a realistic testing system
+
+My solution wasn't more tests. It was the **4-Command Verification Protocol**.
+
+### 1. Mocks with real FONASA data
+
+Instead of creating fictional data, I use real historical medical order data (anonymized, of course). Each test loads a JSON file with actual orders from the last month.
+
+```typescript
+// tests/purchase-handler.test.ts
+import { PurchaseHandler } from '../src/handlers/purchase-handler';
+import { mockOrderData } from '../__mocks__/real-fonasa-data.json';
+
+describe('PurchaseHandler with real data', () => {
+  it('must process valid laboratory order', () => {
+    const handler = new PurchaseHandler();
+    const result = handler.processOrder(mockOrderData.validLaboratoryOrder);
+    
+    expect(result.status).toBe('processed');
+    expect(result.examCode).toBe('LAB-001');
+  });
+});
+```
+
+### 2. Regression tests with Spanish prompts
+
+My agents process medical text in Spanish. Tests must reflect this:
+
+```typescript
+describe('Shuri - Medical Agent', () => {
+  it('must understand Chilean medical slang', () => {
+    const prompt = "Dr. García, necesito examen de sangre completo para paciente María López, RUT 12.345.678-9";
+    const response = agent.processMedicalOrder(prompt);
+    
+    expect(response.understood).toBe(true);
+    expect(response.examRequested.type).toBe('completo');
+  });
+});
+```
+
+### 3. Integration tests with MCP tools
+
+When I add a new tool (like WhatsApp or Mercado Pago), I run tests that simulate complete workflows:
+
+```typescript
+describe('Complete flow: order → payment → result', () => {
+  it('must handle card cancellation', async () => {
+    // Mock Stripe card decline
+    await mockStripeCardDeclined();
+    
+    const result = await agent.completeOrder(orderWithPayment);
+    expect(result.finalStatus).toBe('cancelled');
+    expect(result.notificationSent).toBe(true);
+  });
+});
+```
+
+### 4. Load testing with realistic prompts
+
+The biggest problem with AI agents is that they don't scale. A prompt that works in development can fail with 100 simultaneous requests:
+
+```typescript
+describe('Agent load testing', () => {
+  beforeAll(async () => {
+    // Load real WhatsApp prompts
+    loadRealWhatsAppPrompts();
+  });
+
+  it('must handle 50 simultaneous requests', async () => {
+    const promises = Array(50).fill(null).map(() => 
+      agent.handleWhatsAppMessage('buenos dias, quiero hacer examen')
+    );
+    
+    const results = await Promise.all(promises);
+    expect(results.every(r => r !== null)).toBe(true);
+  });
+});
+```
+
+## How the system works
+
+My testing pipeline now has three levels:
+
+1. **Unit tests**: Individual handler behavior with real data
+2. **Integration tests**: Complete flows between services
+3. **Load tests**: Performance with realistic prompts
+
+The key is in the `__mocks__/real-fonasa-data.json` file that automatically updates weekly with new real orders (anonymized, of course).
+
+## What I learned
+
+### 1. AI testing is different
+
+I can't test "the correct response" because LLMs are probabilistic. Instead, I test:
+
+- That the agent **understands** the context correctly
+- That it **extracts** the necessary data
+- That it **executes** the appropriate action
+- That it **notifies** correctly
+
+### 2. Mocking must be intelligent
+
+Traditional mocks don't work for AI agents. My mocks now:
+
+- Simulate LLM responses with different "personalities"
+- Include common errors (incomplete orders, patient not found)
+- Vary input formats to test robustness
+
+### 3. Tests should break
+
+When I add new capabilities, some tests should fail. This isn't an error, it's a sign that the system is evolving. But critical tests (like order processing) must never fail.
+
+### 4. Documentation is part of tests
+
+Each test has comments explaining what scenario it covers and why it's important. This serves as living documentation of the system's expected behavior.
+
+## What's next
+
+I'm implementing an **end-to-end testing system** that simulates the complete flow from WhatsApp to result notification to the doctor. I'm also testing a new **feature-based testing** approach for when the team grows.
+
+## Contact block
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

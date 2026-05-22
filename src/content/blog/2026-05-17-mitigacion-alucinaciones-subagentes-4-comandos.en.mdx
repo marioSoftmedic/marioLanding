@@ -1,0 +1,140 @@
+---
+title: "Mitigating Sub-agent Hallucinations: 4-Command Protocol for Production"
+date: 2026-05-17
+lang: "en"
+canonicalSlug: "2026-05-17-mitigacion-alucinaciones-subagentes-4-comandos"
+description: "How to detect and mitigate sub-agent hallucinations with a practical protocol based on adversarial verification and redundancy."
+tags: [agents, testing, production, ai, examya, opencode]
+image: "/img/blog/mitigacion-alucinaciones-subagentes.png"
+draft: true
+---
+Sub-agents are a productivity revolution, but they also bring a classic problem: they hallucinate results. In Examya, gemini-flash swore that 3 tests were passing when they were actually failing. This cost us 48 hours of debugging.
+
+## The problem: blind trust in agents
+
+When a code agent says "everything is fine," how do you know it's true? The temptation is to trust, especially when the agent uses convincing technical language. But in production, hallucinations can cost thousands in time and reputational damage.
+
+What we discovered is that sub-agents can:
+
+- **Invent test results** that pass in their simulation
+- **Omit critical errors** in complex code  
+- **Create solutions that work on paper** but fail at runtime
+- **Report resolved dependencies** that never existed
+
+## What we built: 4-command verification protocol
+
+To fight this, we implemented an adversarial verification system that runs 4 commands after any critical sub-agent task.
+
+### Command 1: Code existence verification
+
+```bash
+# Check that all promised files actually exist
+find src/ -name "*.ts" -type f | sort > /tmp/files_before.txt
+# ... after sub-agent works ...
+find src/ -name "*.ts" -type f | sort > /tmp/files_after.txt
+
+diff /tmp/files_before.txt /tmp/files_after.txt
+if [ $? -ne 0 ]; then
+    echo "ERROR: Unexpected files created or deleted"
+    exit 1
+fi
+```
+
+### Command 2: Unit tests with mocking
+
+```typescript
+// tests/unit/mock-subagent-results.test.ts
+describe('Sub-agent result verification', () => {
+  it('should validate mocked results match real execution', () => {
+    const mockResults = getMockedResults();
+    const realResults = executeTestsInIsolatedEnvironment();
+    
+    expect(mockResults).toEqual(realResults);
+  });
+});
+```
+
+### Command 3: Semantic code inspection
+
+We use TypeScript Compiler API to verify generated code:
+
+- Has promised imports
+- Functions exist with expected signatures
+- Types are consistent
+- No unreachable "dead" code
+
+### Command 4: Performance benchmarking
+
+```javascript
+// scripts/verify-performance.js
+const baseline = await getPerformanceBaseline();
+const current = await measureCurrentPerformance();
+
+if (current.executionTime > baseline * 1.5) {
+    console.warn('Performance degradation detected');
+    process.exit(1);
+}
+```
+
+## How the complete flow works
+
+1. **Sub-agent executes task** (e.g.: refactor a module)
+2. **Generates result report** with lists of modified files, passed tests, etc.
+3. **Verification system runs 4 commands**
+4. **If any command fails**, stops and alerts
+5. **If all pass**, confirms and continues
+
+## What we learned
+
+### Lesson 1: never trust "everything is fine"
+
+Agents are like students trying to impress. They give you the answer you think you want, not necessarily the correct truth.
+
+### Lesson 2: redundancy is your friend
+
+Running the same task twice with different methods gives you confidence. If both methods give the same result, it's probably correct.
+
+### Lesson 3: verification must be cheaper than the task
+
+The 4 verification commands take ~30 seconds. The cost of not verifying can be hours of debugging.
+
+## What's next
+
+We're testing an integration with DeepEval to create "sub-agent confidence" metrics. The idea is for the agent to report its confidence level based on:
+
+- Task complexity
+- Accuracy history
+- Level of uncertainty in results
+- Automatic cross-checks
+
+## The real code
+
+```typescript
+// src/subagents/verification.ts
+export class SubAgentVerifier {
+    async verifyTaskExecution(task: SubAgentTask): Promise<VerificationResult> {
+        const results = await Promise.all([
+            this.verifyFileExistence(task),
+            this.runTestsWithMocks(task),
+            this.inspectCodeSemantics(task),
+            this.benchmarkPerformance(task)
+        ]);
+        
+        return {
+            passed: results.every(r => r.passed),
+            details: results,
+            confidence: this.calculateConfidence(results)
+        };
+    }
+}
+```
+
+## Conclusion
+
+Sub-agents are not infallible. They're incredibly powerful tools, but they need supervision. The 4-command protocol has saved us 60 hours of work in the last month and prevented 3 deployments with critical errors.
+
+The key is to treat sub-agents as brilliant but error-prone students: guide them, verify their work, and learn from their mistakes.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,65 @@
+---
+title: "Ingeniería de Campo: cómo construimos un laboratorio molecular portátil en la Patagonia"
+date: 2026-05-12
+lang: "es"
+description: "Los detalles técnicos detrás de BioHealth: cómo empaquetamos extracción de RNA, microfluidos y conectividad 4G en una caja de herramientas para operar en Torres del Paine."
+tags: [Ingeniería, Diagnóstico, BioHealth, Arquitectura, Hardware]
+image: "/diagramas/biohealth-portable-lab.png"
+draft: false
+status: published
+---
+
+En plena pandemia, el desafío no fue solo clínico; fue un problema de arquitectura de sistemas en un entorno hostil. Como tecnólogo médico y arquitecto de sistemas, mi trabajo en Puerto Natales no fue solo tomar muestras; fue diseñar un sistema de diagnóstico molecular que funcionara donde nadie más lo hacía.
+
+Ya conté la historia de cómo BioHealth nació de la necesidad. Hoy quiero entrar en la **ingeniería detrás del sistema**.
+
+## El desafío: Arquitectura en entorno degradado
+
+El problema técnico era simple pero brutal:
+1.  **Transporte ineficiente:** Latencia de resultados inaceptable (>48h).
+2.  **Silos de datos:** Procesos manuales sin trazabilidad.
+3.  **Entorno hostil:** Sin infraestructura estable (electricidad, red).
+
+## La Solución: BioHealth Portable Lab
+
+Desarrollamos un sistema modular que encapsulaba el flujo de diagnóstico clínico en una unidad compacta:
+
+*   **Módulo de Extracción:** Microfluidos automatizados (disminución de error humano).
+*   **Termociclador:** Optimizado para bajo consumo energético.
+*   **Trazabilidad:** Integración 4G con la nube para envío de resultados en tiempo real.
+
+<img src="/diagramas/biohealth-portable-lab.svg" alt="Arquitectura BioHealth Portable Lab" />
+
+## Lecciones de arquitectura para IA (y para la vida)
+
+Lo que aprendí en el campo —gestionando un lab con batería de litio en un parque nacional— es lo que aplico hoy en la orquestación de agentes IA:
+
+1.  **Redundancia es resiliencia:** Si el sistema crítico (PCR) falla, todo el sistema falla.
+2.  **El contexto es el rey:** No puedes operar si no sabes qué pasa en el edge (4G/Cloud).
+3.  **Empatía = Especificación técnica:** Traducir "ansiedad del paciente" a "tiempo de respuesta &lt;24h".
+
+Esta no fue solo una solución médica, fue un ejercicio de **Screaming Architecture**: el código (y el hardware) debe gritar qué problema está resolviendo.
+
+---
+¿Quieres ver cómo construimos esto? Hablemos por WhatsApp o en X como @marioHealthBits.
+
+## La Patagonia como laboratorio de vida
+
+Puerto Natales fue nuestro Silicon Valley accidental. En un lugar de 20,000 habitantes con acceso limitado, construímos tecnología de diagnóstico molecular que funciona en condiciones extremas. Las lecciones de la Patagonia son diferentes a las de Silicon Valley:
+
+- Resiliencia sobre elegancia
+- Funcionalidad sobre estética
+- Eficiencia energética sobre potencia infinita
+- Adaptabilidad sobre perfección
+
+Lo que aprendí aquí no tiene precio: construir sistemas que funcionan cuando todo lo demás falla.
+
+## Lo que viene: el siguiente frente
+
+La experiencia en BioHealth me preparó para el gran desafío actual: interoperabilidad en salud chilena. Los mismos problemas que enfrentamos con muestras aisladas hoy son los mismos que enfrenta el sistema de salud con datos fragmentados:
+
+- Aislamiento de información → centralización de datos con semántica compartida
+- Protocolos manuales → flujos automatizados con inteligencia adaptativa
+- Escasez de recursos → optimización masiva con IA y vectores
+
+BioHealth fue mi bootcamp en IA médica. Cada paciente procesado, cada resultado enviado, cada sistema automatizado construyó los cimientos de lo que hoy soy: un arquitecto de sistemas de inteligencia artificial para la salud.

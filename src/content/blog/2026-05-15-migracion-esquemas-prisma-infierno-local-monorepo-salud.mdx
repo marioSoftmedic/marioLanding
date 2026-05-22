@@ -1,0 +1,185 @@
+---
+title: "Migración de esquemas Prisma: cómo sobrevivir al infierno local en un monorepo de salud"
+date: 2026-05-15
+lang: "es"
+description: "Lecciones de campo sobre las trampas de migración de esquemas en un monorepo médico con múltiples bases de datos y ambientes de desarrollo."
+tags: [ai, postgresql, prisma, development, examya]
+image: "/img/blog/pgvector-production.png"
+draft: false
+series: agentes
+seriesOrder: 6
+---
+
+Hace un par de semanas me enfrenté a una situación que todo desarrollador teme: "todo funcionaba ayer y hoy ya no". En el caso de Examya, esto se tradujo en 7 flujos de pruebas del bot médico fallando localmente después de aplicar correcciones que funcionaban perfectamente en producción.
+
+Lo que descubrí fue un infierno de migración de esquemas Prisma en un monorepo con múltiples servicios, múltiples bases de datos y múltiples entornos de desarrollo. Esta es la historia de cómo solucioné los problemas y las lecciones que aprendí en el proceso.
+
+## El Problema: ¿Por qué los tests locales fallaban?
+
+Todo comenzó con el PR #323 que corrige bugs críticos en el bot médico ExamIA. Los tests en producción pasaban sin problemas, pero al ejecutarlos localmente obtenía errores extraños:
+
+- `NotFoundError: No exam_catalog table in public schema`
+- `relation "whatsapp_context" does not exist`
+- `Invalid prismaMain` en los agents
+
+La causa raíz: esquemas de base de datos desincronizados entre entornos.
+
+## El Dolor: Bases de Datos en un Monorepo Complejo
+
+Examya es un monorepo con varios servicios que usan diferentes bases de datos:
+
+**Servicio API (`apps/api/`):**
+- Usa `examya_dev` para el catálogo de exámenes FONASA, usuarios, etc.
+- 80+ tablas incluyendo `exam_catalog`, `user`, `user_phone`.
+
+**Servicio Agents (`apps/agents/`):**
+- Usa `examya_agents` para contexto de WhatsApp, procesamiento de órdenes.
+- Tablas específicas de agente como `whatsapp_context`, `exam_results`.
+
+**El problema:** Configuraciones locales incorrectas que apuntaban a bases de datos con esquemas anticuados o erróneos.
+
+## Lección #1: Nunca confíes en `db push` en producción
+
+La primera gran lección vino de la práctica: **nunca uses `prisma db push` en producción**. Este comando es solo para prototipado rápido porque puede causar pérdida de datos.
+
+En mi caso local, el problema era aún más sutil:
+
+```typescript
+// apps/agents/.env INCORRECTO
+DATABASE_URL=examya_agents          // ❌ Esto apuntaba al esquema equivocado
+DATABASE_URL_AGENTS=examya_agents_test  // ❌ Esto tampoco era el esquema correcto
+```
+
+La configuración correcta debería ser:
+
+```typescript
+// apps/agents/.env CORRECTO  
+DATABASE_URL=examya_dev              // ✅ Para prismaMain (exam_catalog, users)
+DATABASE_URL_AGENTS=examya_agents    // ✅ Para prismaAgents (whatsapp_context)
+```
+
+## Lección #2: `node --watch` es un enemigo silencioso
+
+Otra trampa peligrosa: usar `node --watch` con servicios que dependen de variables de entorno.
+
+```bash
+# Comando problemático
+dotenv -e .env.local -- node -r ts-node/register -r tsconfig-paths/register src/main.ts --watch
+```
+
+Cuando `prisma generate` regeneraba los clientes de Prisma, `node --watch` reiniciaba el proceso pero **sin las variables de entorno**. El nuevo proceso usaba credenciales por defecto del archivo `.env` en lugar de las locales.
+
+La solución: siempre reiniciar manualmente con el entorno correcto.
+
+```bash
+# Comando correcto (sin --watch)
+dotenv -e .env.local -- node -r ts-node/register -r tsconfig-paths/register src/main.ts
+```
+
+## Lección #3: La trampa de los schemas duplicados
+
+Prisma genera diferentes clientes para diferentes schemas:
+
+- `prismaMain` para el schema principal en `prisma/schema.prisma`
+- `prismaAgents` para el schema de agents en su propio directorio.
+
+El problema: si solo generas uno, el otro queda obsoleto. Esto causaba errores de "schema not applied" porque los archivos del cliente no coincidían con el esquema real en la base de datos.
+
+## El Proceso de Recuperación
+
+### Paso 1: Identificar el estado real de las bases de datos
+
+```bash
+# Verificar esquema en examya_dev
+psql $DATABASE_URL -c "\dt exam_catalog" 
+
+# Verificar esquema en examya_agents  
+psql $DATABASE_URL_AGENTS -c "\dt"
+
+# Verificar extensión pgvector
+psql $DATABASE_URL_AGENTS -c "SELECT extversion FROM pg_extension WHERE extname = 'pgvector';"
+```
+
+### Paso 2: Aplicar el esquema completo
+
+El esquema principal de 80+ tablas nunca se había aplicado correctamente en `examya_dev` local:
+
+```bash
+# Aplicar esquema completo con aceptación de pérdida de datos
+cd apps/api
+DATABASE_URL=examya_dev npx prisma db push --accept-data-loss
+
+# Semilla de datos FONASA
+npx tsx scripts/seed-fonasa-exams.ts
+```
+
+### Paso 3: Corregir configuración de URLs
+
+Actualizar `.env` en agents con las URLs correctas:
+
+```bash
+# apps/agents/.env
+DATABASE_URL=examya_dev                            
+DATABASE_URL_AGENTS=examya_agents
+DIRECT_URL_AGENTS=postgresql://user:pass@localhost:5432/examya_agents
+```
+
+## Código que se Rompió (y cómo se Arregló)
+
+### Bug #1: Búsqueda multi-examen con comas
+
+El código original unía nombres de exámenes con ", " y buscaba como un solo string:
+
+```typescript
+// ❌ INCORRECTO
+const examNames = exams.join(", "); // "HEMOGRAMA, PERFIL LIPÍDICO"
+const results = await prisma.exam_catalog.findMany({
+  where: { name: examNames }
+});
+// 0 resultados porque "HEMOGRAMA, PERFIL LIPÍDICO" no existe como un solo registro
+```
+
+La solución: buscar cada examen individualmente:
+
+```typescript
+// ✅ CORRECTO
+const results = await Promise.all(
+  exams.map(exam => prisma.exam_catalog.findMany({
+    where: { name: exam.replace(/, /g, " ") }
+  }))
+);
+const flatResults = results.flat();
+```
+
+### Bug #2: Regex con caracteres acentuados
+
+El regex `\b` de JavaScript no funciona bien con caracteres no-ASCII como "í":
+
+```typescript
+// ❌ INCORRECTO  
+const isConfirmation = /\bsí\b/.test("sí, confirmo");
+// false porque \b no funciona con "í" en muchos entornos de JS
+```
+
+Solución: usar boundary alternativo:
+
+```typescript
+// ✅ CORRECTO
+const isConfirmation = /\bsí(?:[^a-z]|$)/.test("sí, confirmo");
+```
+
+## Lecciones del Campo
+
+1. **Documenta el Entorno Local**: No asumas que recordaras cómo configurar las DBs en dos meses.
+2. **Valida Esquemas Antes de Commit**: Un pre-commit hook que verifique la existencia de tablas críticas te ahorra horas de debugging.
+3. **Usa Ambientes Separados por Servicio**: Cada microservicio o agente debe tener su propia definición de entorno clara.
+
+## Conclusión: El Costo de la Aceleración
+
+Aprender estas lecciones me costó dos días de trabajo frustrante, pero me salvó de desastres en producción. La tentación de usar atajos como `db push` es fuerte cuando estamos bajo presión.
+
+Pero en el desarrollo de software, especialmente en sistemas críticos como uno de salud, la calidad y la fiabilidad valen más que la velocidad. Como decimos en el sur: hay que darle con calma para que quede firme.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

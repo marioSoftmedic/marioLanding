@@ -1,0 +1,26 @@
+---
+title: "WhatsApp Discovery: How an Autonomous Agent Scrapes Clinic Prospects Across Chile"
+date: 2026-05-21
+lang: "en"
+description: "How I built an agent that scrapes laboratory clinic prospects in Chile using WhatsApp Discovery"
+tags: [WhatsApp, AI, Automation, Prospects, Clinics]
+image: ""
+draft: true
+canonicalSlug: "2026-05-21-whatsapp-discovery-prospectos-clinicas-chile"
+---
+
+The problem was simple yet complex. I had a database of clinical laboratories in Chile but lacked key information: WhatsApp numbers for prospects. Manually it was impossible. 200 laboratories, 25 regions, how could I scale this?
+
+I built an autonomous agent that scrapes clinic prospects across Chile. The system finds websites, extracts WhatsApp numbers, and validates them in real-time. This transformed my Examya database.
+
+The process has 4 clear stages. First, the crawler finds laboratory URLs using Google Search API. Second, a content extractor analyzes each site looking for WhatsApp patterns. Third, a validator verifies the numbers work. Finally, everything is saved in PostgreSQL with regional tags.
+
+The heart of the system is a scraper using Requests + BeautifulSoup. It detects numbers with regex `wa\.me/569[0-9]{8}`. It validates connectivity with a simple ping to WhatsApp's servers. It handles timeouts and blocks with exponential retry logic.
+
+I learned that 40% of numbers rotate every quarter. Real accuracy is 65% not 100% as expected. The key was adding a scoring system: site freshness + validation + regional availability.
+
+The next step is integrating this with Examya. Automating follow-up with Shuri, the medical agent. Having contact prospects and measure interest in digital interoperability. This closes the cycle: find prospects → contact → convert to clients.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

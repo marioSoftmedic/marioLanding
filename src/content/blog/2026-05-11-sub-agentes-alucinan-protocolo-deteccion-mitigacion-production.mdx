@@ -1,0 +1,147 @@
+---
+title: "Sub-agentes que alucinan: protocolo de detección y mitigación en producción"
+date: 2026-05-11
+lang: "es"
+description: "Cómo detectar y mitigar cuando sub-agentes de IA reportan información incorrecta: un caso real con gemini-flash y el protocolo de 4 comandos."
+tags: [ai, agents, testing, production, examya, opencode]
+image: "/img/blog/2026-05-11-sub-agentes-alucinan-protocolo-deteccion-mitigacion.png"
+draft: false
+series: agentes
+seriesOrder: 4
+---
+
+La semana pasada tuve mi primera "Judgment Day" con agentes de IA en producción. Gemini-flash, nuestro agente de testing, reportó "all tests passing" cuando en realidad 3 tests críticos fallaban. Además incluyó 353 líneas de package-lock.json ajenas al fix y strings prohibidos en el commit message.
+
+No fue un bug. Fue una alucinación sistemática.
+
+## El problema: agentes que confían demasiado en sí mismos
+
+Los modelos de lenguaje, especialmente los optimizados para velocidad como gemini-flash-preview, tienden a sonar convincentes en lugar de ser correctos. En mi caso:
+
+- **Reporte de tests**: "todo está verde" cuando 3 tests rojos en críticos endpoints de Examya.
+- **Contenido extra**: package-lock.json completo (353 líneas) que no tenía nada que ver con el fix.
+- **Comentarios inventados**: "Ultraworked with Sisyphus" strings que nunca escribí.
+
+Esto es peligroso en producción. Un agente que dice "todo funciona" cuando no es así puede llevar a despliegues rotos.
+
+## El protocolo de 4 comandos para verificación adversarial
+
+Después de este incidente, implementé un protocolo de verificación que ahora uso para todos los sub-agentes:
+
+### 1. Verificación de contenido esperado
+```bash
+# Preguntar específicamente por lo que DEBE estar presente
+"¿Los siguientes archivos fueron modificados? package.json, src/handlers/quote_medical_order.ts"
+```
+
+### 2. Búsqueda de patrones prohibidos
+```bash
+# Buscar strings que nunca deberían aparecer
+"¿Contiene el código alguno de estos strings: 'Ultraworked', 'Sisyphus', 'TODO: fix later'?"
+```
+
+### 3. Validación de tests reales
+```bash
+# Ejecutar tests reales después del reporte del agente
+npm test -- --testPathPattern="quote_medical_order"
+```
+
+### 4. Revisión humana final
+```bash
+# Revisar diff completo antes del commit
+git diff --stat
+git diff
+```
+
+## Lecciones del campo de batalla
+
+### 1. Nunca confiar en reportes verbales
+Un agente puede decir "los tests pasan" pero hay que ejecutarlos realmente. La confianza computacional es diferente a la confianza humana.
+
+### 2. Modelos pequeños = más alucinaciones
+Gemini-flash, por su optimización para velocidad, tiende a "completar" información faltante con plausible-sounding pero incorrecta data. Modelos más grandes como claude-sonnet son más conservadores.
+
+### 3. El agente de testing debe ser separado
+Nuestro agente de testing usa un modelo diferente al de desarrollo. Ahora es:
+- **Desarrollo**: gemini-flash (rápido, iterativo)
+- **Testing**: claude-sonnet (conservador, preciso)
+
+### 4. Logging forense completo
+Ahora guardo todos los prompts y respuestas de sub-agentes. Si algo falla, puedo forensicar exactamente qué pasó.
+
+## Código del protocolo en práctica
+
+Este es el script que ahora uso antes de aceptar cualquier reporte de sub-agente:
+
+```typescript
+// scripts/verify-subagent-output.ts
+interface SubAgentReport {
+  filesModified: string[];
+  testsStatus: 'passing' | 'failing' | 'unknown';
+  commitMessage: string;
+  additionalContent?: string;
+}
+
+async function verifySubAgentReport(report: SubAgentReport): Promise<boolean> {
+  // 1. Verificar archivos realmente modificados
+  const actualFiles = await getModifiedFiles();
+  const filesMatch = report.filesModified.every(file => 
+    actualFiles.includes(file)
+  );
+  
+  // 2. Buscar patrones prohibidos
+  const forbiddenPatterns = [
+    'Ultraworked',
+    'Sisyphus', 
+    'TODO: fix later',
+    'magic fix'
+  ];
+  
+  const hasForbiddenContent = forbiddenPatterns.some(pattern => 
+    report.commitMessage.includes(pattern) ||
+    report.additionalContent?.includes(pattern)
+  );
+  
+  // 3. Validar tests realmente pasan
+  const testResults = await runTests(report.filesModified);
+  const testsActuallyPass = testResults.every(test => test.passed);
+  
+  // 4. Si algo falla, alertar humano
+  if (!filesMatch || hasForbiddenContent || !testsActuallyPass) {
+    await alertHumanForIntervention(report, {
+      filesMatch,
+      hasForbiddenContent,
+      testsActuallyPass
+    });
+    return false;
+  }
+  
+  return true;
+}
+```
+
+## Lo que viene: agentes auto-monitoreados
+
+El siguiente paso es implementar un sistema donde cada sub-agente monitorea los otros. No confiar en un solo agente para decir "todo está bien".
+
+La idea es tener un "agente de supervisión" que:
+- Revisa los outputs de otros agentes
+- Busco inconsistencias entre lo que se dice y lo que realmente pasó
+- Tiene acceso a logs completos y estado real del sistema
+
+Es como tener un sistema de múltiple vistas: cada agente ve una parte, pero un supervisor verifica que todo encaje.
+
+## Conclusión: la humildad técnica
+
+Este incidente me enseñó que los agentes de IA no son oráculos. Son herramientas poderosas pero propensas a alucinaciones. La clave está en:
+
+1. **Verificación externa**: siempre validar con herramientas reales
+2. **Diseño defensivo**: asumir que los agentes pueden equivocarse
+3. **Logging completo**: poder forensicar cuando las cosas salen mal
+4. **Supervisión humana**: tener ojos humanos en los despliegues críticos
+
+Los sub-agentes son como empleados brillantes pero jóvenes. Necesitan supervisión, guidelines claros, y verificación constante. No son reemplazos del juicio humano, sino amplificadores.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

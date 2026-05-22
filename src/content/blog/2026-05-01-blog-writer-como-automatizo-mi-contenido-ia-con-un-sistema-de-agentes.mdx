@@ -1,0 +1,90 @@
+---
+title: "Blog Writer: cómo automatizo mi contenido de IA con un sistema de agentes"
+date: 2026-05-01
+lang: "es"
+description: "Detalles técnicos del blog-writer skill que orquesta la creación de posts automáticos usando memoria, sync bidireccional y publicación multilingüe."
+tags: [IA, Agentes, Automatización, Obsidian, Engram, Blog]
+image: "/img/blog/blog-writer-automatizacion-contenido-ia.png"
+draft: true
+---
+
+## Problema
+
+Escribir y publicar contenido técnico de alta calidad es un proceso complejo. Requiere investigación, escritura, traducción, edición y publicación en múltiples plataformas. El proceso manual consume horas de trabajo valioso y genera inconsistencias.
+
+## Lo que construí
+
+Un sistema automatizado de creación de blog posts que convierte memorias de trabajo en contenido publicado. El flujo completo:
+
+**Entrada**: Observaciones de trabajo diario desde Engram.
+**Procesamiento**: Análisis de temas, evitación de repeticiones, generación de drafts.
+**Salida**: Posts en español e inglés, listos para publicación.
+
+El sistema funciona como un agente especializado que coordina múltiples tareas técnicas:
+
+1. **Sincronización repos**: Obtiene el último estado de obsidian-vault y marioLanding
+2. **Anti-repetición**: Lee `_INDEX.md` para evitar cubrir temas ya publicados
+3. **Contexto en tiempo real**: Extrae memorias recientes del pipeline Engram
+4. **Generación bilingüe**: Crea drafts en español e inglés simultáneamente
+5. **Publicación automática**: Guarda en ambos repos y hace push automático
+
+## Cómo funciona
+
+El sistema está construido como una skill de OpenClaw con un workflow cuidadosamente orquestado:
+
+**Sincronización inicial**:
+```bash
+cd ~/repos/obsidian-vault && git pull
+cd ~/repos/marioLanding && git pull
+```
+
+**Extracción de contexto**:
+- Analiza `_INDEX.md` para identificar temas cubiertos y disponibles
+- Extrae las 10 observaciones más recientes del pipeline Engram
+- Genera un tema único que no se repite
+
+**Generación de contenido**:
+- Usa el modelo ZAI GLM-5 Turbo para crear contenido en español
+- Traduce automáticamente al inglés manteniendo la estructura MDX
+- Aplica todas las reglas de estilo y estructura obligatorias
+
+**Guardado y publicación**:
+- Crea 3 archivos: borrador en Obsidian, MDX español, MDX inglés
+- Actualiza el índice de posts pendientes
+- Hace push automático a ambos repos
+- Registra la acción en Engram para trazabilidad
+
+## Lo que aprendí
+
+**Memoria como activo**: Las observaciones diarias son mucho más que registros. Son la base de contenido auténtico y actualizado. El sistema convierte el trabajo real en conocimiento público.
+
+**Automatización inteligente**: No es reemplazar al creador, sino amplificar sus capacidades. La automatización gestiona lo técnico (sync, push, formatos) para que el creador se enfoque en la calidad.
+
+**Sincronización bidireccional**: El flujo Mac→VPS→Mac con Engram crea un ciclo de retroalimentación donde el contenido publicado vuelve a nutrir el sistema de conocimiento.
+
+**Reglas estrictas**: Los sistemas complejos necesitan protocolos claros. Las reglas de frontmatter, estructura de contenido y anti-repetición son esenciales para consistencia.
+
+## Lo que viene
+
+El próximo paso es integrar la publicación automática en redes sociales. El sistema ya genera los drafts, el siguiente paso es:
+
+1. **Publicación automática en X**: Genera hilos de 4 tweets adaptados al formato de la plataforma
+2. **LinkedIn**: Contenido optimizado para la red profesional con hashtags adecuados
+3. **Monitoreo**: Seguimiento de engagement y métricas para optimizar futuros posts
+
+La automatización no termina con la publicación del blog. Extenderá el reach del contenido a las redes sociales de forma inteligente y contextual.
+
+## Estructura técnica
+
+El sistema se ejecuta como un cron job en el VPS de Contabo con múltiples componentes interconectados:
+
+**Base de datos**: Engram como fuente única de verdad para memorias
+**Repositorios**: obsidian-vault (origen) y marioLanding (publicación)
+**Skills**: blog-writer como orquestador, memory-miner para contexto
+**Publicación**: Pipeline multilingüe con validación automática
+
+## Contacto
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

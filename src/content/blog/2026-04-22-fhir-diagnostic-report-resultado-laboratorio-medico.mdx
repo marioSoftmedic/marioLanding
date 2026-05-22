@@ -1,0 +1,87 @@
+---
+title: "FHIR DiagnosticReport: cómo un resultado de laboratorio viaja de vuelta al médico que lo ordenó"
+date: 2026-04-22
+lang: "es"
+description: "El resultado salió del analizador. Ahora tiene que llegar al sistema del médico que lo pidió — sin PDF, sin WhatsApp, sin intermediario humano. Así funciona DiagnosticReport FHIR y así lo implementa Examya."
+tags: ["FHIR", "Interoperabilidad", "HL7", "Salud Digital", "Examya", "Laboratorios Clínicos"]
+image: "/img/blog/2026-04-22-fhir-diagnostic-report-resultado-laboratorio-medico.png"
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 4
+related:
+  - "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+  - "2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile"
+---
+
+El tubo entró al analizador. La máquina corrió el protocolo. El técnico validó. El resultado está listo.
+
+¿Y ahora qué?
+
+En la mayoría de los laboratorios en Chile hoy, la respuesta es: se exporta un PDF, se imprime o se manda por email, y el médico lo recibe en algún momento — si tiene suerte, antes de ver al paciente de vuelta. En el peor caso, el paciente llega con una foto en el celular y el médico tiene que tipear los valores a mano en su sistema.
+
+Eso no es interoperabilidad. Es un fax disfrazado de modernidad.
+
+FHIR tiene un recurso diseñado exactamente para este momento: **DiagnosticReport**.
+
+## Qué es un DiagnosticReport
+
+Un `DiagnosticReport` es el recurso FHIR que representa el resultado de un estudio diagnóstico — laboratorio clínico, imagenología, anatomía patológica. No es el resultado en sí (eso son las `Observation`s), sino el sobre que los agrupa, los firma, y los entrega con contexto: quién lo ordenó, sobre qué paciente, qué muestra se procesó, y cuál es la conclusión.
+
+La estructura mínima que importa:
+
+```json
+{
+  "resourceType": "DiagnosticReport",
+  "id": "resultado-hemograma-4521",
+  "status": "final",
+  "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/v2-0074", "code": "LAB" }] }],
+  "code": {
+    "coding": [{ "system": "http://loinc.org", "code": "58410-2", "display": "CBC panel - Blood by Automated count" }]
+  },
+  "subject": { "reference": "Patient/rut-12345678-9" },
+  "basedOn": [{ "reference": "ServiceRequest/orden-medico-consulta-3301" }],
+  "issued": "2026-04-22T10:45:00-04:00",
+  "performer": [{ "reference": "Organization/laboratorio-biohealth-natales" }],
+  "result": [
+    { "reference": "Observation/hemoglobina-resultado" },
+    { "reference": "Observation/leucocitos-resultado" },
+    { "reference": "Observation/plaquetas-resultado" }
+  ]
+}
+```
+
+Tres cosas importantes en ese JSON:
+
+**`basedOn`**: apunta a la `ServiceRequest` — la orden que generó el estudio. Esto es lo que cierra el ciclo. El sistema que generó la orden (digamos, el EHR del médico) puede recibir el resultado y saber exactamente a qué orden corresponde, sin ambigüedad.
+
+**`result`**: lista de referencias a `Observation`. Cada observación tiene el valor, la unidad, el rango de referencia, y el código LOINC del analito. No es texto libre — es dato estructurado que otro sistema puede leer, graficar, alertar, o comparar con resultados anteriores.
+
+**`status: "final"`**: el resultado está validado y firmado. FHIR tiene estados intermedios (`preliminary`, `registered`) que permiten modelar el proceso del laboratorio con precisión.
+
+## El flujo completo en Examya
+
+En Examya el flujo de un examen tiene cuatro momentos FHIR:
+
+1. **ServiceRequest** — el médico (o el paciente vía WhatsApp) genera la orden. Examya la registra con el código LOINC del estudio, el paciente (referenciado por RUT), y el prestador que lo va a ejecutar.
+
+2. **Specimen** — cuando la muestra llega al laboratorio, se registra la toma: tipo de muestra, hora, condiciones. Esto es crítico para trazabilidad y para validar que el resultado corresponde a una muestra real.
+
+3. **Observation** (por cada analito) — el analizador entrega los valores. Examya los estructura: valor numérico, unidad UCUM (`g/dL`, `10*3/uL`), rango de referencia por edad/sexo, interpretación (`H`, `L`, `N`).
+
+4. **DiagnosticReport** — agrupa las observaciones, las firma digitalmente con la identidad del laboratorio, y cambia el estado a `final`. En ese momento el resultado está disponible para ser consultado por cualquier sistema autorizado.
+
+## Por qué esto importa ahora en Chile
+
+La [Ley 21.668](/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya) obliga a los prestadores a exponer sus datos clínicos en formato interoperable. Los resultados de laboratorio son explícitamente parte de esa obligación.
+
+Un DiagnosticReport FHIR bien formado cumple ese requisito de base: tiene el recurso correcto, el código LOINC que identifica el estudio, el RUT del paciente como identificador nacional, y la referencia a la orden que lo originó.
+
+Lo que hoy tarda horas (PDF → email → tipeo manual) puede colapsar a segundos: el lab valida, el DiagnosticReport cambia a `final`, y el EHR del médico recibe una notificación vía FHIR Subscription. Sin intermediarios.
+
+## El eslabón que faltaba en la cadena
+
+Los posts anteriores de esta serie cubrieron la ley que obliga ([Ley 21.668](/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya)), los laboratorios como actors clave ([laboratorios clínicos](/blog/2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile)), y la capa técnica del adapter ([FHIR + Ley 21.668](/blog/2026-04-18-fhir-ley-21-668-interoperabilidad-chile)).
+
+DiagnosticReport es el momento donde todo eso se materializa. Es el recurso que cierra el ciclo: de la orden del médico, al resultado en sus manos, en formato que su sistema puede leer directamente.
+
+El laboratorio dejó de ser el final de la cadena. Ahora es el punto de retorno.

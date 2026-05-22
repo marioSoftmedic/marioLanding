@@ -271,6 +271,16 @@ export const TAG_TAXONOMY: TagDef[] = [
     aliases: ['digital health', 'salud digital', 'saluddigital', 'digitalhealth', 'healthtech', 'salud'],
   },
   {
+    slug: 'telemedicine',
+    label: { es: 'Telemedicina', en: 'Telemedicine' },
+    aliases: ['telemedicine', 'telemedicina'],
+  },
+  {
+    slug: 'compliance',
+    label: { es: 'Cumplimiento', en: 'Compliance' },
+    aliases: ['compliance', 'cumplimiento'],
+  },
+  {
     slug: 'interoperability',
     label: { es: 'Interoperabilidad', en: 'Interoperability' },
     aliases: ['interoperability', 'interoperabilidad'],

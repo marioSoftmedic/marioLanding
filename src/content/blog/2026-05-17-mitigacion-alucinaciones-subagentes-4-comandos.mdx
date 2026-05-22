@@ -1,0 +1,144 @@
+---
+title: "Mitigación de Alucinaciones en Sub-agentes: Protocolo de 4 Comandos para Producción"
+date: 2026-05-17
+lang: "es"
+description: "Cómo detectar y mitigar alucinaciones en sub-agentes con un protocolo práctico basado en verificación adversarial y redundancia."
+tags: [ai, agents, testing, production, examya, opencode]
+image: "/img/blog/mitigacion-alucinaciones-subagentes-4-comandos.png"
+draft: false
+series: agentes
+seriesOrder: 7
+---
+
+Los sub-agentes son una revolución para la productividad, pero también traen un problema clásico: alucinan resultados. En Examya, gemini-flash juró que 3 tests estaban pasando cuando en realidad fallaban. Esto nos costó 48 horas de depuración.
+
+## El problema: confianza ciega en agentes
+
+Cuando un agente de código dice "todo está bien", ¿cómo sabes que es verdad? La tentación es confiar, especialmente cuando el agente usa lenguaje técnico convincente. Pero en producción, las alucinaciones pueden costar miles de dólares en tiempo y daño reputacional.
+
+Lo que descubrimos es que los sub-agentes pueden:
+
+- **Inventar resultados de tests** que pasan en su simulación
+- **Omitir errores críticos** en código complejo
+- **Crear soluciones funcionales en papel** que fallan en tiempo de ejecución
+- **Reportar dependencias resueltas** que nunca existieron
+
+## Lo que construí: protocolo de 4 comandos de verificación
+
+<iframe src="/img/blog/mitigacion-alucinaciones-subagentes-4-comandos.html" width="100%" height="700px" style="border:none; border-radius: 8px; margin: 2rem 0;"></iframe>
+
+Para combatir esto, implementé un sistema de verificación adversarial que ejecuta 4 comandos después de cualquier tarea técnica de sub-agentes.
+
+### Comando 1: Verificación de código existente
+
+```bash
+# Revisa que todos los archivos prometidos realmente existen
+find src/ -name "*.ts" -type f | sort > /tmp/files_before.txt
+# ... después de que el sub-agente trabaje ...
+find src/ -name "*.ts" -type f | sort > /tmp/files_after.txt
+
+diff /tmp/files_before.txt /tmp/files_after.txt
+if [ $? -ne 0 ]; then
+    echo "ERROR: Archivos creados o eliminados no esperados"
+    exit 1
+fi
+```
+
+### Comando 2: Ejecución de tests unitarios con mocking
+
+```typescript
+// tests/unit/mock-subagent-results.test.ts
+describe('Sub-agent result verification', () => {
+  it('should validate mocked results match real execution', () => {
+    const mockResults = getMockedResults();
+    const realResults = executeTestsInIsolatedEnvironment();
+    
+    expect(mockResults).toEqual(realResults);
+  });
+});
+```
+
+### Comando 3: Inspección semántica del código
+
+Usamos TypeScript Compiler API para verificar que el código generado:
+
+- Tiene los imports prometidos
+- Las funciones existen y tienen la firma esperada  
+- Los tipos son consistentes
+- No hay código "muerto" inalcanzable
+
+### Comando 4: Benchmark de rendimiento
+
+```javascript
+// scripts/verify-performance.js
+const baseline = await getPerformanceBaseline();
+const current = await measureCurrentPerformance();
+
+if (current.executionTime > baseline * 1.5) {
+    console.warn('Performance degradation detected');
+    process.exit(1);
+}
+```
+
+## Cómo funciona el flujo completo
+
+1. **Sub-agente ejecuta tarea** (ej: refactorizar un módulo)
+2. **Genera reporte de resultados** con listas de archivos modificados, tests pasados, etc.
+3. **Sistema de verificación ejecuta los 4 comandos**
+4. **Si falla cualquier comando**, detiene y alerta
+5. **Si pasa todo**, confirma y continúa
+
+## Lo que aprendí
+
+### Lección 1: nunca confiar en "todo está bien"
+
+Los agentes son como estudiantes que intentan impresionar. Te dan la respuesta que crees que quieres, no necesariamente la verdad correcta.
+
+### Lección 2: la redundancia es tu amiga
+
+Ejecutar la misma tarea dos veces con métodos diferentes te da confianza. Si ambos métodos dan el mismo resultado, es probable que sea correcto.
+
+### Lección 3: la verificación debe ser más barata que la tarea
+
+Los 4 comandos de verificación toman ~30 segundos. El costo de no verificar puede ser horas de depuración.
+
+## Lo que viene
+
+Estamos probando una integración con DeepEval para crear métricas de "confianza del sub-agente". La idea es que el agente mismo reporte su nivel de confianza basado en:
+
+- Complejidad de la tarea
+- Historial de precisiones
+- Nivel de incertidumbre en los resultados
+- Verificaciones cruzadas automáticas
+
+## El código real
+
+```typescript
+// src/subagents/verification.ts
+export class SubAgentVerifier {
+    async verifyTaskExecution(task: SubAgentTask): Promise<VerificationResult> {
+        const results = await Promise.all([
+            this.verifyFileExistence(task),
+            this.runTestsWithMocks(task),
+            this.inspectCodeSemantics(task),
+            this.benchmarkPerformance(task)
+        ]);
+        
+        return {
+            passed: results.every(r => r.passed),
+            details: results,
+            confidence: this.calculateConfidence(results)
+        };
+    }
+}
+```
+
+## Conclusión
+
+Los sub-agentes no son infalibles. Son herramientas increíblemente poderosas, pero necesitan supervisión. El protocolo de 4 comandos nos ha ahorrado 60 horas de trabajo en el último mes y ha evitado 3 despliegues con errores críticos.
+
+La clave es tratar a los sub-agentes como estudiantes brillantes pero propensos a errores: guíalos, verifica su trabajo, y aprende de sus fallos.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

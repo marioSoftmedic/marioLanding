@@ -1,0 +1,91 @@
+---
+title: "Arquitectura de Routing OCR en Examya: cómo un simple cambio unificó 2 flujos"
+date: 2026-04-28
+lang: "es"
+description: "La historia de cómo eliminamos duplicación en el procesamiento de resultados médicos y optimizamos el flujo OCR de WhatsApp con una sola decisión técnica."
+tags: [examya, whatsapp, ocr, architecture, agents, interoperabilidad]
+image: ""
+draft: true
+---
+
+El sistema de procesamiento de órdenes médicas por WhatsApp en Examya tenía un problema sutil pero crítico: dos caminos separados para interpretar resultados de exámenes. En un mundo donde la precisión médica es lo que está en juego, esta duplicación no solo era un problema técnico, sino un riesgo potencial para los pacientes.
+
+## El problema: dos mundos paralelos
+
+Cuando un paciente enviaba una foto de resultados por WhatsApp, nuestro sistema podía tomar dos caminos completamente diferentes dependiendo de un detalle aparentemente menor:
+
+**Camino A** (nuevo, stage-gated):
+- GPT-4o + guías MINSAL + parser corregido + rangos de referencia chilenos
+- Alta calidad, preciso, contextualizado
+
+**Camino B** (antiguo, classifier-gated): 
+- GPT-4o-mini, prompt genérico, sin guías MINSAL, sin correcciones de parser
+- Calidad inferior, potencialmente impreciso
+
+Un paciente que enviaba una foto de resultados sin antes solicitar "interpretar resultados" recibía el Camino B. No era un error grave, pero tampoco era lo óptimo. Más importante: manteníamos código duplicado en dos servicios diferentes con lógica similar pero no idéntica.
+
+La pregunta que nos hicimos: ¿por qué tener dos caminos cuando podemos tener uno que sea excelente?
+
+## La solución: unificación bajo un solo punto de decisión
+
+La respuesta no era combinar los dos caminos, sino eliminar uno por completo. En `whatsapp-webhook.controller.ts` en la línea 1189-1227, implementamos un solo punto de decisión que reemplazó la lógica compleja con algo elegante:
+
+```typescript
+// Antes: dos caminos separados
+if (stage == 'awaiting_results_photo') {
+  handleResultsPhotoOcr(); // Camino A
+} else {
+  const classification = documentClassifier.classifyDocumentFromStorage();
+  if (classification === 'exam_result') {
+    ExamResultWhatsappService.interpretAndSend(); // Camino B duplicado
+  }
+}
+
+// Después: unificación
+if (stage == 'awaiting_results_photo' || classification === 'exam_result') {
+  handleResultsPhotoOcr(); // Solo un camino excelente
+}
+```
+
+Este cambio parece simple, pero implica varias decisiones técnicas fundamentales:
+
+1. **Stage tiene prioridad sobre el clasificador**: si el usuario está en el estado esperando resultados, no necesitamos clasificar, vamos directo a la interpretación de alta calidad.
+
+2. **Eliminación del Camino B**: el antiguo servicio `ExamResultWhatsappService.interpretAndSend()` fue completamente removido. Su lógica ahora vive únicamente en `handleResultsPhotoOcr()`.
+
+3. **Manejo de clasificación abierta**: cuando el clasificador falla abiertamente como `medical_order`, los documentos no médicos van a cotización, nunca a interpretación. Esto protege contra falsos positivos.
+
+## Impacto en la calidad del servicio
+
+Este cambio no solo resolvió la duplicación de código. Impactó directamente la calidad del servicio:
+
+- **Precisión mejorada**: todos los resultados ahora se procesan con GPT-4o + guías MINSAL
+- **Consistencia**: no hay más diferencia entre "tipos" de usuarios
+- **Mantenibilidad**: un solo punto de lógica para modificar, testear y depurar
+- **Riesgo reducido**: eliminamos la posibilidad de pacientes reciban interpretaciones inferiores
+
+## Lecciones aprendidas
+
+La implementación nos dejó varias enseñanzas importantes:
+
+**1. La simplicidad es poder**: eliminar código duplicado a veces es más valioso que agregar nueva funcionalidad. Un camino claro y excelente es mejor que dos caminos mediocres.
+
+**2. El stage management es clave**: en sistemas conversacionales, el estado del usuario es información más valiosa que la clasificación de documentos solos. Priorizar el estado nos dio una mejor experiencia.
+
+**3. Los clasificadores pueden fallar**: cuando un clasificador de IA falla abiertamente, es mejor ser conservador (enviar a cotización) que arriesgar interpretaciones incorrectas.
+
+## ¿Qué viene después?
+
+Con esta base unificada, podemos pensar en el siguiente nivel:
+
+- **Integración con FHIR**: los resultados estandarizados pueden fluir directamente a sistemas clínicos
+- **Personalización de rangos**: ajuste de rangos de referencia según perfil del paciente
+- **Alertas inteligentes**: detección de resultados anómalos que requieren atención médica inmediata
+
+La arquitectura de routing OCR es ahora un ejemplo de cómo la simplicidad técnica puede traducirse en mejor experiencia clínica. En un sistema donde cada resultado cuenta, no podemos permitirnos caminos mediocres.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

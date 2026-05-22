@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FONASA MLE Open - Diagrama de Arquitectura</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #020617;
+            --card-bg: #0f172a;
+            --border: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --cyan: #22d3ee;
+            --emerald: #34d399;
+            --violet: #a78bfa;
+            --amber: #fbbf24;
+            --rose: #fb7185;
+            --slate: #94a3b8;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+        header {
+            margin-bottom: 32px;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--emerald);
+            margin-bottom: 8px;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--emerald);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        h1 { font-size: 24px; font-weight: 700; margin: 0 0 8px 0; }
+        p.subtitle { color: var(--text-secondary); margin: 0; font-size: 14px; }
+        .diagram-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            overflow: hidden;
+        }
+        svg { width: 100%; height: auto; display: block; }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .card-dot.cyan { background-color: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+        .card-dot.emerald { background-color: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+        .card-dot.rose { background-color: var(--rose); box-shadow: 0 0 8px var(--rose); }
+        h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+        footer { font-size: 10px; color: var(--text-secondary); opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="status"><div class="dot"></div> Sistema En Línea</div>
+            <h1>FONASA MLE Open: Pipeline y Distribución</h1>
+            <p class="subtitle">Extracción automatizada de exámenes médicos y distribución vía Model Context Protocol</p>
+        </header>
+
+        <div class="diagram-container">
+            <svg viewBox="0 0 1000 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+                    </pattern>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                    </marker>
+                </defs>
+
+                <!-- Grid Background -->
+                <rect width="1000" height="500" fill="url(#grid)" />
+
+                <!-- Connections -->
+                <path d="M 160 120 L 260 120" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+                <path d="M 420 120 L 520 120" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+                <path d="M 680 120 L 780 120" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+                
+                <path d="M 860 160 L 860 260" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+                <path d="M 780 300 L 680 300" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+                <path d="M 520 300 L 420 300" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" />
+
+                <!-- External Data -->
+                <rect x="40" y="80" width="120" height="80" rx="6" fill="#0f172a"/>
+                <rect x="40" y="80" width="120" height="80" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+                <text x="100" y="115" fill="white" font-size="12" font-weight="600" text-anchor="middle">FONASA</text>
+                <text x="100" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">Anexos XLSX</text>
+
+                <!-- Extractor -->
+                <rect x="260" y="80" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="260" y="80" width="160" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+                <text x="340" y="115" fill="white" font-size="12" font-weight="600" text-anchor="middle">Extractor Python</text>
+                <text x="340" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">Seguro XXE / Regex Precios</text>
+
+                <!-- Store -->
+                <rect x="520" y="80" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="520" y="80" width="160" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+                <text x="600" y="115" fill="white" font-size="12" font-weight="600" text-anchor="middle">Archivos JSON</text>
+                <text x="600" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">mle-2025/2026.json</text>
+
+                <!-- NPM / Smithery -->
+                <rect x="780" y="80" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="780" y="80" width="160" height="80" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+                <text x="860" y="115" fill="white" font-size="12" font-weight="600" text-anchor="middle">NPM / Smithery</text>
+                <text x="860" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">Distribución Global</text>
+
+                <!-- MCP Server -->
+                <rect x="780" y="260" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="780" y="260" width="160" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+                <text x="860" y="295" fill="white" font-size="12" font-weight="600" text-anchor="middle">Servidor MCP</text>
+                <text x="860" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">TS / Stdio / Caché</text>
+
+                <!-- AI Clients -->
+                <rect x="520" y="260" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="520" y="260" width="160" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="600" y="295" fill="white" font-size="12" font-weight="600" text-anchor="middle">Clientes IA</text>
+                <text x="600" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">Claude / Cursor</text>
+
+                <!-- End Users -->
+                <rect x="260" y="260" width="160" height="80" rx="6" fill="#0f172a"/>
+                <rect x="260" y="260" width="160" height="80" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+                <text x="340" y="295" fill="white" font-size="12" font-weight="600" text-anchor="middle">Usuarios Finales</text>
+                <text x="340" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">Pacientes y Médicos</text>
+
+            </svg>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-dot emerald"></div>
+                    <h3>Procesamiento Seguro</h3>
+                </div>
+                <ul>
+                    <li>• Parser XML protegido contra XXE</li>
+                    <li>• Heurísticas de precio localizadas</li>
+                    <li>• Normalización a 7 dígitos automática</li>
+                </ul>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-dot cyan"></div>
+                    <h3>Distribución Abierta</h3>
+                </div>
+                <ul>
+                    <li>• Alojado en NPM: @mariohealthbits</li>
+                    <li>• Servidor verificado en Smithery.ai</li>
+                    <li>• Fácil instalación vía npx y GitHub</li>
+                </ul>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-dot rose"></div>
+                    <h3>Interoperabilidad Salud</h3>
+                </div>
+                <ul>
+                    <li>• Fuente de verdad para MLE Chileno</li>
+                    <li>• Cobertura total de catálogos 25/26</li>
+                    <li>• Base para órdenes médicas con IA</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            Examya Technical Architecture • v1.0.0 • Patagonia, Chile
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,147 @@
+---
+title: "WhatsApp Discovery: agente autónomo para scrapeo de prospectos B2B en laboratorios clínicos de Chile"
+date: 2026-04-29
+lang: "es"
+description: "Cómo construí un sistema automatizado para descubrir números de WhatsApp en laboratorios clínicos chilenos, aumentando la cobertura del 59.6% al 80%+ para campañas B2B de Examya."
+tags: [WhatsApp, B2B, Scraping, Automatización, Examya, Laboratorios Clínicos, Chile]
+image: ""
+draft: true
+---
+
+Los laboratorios clínicos en Chile operan con diferentes estrategias digitales. Algunos tienen WhatsApp visible. Otros esconden sus números detrás de formularios. Algunos ni siquiera tienen presencia online.
+
+Este es el problema que resolví con WhatsApp Discovery: un agente autónomo que scrapea prospectos B2B para Examya.
+
+El desafío inicial era simple. Pero la implementación reveló complejidades que no anticipé.
+
+## El contexto: 245 laboratorios, 59.6% de cobertura
+
+Cuando comencé, la base de datos de Examya tenía 245 laboratorios registrados. Solo 146 tenían números de WhatsApp descubiertos. El 59.6% de cobertura no era suficiente para campañas B2B masivas.
+
+El objetivo era claro: llegar al 80%+ de cobertura usando estrategias rotativas y técnicas avanzadas de scraping.
+
+## Las 5 capas del sistema
+
+### 1. Database Monitor como orquestador
+
+El corazón del sistema está en `db_monitor`. PostgreSQL almacena estado de cada laboratorio:
+
+```sql
+ALTER TABLE laboratories ADD COLUMN whatsapp_status VARCHAR(20);
+ALTER TABLE laboratories ADD COLUMN whatsapp_number VARCHAR(20);
+ALTER TABLE laboratories ADD COLUMN discovery_round INTEGER;
+```
+
+Cada laboratorio pasa por estados:
+- `pending`: aún no procesado
+- `not_found`: intentado pero sin éxito
+- `found`: número de WhatsApp identificado
+- `failed`: errores críticos en procesamiento
+
+### 2. Estrategias rotativas de descubrimiento
+
+Ninguna estrategia funciona al 100%. Implementé rotación automática:
+
+**Google Business Profile API**: búsqueda avanzada con filtros regionales y bypass de CAPTCHA. Útil para laboratorios con perfiles completos.
+
+**Web scraping con Selenium**: para sitios dinámicos que cargan números via JavaScript. Requiere configuración de proxy rotativo.
+
+**Búsqueda manual en redes sociales**: Instagram y Facebook para perfiles de laboratorios. Identificamos patrones en biografías.
+
+**Phone number validation**: asegura que los números siguen formato chileno +569XXXXXXXX.
+
+### 3. Manejo de errores robusto
+
+El sistema falla constantemente. Redes caen. Sitios cambian. CAPTCHAs bloquean.
+
+Implementé un sistema de reintento con backoff exponencial:
+
+```python
+def retry_with_backoff(func, max_attempts=3, base_delay=2):
+    for attempt in range(max_attempts):
+        try:
+            return func()
+        except Exception as e:
+            delay = base_delay * (2 ** attempt)
+            time.sleep(delay)
+    raise Exception(f"Failed after {max_attempts} attempts")
+```
+
+### 4. Reporte automático a Slack
+
+Cada ronda de 10 laboratorios genera un reporte estructurado:
+
+```
+WhatsApp Discovery Round 141 Results:
+- Procesados: 10/10
+- Éxito: 3/10 (30%)
+- Nuevos números: +3
+- Cobertura total: 149/245 (60.8%)
+- Próxima ronda: Maipú, Santiago
+```
+
+Los hilos de Slack permiten tracking histórico de progreso.
+
+### 5. Validación de calidad
+
+Los números encontrados pasan por filtros:
+- Formato correcto (+569XXXXXXXX)
+- No son números de línea fija
+- No están en blacklist de números erróneos
+- Pertenecen realmente al laboratorio
+
+## Lo que construí: el flujo completo
+
+El sistema opera como cron job cada 6 horas. Procesa 10 laboratorios por ronda.
+
+La rotación de estrategias evita bloqueos. Un día usa Google. Al siguiente, scraping. El tercero, búsqueda manual.
+
+Cada ronda actualiza el estado en PostgreSQL. Los reportes van a Slack automáticamente.
+
+Los resultados son medibles: de 146/245 (59.6%) pasamos a 149/245 (60.8%) en las primeras 141 rondas.
+
+## Lo que aprendí
+
+### 1. La importancia de la rotación
+
+Estrategias únicas fallan. Google funciona para 40% de casos. Para el otro 60%, necesitas enfoques alternativos.
+
+La rotación automática asegura cobertura máxima sin intervención manual.
+
+### 2. La resiliencia es clave
+
+Los sistemas fallan constantemente. CAPTCHAs, cambios de estructura web, timeouts. El sistema debe sobrevivir a estos errores.
+
+El backoff exponencial y reintento automático mantienen la operación continua.
+
+### 3. La medición drivea mejora
+
+Sin métricas, no sabes qué funciona. El reporte automático muestra qué estrategias dan mejor resultado.
+
+Google Business Profile tiene 30% de éxito. Búsqueda manual 15%. Web scraping 5%.
+
+### 4. La escala exige automatización
+
+Procesar manualmente 245 laboratorios sería inviable. La automatización permite escalar a miles de prospectos con costo marginal cero.
+
+## Lo que viene
+
+Próximos pasos:
+
+1. **Inteligencia artificial**: validar que los números pertenecen realmente al laboratorio usando LLMs para análisis de contexto.
+
+2. **Multiplataforma**: expandir a otras redes sociales como LinkedIn para perfiles B2B.
+
+3. **Integración con CRM**: conexión automática con Salesforce para lead nurturing.
+
+4. **Reportes predictivos**: anticipar cobertura futura basada en patrones históricos.
+
+El sistema actual logra 60.8% de cobertura. El objetivo es 90%+ antes de junio 2026.
+
+La automatización de prospectos B2B es fundamental para el crecimiento de Examya. Más cobertura significa más capacidad de reach para campañas de ventas.
+
+## Contacto
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

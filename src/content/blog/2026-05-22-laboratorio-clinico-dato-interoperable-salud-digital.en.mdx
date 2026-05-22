@@ -1,0 +1,186 @@
+---
+title: "From clinical lab to interoperable data"
+description: "Digital health starts when a lab result stops being a PDF and becomes a traceable FHIR DiagnosticReport."
+date: 2026-05-22
+lang: "en"
+image: "/img/blog/laboratorio-clinico-dato-interoperable.png"
+tags: [Digital Health, Interoperability, FHIR, Clinical Labs, Examya, HL7]
+series: interoperabilidad-chile
+seriesOrder: 7
+related:
+  - "2026-04-22-fhir-diagnostic-report-resultado-laboratorio-medico"
+  - "2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile"
+  - "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+draft: false
+canonicalSlug: "2026-05-22-laboratorio-clinico-dato-interoperable-salud-digital"
+---
+
+A lab result can be technically “digital” and still be useless for interoperability.
+
+It happens every day: the analyzer produces values, the laboratory system generates a PDF, someone sends it by email, portal, or WhatsApp, and the physician ends up reading an image of data that a machine already had in structured form minutes earlier.
+
+That is the point I care about: digital health does not start when a result appears on a screen. It starts when that result can travel as clinical data, with context, traceability, and meaning.
+
+## Digitizing is not interoperability
+
+In clinical labs, there is a common confusion.
+
+People assume that stopping paper is already a move toward digital health. And yes, it helps. But a PDF sent through WhatsApp is still an administrative snapshot of the result, not interoperable clinical data.
+
+A PDF works for a human reader.
+
+It does not work well for another system that needs to understand:
+
+- which test was requested,
+- which specimen was processed,
+- which analytes are part of the result,
+- which units and reference ranges apply,
+- which professional validated it,
+- which medical order it responds to,
+- which physician or system should receive it back.
+
+That difference sounds semantic, but in clinical operations it changes everything.
+
+When the result only exists as a document, the data dies at the end of the flow. When it exists as structure, it can close the clinical loop.
+
+## The practical path: from lab process to clinical data
+
+A laboratory does not start from zero. It already has a process. The specimen arrives, gets received, processed, validated, and reported.
+
+The problem is that this process is often locked inside systems designed for internal operations, not for talking to the broader healthcare ecosystem.
+
+The practical path is not replacing the LIS or forcing the lab to rebuild its operation. It is adding a layer that translates the real workflow into interoperable clinical resources.
+
+In simple terms:
+
+```text
+Medical order -> specimen -> observations -> validated report -> delivery
+```
+
+In FHIR, the same flow can be projected as:
+
+```text
+ServiceRequest -> Specimen -> Observation[] -> DiagnosticReport
+```
+
+That mapping is the bridge.
+
+It is not an academic exercise. It is the difference between “the result is available in a portal” and “the result can return to the system of the physician who ordered it”.
+
+<iframe src="/img/blog/laboratorio-clinico-dato-interoperable.html" width="100%" height="620px" style="border:none; border-radius: 8px;" title="Diagram from clinical laboratory to interoperable data"></iframe>
+
+## What we learned by looking at real labs
+
+In a previous post, I wrote that at Examya we mapped [245 clinical labs in Chile](/blog/2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile). We did not do it as a generic market exercise. We did it to understand how information actually moves.
+
+The most important finding was not technological. It was operational.
+
+Many small and mid-sized labs do not have an integration team, do not have an internal FHIR roadmap, and cannot stop operations to “modernize”. They keep serving patients through the channels that work: in person, phone, email, portal, WhatsApp.
+
+That does not make them outdated. It makes them realistic.
+
+That is why healthcare interoperability cannot be designed as if everyone had the same starting point. For a large hospital, FHIR may be an architecture project. For a small lab, it has to be a gradual layer that does not break daily operations.
+
+## DiagnosticReport is the envelope, not the PDF
+
+FHIR has a resource designed for this moment: `DiagnosticReport`.
+
+The idea is not “create a prettier PDF”. The idea is to represent the lab report as a resource that groups observations, references the original order, and makes the result status explicit.
+
+A minimal version looks like this:
+
+```json
+{
+  "resourceType": "DiagnosticReport",
+  "status": "final",
+  "category": [{ "coding": [{ "code": "LAB" }] }],
+  "code": {
+    "coding": [{ "system": "http://loinc.org", "display": "Complete blood count" }]
+  },
+  "subject": { "reference": "Patient/123" },
+  "basedOn": [{ "reference": "ServiceRequest/order-456" }],
+  "specimen": [{ "reference": "Specimen/specimen-789" }],
+  "result": [
+    { "reference": "Observation/hemoglobin" },
+    { "reference": "Observation/leukocytes" },
+    { "reference": "Observation/platelets" }
+  ]
+}
+```
+
+The point is not memorizing the JSON.
+
+The point is understanding the mental model shift: the report stops being the administrative end of the exam and becomes a connected clinical node.
+
+`basedOn` closes the loop with the medical order. `Specimen` connects the result to the real sample. `Observation` lets each value carry unit, range, code, and interpretation. `status: "final"` makes it clear that the result was validated.
+
+The PDF can still exist for human reading. But it should no longer be the only source of truth.
+
+## The gotcha: structured data arrives too late
+
+The mistake I often see is trying to structure the data at the end.
+
+First, operations continue as usual. Then a PDF is exported. Then someone tries to read it with OCR or copy it into another system. That works as a transition, but it should not be the destination.
+
+Interoperable data is designed earlier:
+
+- when the order is received,
+- when the test is identified,
+- when the specimen is registered,
+- when each observation is captured,
+- when the result is validated,
+- when the report is delivered.
+
+If you wait until the PDF, you have already lost context.
+
+You lost the relationship with the original order. You lost part of the specimen traceability. You lost semantic structure. And you forced another system to reconstruct from text something that could have existed as data from the beginning.
+
+That is the hidden cost of “document-based digitization”.
+
+## Where Examya fits
+
+In Examya, this problem appears from a very concrete starting point: the medical order that arrives through WhatsApp, image, or text.
+
+The first step is not speaking perfect FHIR. The first step is turning a messy interaction into an ordered flow: patient, requested tests, service code, price, laboratory, status, and result.
+
+From there, the interoperable layer becomes a projection.
+
+It does not replace the operation. It translates it.
+
+I described that pattern before when writing about the [FHIR adapter over Examya’s stack](/blog/2026-04-18-fhir-ley-21-668-interoperabilidad-chile): keep the business domain working and expose standard resources when the ecosystem needs them.
+
+For labs, that layer must be especially careful. Mapping fields is not enough. The system has to respect the real process: specimen collection, technical validation, corrected results, reissue, delivery to the patient, and return to the physician.
+
+## What comes next for digital health in Chile
+
+Law 21.668 pushes the system toward interoperability, but the law alone does not turn PDFs into clinical data.
+
+The real work happens at the edges:
+
+- where the patient sends an order through WhatsApp,
+- where the lab validates a specimen,
+- where a result leaves the analyzer,
+- where the physician needs to see it inside their own system,
+- where an auditor asks for traceability months later.
+
+That is where practical digital health is built.
+
+Not by saying “we have AI”. Not by having a portal. Not by adding another app.
+
+By making clinical data travel without losing meaning.
+
+## In summary
+
+The clinical lab is one of the best places to start interoperability because it produces structured data every day.
+
+But the path is not asking the lab to change everything at once. The practical path is connecting its current operation with an interoperable clinical data layer.
+
+A lab result should not die in a PDF.
+
+It should be able to return as a `DiagnosticReport`, with its `Observation`, its `Specimen`, its original `ServiceRequest`, and enough traceability for another system to use it without retyping it.
+
+That is the step that turns digitization into digital health.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

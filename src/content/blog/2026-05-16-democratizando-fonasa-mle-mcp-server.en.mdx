@@ -1,0 +1,68 @@
+---
+title: "Democratizing FONASA MLE Access: Open Data and an MCP Server"
+description: "How we transformed the FONASA medical exam catalog into an AI-ready tool with an MCP server and 7-digit normalized data."
+date: 2026-05-16
+lang: "en"
+image: "/img/blog/fonasa-mle-mcp.png"
+tags: [ai, digital-health, mcp, fonasa]
+draft: false
+canonicalSlug: "2026-05-16-democratizando-fonasa-mle-mcp-server"
+---
+
+In Chile, the FONASA Modalidad Libre Elección (MLE) catalog is the "source of truth" for thousands of medical procedures. However, accessing it programmatically has historically been a nightmare of inconsistent Excel spreadsheets and truncated codes.
+
+Today we are releasing `fonasa-mle-open`, an open-source project that cleans this data and exposes it via an MCP server so any AI agent can understand the Chilean healthcare system.
+
+## The Problem with "Living" Spreadsheets
+
+Every March, FONASA publishes its annexes. But here’s the gotcha: the 2025 file looks nothing like the 2026 one. One uses `sharedStrings.xml` in its internal structure, the other uses in-line strings. One has 3 sheets, the other only 1.
+
+If you try to parse them naively, you lose data or, worse, destroy the prices.
+
+## What We Built: Surgical Normalization
+
+We implemented a Python extractor that normalizes every procedure to its canonical 7-digit code (`Group` + `Subgroup` + `Item`). Without this, interoperability is impossible.
+
+```typescript
+// Example of robust search in the MCP server
+const codeQuery = query.replace(/\D/g, "").padStart(7, "0");
+// Now "301045" will always find "0301045" (CBC/Hemograma)
+```
+
+## The Gotcha: The Excel Decimal Trap
+
+A real bug we faced: Excel sometimes exports `1680` as `1680.0`. In the Chilean pricing format, where a dot is usually a thousands separator (`1.680`), a simple heuristic could end up turning a $1,680 exam into a $16,800 one.
+
+We solved it with regex cleaning and strict rounding before integer conversion.
+
+## Security and Robustness
+
+We didn't just stop at data. We applied a **Judgment Day** (adversarial review) to the code, and critical items surfaced:
+- **XXE Protection**: The XML parser is now locked against external entities to prevent data exfiltration.
+- **Hybrid Search**: The MCP server now handles partial code searches by ignoring leading zeros, perfect for when a user types quickly.
+
+## System Architecture
+
+To ensure data integrity, we designed a pipeline that goes from the official Excel to the AI agent:
+
+<iframe src="/img/blog/fonasa-mle-architecture.html" width="100%" height="600px" style="border:none; border-radius: 8px;"></iframe>
+
+## Why an MCP Server?
+
+AI agents (like Claude) can now "learn" about Chilean healthcare in real time. By connecting this server to Claude Desktop, the model no longer hallucinates prices: it queries the source of truth.
+
+## Now Available for the Community
+
+The project is live and you can use it in three ways:
+
+1.  **NPM**: Run it directly with `npx @mariohealthbits/fonasa-mle-open`.
+2.  **Smithery.ai**: Find it in the official [Smithery catalog](https://smithery.ai/servers/mariohealthbits/fonasa-mle-open).
+3.  **GitHub**: Check the code and data at [marioSoftmedic/fonasa-mle-open](https://github.com/marioSoftmedic/fonasa-mle-open).
+
+## What's Next
+
+The next technical step is automating extraction with a GitHub Action for March 2027, ensuring the data is always up to date.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

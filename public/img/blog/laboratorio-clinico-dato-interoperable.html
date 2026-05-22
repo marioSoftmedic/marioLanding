@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Del laboratorio clínico al dato interoperable</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #020617; --panel: #0f172a; --muted: #94a3b8; --text: #e2e8f0; --line: #334155; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; }
+    .wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding: 28px; }
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .pulse { width: 11px; height: 11px; border-radius: 999px; background: #34d399; box-shadow: 0 0 0 0 rgba(52,211,153,.7); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,.65); } 70% { box-shadow: 0 0 0 12px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -0.04em; }
+    .subtitle { color: var(--muted); margin: 0 0 20px 23px; font-size: 13px; }
+    .diagram { border: 1px solid #1e293b; border-radius: 16px; background: #020617; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+    svg { display: block; width: 100%; height: auto; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+    .card { background: rgba(15,23,42,.86); border: 1px solid #1e293b; border-radius: 14px; padding: 14px; min-height: 112px; }
+    .card h3 { margin: 0 0 10px; font-size: 12px; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .cyan { background: #22d3ee; } .emerald { background: #34d399; } .violet { background: #a78bfa; }
+    ul { margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .footer { margin-top: 12px; color: #64748b; font-size: 10px; text-align: right; }
+    @media (max-width: 780px) { .cards { grid-template-columns: 1fr; } .wrap { padding: 18px; } h1 { font-size: 18px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="header"><span class="pulse"></span><h1>Del laboratorio clínico al dato interoperable</h1></div>
+    <p class="subtitle">El resultado deja de morir en un PDF cuando conserva orden, muestra, observaciones y validación en FHIR.</p>
+    <section class="diagram" aria-label="Arquitectura de flujo de laboratorio clínico interoperable">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+        <title id="title">Del laboratorio clínico al dato interoperable</title>
+        <desc id="desc">Flujo desde orden médica y muestra de laboratorio hasta DiagnosticReport FHIR interoperable.</desc>
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="#22d3ee" stop-opacity="0.9"/>
+            <stop offset="1" stop-color="#34d399" stop-opacity="0.9"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="#020617"/>
+        <rect width="1200" height="630" fill="url(#grid)" opacity="0.8"/>
+
+        <!-- boundaries -->
+        <rect x="36" y="54" width="286" height="452" rx="14" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="8,5" opacity="0.75"/>
+        <text x="58" y="82" fill="#22d3ee" font-size="12" font-weight="700">Operación real del laboratorio</text>
+        <rect x="456" y="54" width="286" height="452" rx="14" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="8,5" opacity="0.75"/>
+        <text x="478" y="82" fill="#fbbf24" font-size="12" font-weight="700">Capa de traducción</text>
+        <rect x="876" y="54" width="286" height="452" rx="14" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="8,5" opacity="0.75"/>
+        <text x="898" y="82" fill="#34d399" font-size="12" font-weight="700">Dato interoperable</text>
+
+        <!-- arrows behind boxes -->
+        <line x1="278" y1="160" x2="476" y2="160" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <line x1="278" y1="278" x2="476" y2="278" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <line x1="278" y1="396" x2="476" y2="396" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <line x1="722" y1="160" x2="896" y2="160" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <line x1="722" y1="278" x2="896" y2="278" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <line x1="722" y1="396" x2="896" y2="396" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <path d="M 178 462 C 178 552, 1018 552, 1018 462" fill="none" stroke="url(#fade)" stroke-width="2" stroke-dasharray="7,5" marker-end="url(#arrowhead)" opacity="0.75"/>
+
+        <!-- operation boxes -->
+        <rect x="72" y="118" width="206" height="84" rx="8" fill="#0f172a"/>
+        <rect x="72" y="118" width="206" height="84" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="175" y="146" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Orden médica</text>
+        <text x="175" y="166" fill="#94a3b8" font-size="10" text-anchor="middle">WhatsApp, portal, papel</text>
+        <text x="175" y="184" fill="#64748b" font-size="9" text-anchor="middle">texto + foto + contexto paciente</text>
+
+        <rect x="72" y="236" width="206" height="84" rx="8" fill="#0f172a"/>
+        <rect x="72" y="236" width="206" height="84" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="175" y="264" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Muestra</text>
+        <text x="175" y="284" fill="#94a3b8" font-size="10" text-anchor="middle">recepción + trazabilidad</text>
+        <text x="175" y="302" fill="#64748b" font-size="9" text-anchor="middle">tipo, hora, condiciones</text>
+
+        <rect x="72" y="354" width="206" height="84" rx="8" fill="#0f172a"/>
+        <rect x="72" y="354" width="206" height="84" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="175" y="382" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Resultado validado</text>
+        <text x="175" y="402" fill="#94a3b8" font-size="10" text-anchor="middle">LIS / analizador / técnico</text>
+        <text x="175" y="420" fill="#64748b" font-size="9" text-anchor="middle">valores, rangos, estado final</text>
+
+        <!-- translation boxes -->
+        <rect x="492" y="118" width="214" height="84" rx="8" fill="#0f172a"/>
+        <rect x="492" y="118" width="214" height="84" rx="8" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="599" y="146" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Normalización</text>
+        <text x="599" y="166" fill="#94a3b8" font-size="10" text-anchor="middle">códigos + identidad + contexto</text>
+        <text x="599" y="184" fill="#64748b" font-size="9" text-anchor="middle">sin romper operación actual</text>
+
+        <rect x="492" y="236" width="214" height="84" rx="8" fill="#0f172a"/>
+        <rect x="492" y="236" width="214" height="84" rx="8" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="599" y="264" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Adapter FHIR</text>
+        <text x="599" y="284" fill="#94a3b8" font-size="10" text-anchor="middle">proyección, no reemplazo</text>
+        <text x="599" y="302" fill="#64748b" font-size="9" text-anchor="middle">ServiceRequest / Specimen / Obs.</text>
+
+        <rect x="492" y="354" width="214" height="84" rx="8" fill="#0f172a"/>
+        <rect x="492" y="354" width="214" height="84" rx="8" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="599" y="382" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Evidencia auditable</text>
+        <text x="599" y="402" fill="#94a3b8" font-size="10" text-anchor="middle">quién, cuándo, qué cambió</text>
+        <text x="599" y="420" fill="#64748b" font-size="9" text-anchor="middle">traza operacional revisable</text>
+
+        <!-- FHIR boxes -->
+        <rect x="912" y="112" width="214" height="62" rx="8" fill="#0f172a"/>
+        <rect x="912" y="112" width="214" height="62" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1019" y="138" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">ServiceRequest</text>
+        <text x="1019" y="158" fill="#94a3b8" font-size="10" text-anchor="middle">orden original</text>
+
+        <rect x="912" y="202" width="214" height="62" rx="8" fill="#0f172a"/>
+        <rect x="912" y="202" width="214" height="62" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1019" y="228" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Specimen</text>
+        <text x="1019" y="248" fill="#94a3b8" font-size="10" text-anchor="middle">muestra procesada</text>
+
+        <rect x="912" y="292" width="214" height="62" rx="8" fill="#0f172a"/>
+        <rect x="912" y="292" width="214" height="62" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="1019" y="318" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">Observation[]</text>
+        <text x="1019" y="338" fill="#94a3b8" font-size="10" text-anchor="middle">valores, unidades, rangos</text>
+
+        <rect x="912" y="382" width="214" height="80" rx="8" fill="#0f172a"/>
+        <rect x="912" y="382" width="214" height="80" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1019" y="410" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">DiagnosticReport</text>
+        <text x="1019" y="430" fill="#94a3b8" font-size="10" text-anchor="middle">informe final interoperable</text>
+        <text x="1019" y="448" fill="#64748b" font-size="9" text-anchor="middle">retorna al médico / EHR / paciente</text>
+
+        <!-- warning strip -->
+        <rect x="72" y="538" width="1054" height="52" rx="10" fill="rgba(15,23,42,.86)" stroke="#334155" stroke-width="1"/>
+        <text x="100" y="568" fill="#f8fafc" font-size="12" font-weight="700">Idea central:</text>
+        <text x="206" y="568" fill="#cbd5e1" font-size="12">el PDF puede seguir existiendo para humanos, pero la fuente interoperable debe ser el dato estructurado.</text>
+      </svg>
+    </section>
+    <section class="cards">
+      <div class="card"><h3><span class="dot cyan"></span>Problema</h3><ul><li>• PDF y WhatsApp no preservan estructura clínica.</li><li>• El médico recibe lectura humana, no dato computable.</li><li>• La trazabilidad se reconstruye tarde.</li></ul></div>
+      <div class="card"><h3><span class="dot emerald"></span>Puente</h3><ul><li>• Adapter FHIR sobre la operación real del laboratorio.</li><li>• ServiceRequest conecta con la orden original.</li><li>• Specimen y Observation conservan contexto.</li></ul></div>
+      <div class="card"><h3><span class="dot violet"></span>Resultado</h3><ul><li>• DiagnosticReport viaja como dato interoperable.</li><li>• El PDF queda como vista humana, no fuente única.</li><li>• Salud digital práctica, sin reemplazar todo el LIS.</li></ul></div>
+    </section>
+    <div class="footer">mariohealthbits.dev · FHIR · Laboratorios clínicos · 2026-05-22</div>
+  </main>
+</body>
+</html>
