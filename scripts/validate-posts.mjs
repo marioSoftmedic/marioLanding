@@ -15,6 +15,9 @@
  *    taxonomy (src/lib/tags.ts). Without this, "IA" vs "AI" vs "ia" each
  *    create their own /blog/tags/<slug> page with one post — useless.
  *
+ * 3. Every blog post MUST match at least one editorial hub in src/lib/hubs.ts.
+ *    Hubs are the SEO replacement for the old automated news feed.
+ *
  * Usage:
  *   node scripts/validate-posts.mjs          # validate all blog posts
  *   node scripts/validate-posts.mjs file...  # validate specific files only
@@ -22,11 +25,11 @@
  * Exit codes: 0 ok, 1 validation failed, 2 config/IO error.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve, relative, basename } from 'node:path';
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve, relative, basename } from "node:path";
 
 const ROOT = resolve(process.cwd());
-const BLOG_DIR = join(ROOT, 'src', 'content', 'blog');
+const BLOG_DIR = join(ROOT, "src", "content", "blog");
 const EN_PATTERN = /\.en\.(md|mdx)$/;
 const ANY_POST_PATTERN = /\.(md|mdx)$/;
 
@@ -51,58 +54,109 @@ const bold = (s) => (tty ? `\x1b[1m${s}\x1b[0m` : s);
  * helper that mirrors the runtime behavior of src/lib/tags.ts.
  */
 function loadTaxonomy() {
-  const tagsTs = join(ROOT, 'src', 'lib', 'tags.ts');
-  let source;
-  try {
-    source = readFileSync(tagsTs, 'utf8');
-  } catch (err) {
-    console.error(red(`[validate-posts] Could not read tags taxonomy at ${tagsTs}: ${err.message}`));
-    process.exit(2);
-  }
+	const tagsTs = join(ROOT, "src", "lib", "tags.ts");
+	let source;
+	try {
+		source = readFileSync(tagsTs, "utf8");
+	} catch (err) {
+		console.error(
+			red(
+				`[validate-posts] Could not read tags taxonomy at ${tagsTs}: ${err.message}`,
+			),
+		);
+		process.exit(2);
+	}
 
-  const acceptedLower = new Set();
-  const aliasArrayRe = /aliases\s*:\s*\[([^\]]*)\]/g;
-  let m;
-  while ((m = aliasArrayRe.exec(source)) !== null) {
-    const inner = m[1];
-    const stringRe = /["']([^"']+)["']/g;
-    let s;
-    while ((s = stringRe.exec(inner)) !== null) {
-      acceptedLower.add(s[1].toLowerCase().trim());
-    }
-  }
+	const acceptedLower = new Set();
+	const aliasToSlug = new Map();
+	const tagEntryRe =
+		/\{\s*slug\s*:\s*["']([^"']+)["'][\s\S]*?aliases\s*:\s*\[([^\]]*)\]/g;
+	let m;
+	while ((m = tagEntryRe.exec(source)) !== null) {
+		const slug = m[1].toLowerCase().trim();
+		acceptedLower.add(slug);
+		aliasToSlug.set(slug, slug);
 
-  const slugRe = /slug\s*:\s*["']([^"']+)["']/g;
-  let sm;
-  while ((sm = slugRe.exec(source)) !== null) {
-    acceptedLower.add(sm[1].toLowerCase().trim());
-  }
+		const inner = m[2];
+		const stringRe = /["']([^"']+)["']/g;
+		let s;
+		while ((s = stringRe.exec(inner)) !== null) {
+			const alias = s[1].toLowerCase().trim();
+			acceptedLower.add(alias);
+			aliasToSlug.set(alias, slug);
+		}
+	}
 
-  if (acceptedLower.size === 0) {
-    console.error(red(`[validate-posts] Parsed 0 tags from ${tagsTs} — the taxonomy parser is broken or the file is empty.`));
-    process.exit(2);
-  }
+	if (acceptedLower.size === 0) {
+		console.error(
+			red(
+				`[validate-posts] Parsed 0 tags from ${tagsTs} — the taxonomy parser is broken or the file is empty.`,
+			),
+		);
+		process.exit(2);
+	}
 
-  return {
-    isKnownTag: (raw) => acceptedLower.has(String(raw).toLowerCase().trim()),
-    size: acceptedLower.size,
-  };
+	return {
+		isKnownTag: (raw) => acceptedLower.has(String(raw).toLowerCase().trim()),
+		normalizeTag: (raw) =>
+			aliasToSlug.get(String(raw).toLowerCase().trim()) ??
+			String(raw).toLowerCase().trim(),
+		size: acceptedLower.size,
+	};
+}
+
+function loadHubTags() {
+	const hubsTs = join(ROOT, "src", "lib", "hubs.ts");
+	let source;
+	try {
+		source = readFileSync(hubsTs, "utf8");
+	} catch (err) {
+		console.error(
+			red(
+				`[validate-posts] Could not read hubs config at ${hubsTs}: ${err.message}`,
+			),
+		);
+		process.exit(2);
+	}
+
+	const hubTags = new Set();
+	const tagsArrayRe = /tags\s*:\s*\[([^\]]*)\]/g;
+	let m;
+	while ((m = tagsArrayRe.exec(source)) !== null) {
+		const inner = m[1];
+		const stringRe = /["']([^"']+)["']/g;
+		let s;
+		while ((s = stringRe.exec(inner)) !== null) {
+			hubTags.add(s[1].toLowerCase().trim());
+		}
+	}
+
+	if (hubTags.size === 0) {
+		console.error(
+			red(
+				`[validate-posts] Parsed 0 hub tags from ${hubsTs} — hub config parser is broken or empty.`,
+			),
+		);
+		process.exit(2);
+	}
+
+	return hubTags;
 }
 
 function extractFrontmatter(source) {
-  const trimmed = source.replace(/^\uFEFF/, '');
-  if (!trimmed.startsWith('---')) return null;
-  const afterOpen = trimmed.slice(3);
-  const closeMatch = afterOpen.match(/\r?\n---\s*(\r?\n|$)/);
-  if (!closeMatch) return null;
-  return afterOpen.slice(0, closeMatch.index);
+	const trimmed = source.replace(/^\uFEFF/, "");
+	if (!trimmed.startsWith("---")) return null;
+	const afterOpen = trimmed.slice(3);
+	const closeMatch = afterOpen.match(/\r?\n---\s*(\r?\n|$)/);
+	if (!closeMatch) return null;
+	return afterOpen.slice(0, closeMatch.index);
 }
 
 function hasCanonicalSlug(frontmatter) {
-  const re = /^\s*canonicalSlug\s*:\s*(["']?)([^"'\n\r]+)\1\s*$/m;
-  const m = frontmatter.match(re);
-  if (!m) return false;
-  return m[2].trim().length > 0;
+	const re = /^\s*canonicalSlug\s*:\s*(["']?)([^"'\n\r]+)\1\s*$/m;
+	const m = frontmatter.match(re);
+	if (!m) return false;
+	return m[2].trim().length > 0;
 }
 
 /**
@@ -116,139 +170,177 @@ function hasCanonicalSlug(frontmatter) {
  * Returns [] if no tags field is found (consistent with the schema default).
  */
 function extractTags(frontmatter) {
-  // Inline form on the same line
-  const inlineMatch = frontmatter.match(/^\s*tags\s*:\s*\[([^\]]*)\]\s*$/m);
-  if (inlineMatch) {
-    const inner = inlineMatch[1].trim();
-    if (inner === '') return [];
-    return inner
-      .split(',')
-      .map((s) => s.trim().replace(/^["']|["']$/g, ''))
-      .filter((s) => s.length > 0);
-  }
+	// Inline form on the same line
+	const inlineMatch = frontmatter.match(/^\s*tags\s*:\s*\[([^\]]*)\]\s*$/m);
+	if (inlineMatch) {
+		const inner = inlineMatch[1].trim();
+		if (inner === "") return [];
+		return inner
+			.split(",")
+			.map((s) => s.trim().replace(/^["']|["']$/g, ""))
+			.filter((s) => s.length > 0);
+	}
 
-  // Block form across multiple lines
-  const blockHeaderRe = /^\s*tags\s*:\s*$/m;
-  const headerMatch = frontmatter.match(blockHeaderRe);
-  if (headerMatch) {
-    const after = frontmatter.slice(headerMatch.index + headerMatch[0].length);
-    const lines = after.split(/\r?\n/);
-    const tags = [];
-    for (const line of lines) {
-      const itemMatch = line.match(/^\s*-\s*(["']?)([^"'\n\r]+)\1\s*$/);
-      if (itemMatch) {
-        tags.push(itemMatch[2].trim());
-      } else if (line.trim() === '' || /^\s*-/.test(line)) {
-        continue;
-      } else {
-        break;
-      }
-    }
-    return tags;
-  }
+	// Block form across multiple lines
+	const blockHeaderRe = /^\s*tags\s*:\s*$/m;
+	const headerMatch = frontmatter.match(blockHeaderRe);
+	if (headerMatch) {
+		const after = frontmatter.slice(headerMatch.index + headerMatch[0].length);
+		const lines = after.split(/\r?\n/);
+		const tags = [];
+		for (const line of lines) {
+			const itemMatch = line.match(/^\s*-\s*(["']?)([^"'\n\r]+)\1\s*$/);
+			if (itemMatch) {
+				tags.push(itemMatch[2].trim());
+			} else if (line.trim() === "" || /^\s*-/.test(line)) {
+			} else {
+				break;
+			}
+		}
+		return tags;
+	}
 
-  return [];
+	return [];
 }
 
 function listAllPosts() {
-  let entries;
-  try {
-    entries = readdirSync(BLOG_DIR, { withFileTypes: true });
-  } catch (err) {
-    console.error(red(`[validate-posts] Could not read ${BLOG_DIR}: ${err.message}`));
-    process.exit(2);
-  }
-  return entries
-    .filter((e) => e.isFile() && ANY_POST_PATTERN.test(e.name))
-    .map((e) => join(BLOG_DIR, e.name));
+	let entries;
+	try {
+		entries = readdirSync(BLOG_DIR, { withFileTypes: true });
+	} catch (err) {
+		console.error(
+			red(`[validate-posts] Could not read ${BLOG_DIR}: ${err.message}`),
+		);
+		process.exit(2);
+	}
+	return entries
+		.filter((e) => e.isFile() && ANY_POST_PATTERN.test(e.name))
+		.map((e) => join(BLOG_DIR, e.name));
 }
 
 function filterPosts(paths) {
-  return paths
-    .map((p) => resolve(p))
-    .filter((p) => {
-      const rel = relative(ROOT, p);
-      return rel.startsWith(join('src', 'content', 'blog') + '/') && ANY_POST_PATTERN.test(basename(p));
-    });
+	return paths
+		.map((p) => resolve(p))
+		.filter((p) => {
+			const rel = relative(ROOT, p);
+			return (
+				rel.startsWith(join("src", "content", "blog") + "/") &&
+				ANY_POST_PATTERN.test(basename(p))
+			);
+		});
 }
 
 function isEnPost(filePath) {
-  return EN_PATTERN.test(basename(filePath));
+	return EN_PATTERN.test(basename(filePath));
 }
 
-function validatePost(filePath, taxonomy) {
-  let source;
-  try {
-    source = readFileSync(filePath, 'utf8');
-  } catch (err) {
-    return [{ ok: false, file: filePath, error: `cannot read: ${err.message}` }];
-  }
-  const fm = extractFrontmatter(source);
-  if (fm === null) {
-    return [{ ok: false, file: filePath, error: 'no YAML frontmatter found (expected --- ... --- block at top)' }];
-  }
+function validatePost(filePath, taxonomy, hubTags) {
+	let source;
+	try {
+		source = readFileSync(filePath, "utf8");
+	} catch (err) {
+		return [
+			{ ok: false, file: filePath, error: `cannot read: ${err.message}` },
+		];
+	}
+	const fm = extractFrontmatter(source);
+	if (fm === null) {
+		return [
+			{
+				ok: false,
+				file: filePath,
+				error: "no YAML frontmatter found (expected --- ... --- block at top)",
+			},
+		];
+	}
 
-  const errors = [];
+	const errors = [];
 
-  if (isEnPost(filePath) && !hasCanonicalSlug(fm)) {
-    errors.push({ ok: false, file: filePath, error: 'missing required field `canonicalSlug` (EN posts only)' });
-  }
+	if (isEnPost(filePath) && !hasCanonicalSlug(fm)) {
+		errors.push({
+			ok: false,
+			file: filePath,
+			error: "missing required field `canonicalSlug` (EN posts only)",
+		});
+	}
 
-  const rawTags = extractTags(fm);
-  const unknownTags = rawTags.filter((t) => !taxonomy.isKnownTag(t));
-  if (unknownTags.length > 0) {
-    errors.push({
-      ok: false,
-      file: filePath,
-      error: `unknown tag(s) not in taxonomy: ${unknownTags.map((t) => `"${t}"`).join(', ')}`,
-    });
-  }
+	const rawTags = extractTags(fm);
+	const unknownTags = rawTags.filter((t) => !taxonomy.isKnownTag(t));
+	if (unknownTags.length > 0) {
+		errors.push({
+			ok: false,
+			file: filePath,
+			error: `unknown tag(s) not in taxonomy: ${unknownTags.map((t) => `"${t}"`).join(", ")}`,
+		});
+	}
 
-  if (errors.length === 0) return [{ ok: true, file: filePath }];
-  return errors;
+	const hubMatches = rawTags
+		.map((t) => taxonomy.normalizeTag(t))
+		.filter((t) => hubTags.has(t));
+	if (hubMatches.length === 0) {
+		errors.push({
+			ok: false,
+			file: filePath,
+			error:
+				"post does not match any editorial hub; add at least one hub tag from src/lib/hubs.ts",
+		});
+	}
+
+	if (errors.length === 0) return [{ ok: true, file: filePath }];
+	return errors;
 }
 
 function main() {
-  const taxonomy = loadTaxonomy();
-  const argv = process.argv.slice(2);
-  let targets;
-  if (argv.length > 0) {
-    targets = filterPosts(argv);
-    if (targets.length === 0) {
-      process.exit(0);
-    }
-  } else {
-    targets = listAllPosts();
-  }
+	const taxonomy = loadTaxonomy();
+	const hubTags = loadHubTags();
+	const argv = process.argv.slice(2);
+	let targets;
+	if (argv.length > 0) {
+		targets = filterPosts(argv);
+		if (targets.length === 0) {
+			process.exit(0);
+		}
+	} else {
+		targets = listAllPosts();
+	}
 
-  if (targets.length === 0) {
-    console.log(yellow('[validate-posts] No blog posts found. Nothing to validate.'));
-    process.exit(0);
-  }
+	if (targets.length === 0) {
+		console.log(
+			yellow("[validate-posts] No blog posts found. Nothing to validate."),
+		);
+		process.exit(0);
+	}
 
-  const allResults = targets.flatMap((f) => validatePost(f, taxonomy));
-  const failures = allResults.filter((r) => !r.ok);
+	const allResults = targets.flatMap((f) => validatePost(f, taxonomy, hubTags));
+	const failures = allResults.filter((r) => !r.ok);
 
-  if (failures.length === 0) {
-    console.log(green(`[validate-posts] ✓ ${targets.length} post(s) validated — canonicalSlug + taxonomy OK.`));
-    process.exit(0);
-  }
+	if (failures.length === 0) {
+		console.log(
+			green(
+				`[validate-posts] ✓ ${targets.length} post(s) validated — canonicalSlug + taxonomy + hub coverage OK.`,
+			),
+		);
+		process.exit(0);
+	}
 
-  console.error(bold(red(`\n[validate-posts] ✗ ${failures.length} validation issue(s):\n`)));
-  for (const f of failures) {
-    const rel = relative(ROOT, f.file);
-    console.error(`  ${red('✗')} ${bold(rel)}`);
-    console.error(`      ${f.error}`);
-  }
-  console.error(
-    yellow(
-      '\nFix instructions:\n' +
-        '  • Missing canonicalSlug → add `canonicalSlug: "YYYY-MM-DD-your-slug"` to the EN post frontmatter.\n' +
-        '  • Unknown tag → either fix the tag in the post (use a taxonomy alias) or add it to TAG_TAXONOMY in src/lib/tags.ts.\n' +
-        '    See _TAXONOMY.md in the Obsidian vault for the canonical list of allowed tags.\n'
-    )
-  );
-  process.exit(1);
+	console.error(
+		bold(red(`\n[validate-posts] ✗ ${failures.length} validation issue(s):\n`)),
+	);
+	for (const f of failures) {
+		const rel = relative(ROOT, f.file);
+		console.error(`  ${red("✗")} ${bold(rel)}`);
+		console.error(`      ${f.error}`);
+	}
+	console.error(
+		yellow(
+			"\nFix instructions:\n" +
+				'  • Missing canonicalSlug → add `canonicalSlug: "YYYY-MM-DD-your-slug"` to the EN post frontmatter.\n' +
+				"  • Unknown tag → either fix the tag in the post (use a taxonomy alias) or add it to TAG_TAXONOMY in src/lib/tags.ts.\n" +
+				"  • No hub match → add at least one tag used by a hub in src/lib/hubs.ts.\n" +
+				"    See docs/content-hubs.md and _TAXONOMY.md in the Obsidian vault for the canonical lists.\n",
+		),
+	);
+	process.exit(1);
 }
 
 main();

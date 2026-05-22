@@ -1,5 +1,11 @@
 {
   "framework": "astro",
   "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install"
+  "installCommand": "pnpm install",
+  "redirects": [
+    { "source": "/news", "destination": "/blog", "permanent": true },
+    { "source": "/news/", "destination": "/blog", "permanent": true },
+    { "source": "/en/news", "destination": "/en/blog", "permanent": true },
+    { "source": "/en/news/", "destination": "/en/blog", "permanent": true }
+  ]
 }

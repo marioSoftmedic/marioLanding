@@ -22,9 +22,36 @@ const tagSlugs = tagsForPost(post.data.tags);
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
+
+const slug = post.data.canonicalSlug ?? post.id;
+const siteUrl = 'https://mariohealthbits.dev';
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: post.data.title,
+  description: post.data.description,
+  image: post.data.image ? `${siteUrl}${post.data.image}` : `${siteUrl}/img/marioHealthBits.png`,
+  author: {
+    '@type': 'Person',
+    name: 'Mario Inostroza',
+    url: siteUrl,
+    jobTitle: 'Tecnólogo Médico & AI Builder',
+    sameAs: ['https://x.com/mariohealthbits', 'https://www.linkedin.com/in/mario-inostroza-softmedic/'],
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'mariohealthbits.dev',
+    url: siteUrl,
+  },
+  datePublished: post.data.date.toISOString(),
+  dateModified: post.data.date.toISOString(),
+  url: `${siteUrl}/blog/${slug}`,
+  inLanguage: 'es-CL',
+  keywords: post.data.tags,
+};
 ---
 
-<Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description} image={post.data.image}>
+<Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description} image={post.data.image} ogType="article" schema={articleSchema}>
   <article class="py-24 px-4">
     <div class="max-w-3xl mx-auto">
 
