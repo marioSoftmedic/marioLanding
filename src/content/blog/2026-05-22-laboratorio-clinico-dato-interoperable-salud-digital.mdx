@@ -1,0 +1,185 @@
+---
+title: "Del laboratorio clínico al dato interoperable"
+description: "La salud digital empieza cuando el resultado de laboratorio deja de ser PDF y se convierte en DiagnosticReport FHIR trazable."
+date: 2026-05-22
+lang: "es"
+image: "/img/blog/laboratorio-clinico-dato-interoperable.png"
+tags: [Salud Digital, Interoperabilidad, FHIR, Laboratorios Clínicos, Examya, HL7]
+series: interoperabilidad-chile
+seriesOrder: 7
+related:
+  - "2026-04-22-fhir-diagnostic-report-resultado-laboratorio-medico"
+  - "2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile"
+  - "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+draft: false
+---
+
+Un resultado de laboratorio puede estar técnicamente “digitalizado” y seguir siendo inútil para interoperar.
+
+Pasa todos los días: el analizador entrega valores, el sistema del laboratorio genera un PDF, alguien lo manda por correo, portal o WhatsApp, y el médico termina leyendo una imagen de un dato que alguna máquina ya tenía estructurado minutos antes.
+
+Ese es el punto que me interesa: la salud digital no empieza cuando el resultado aparece en una pantalla. Empieza cuando ese resultado puede viajar como dato clínico, con contexto, trazabilidad y significado.
+
+## Digitalizar no es interoperar
+
+En laboratorio clínico hay una confusión bien común.
+
+Se asume que dejar de imprimir ya es avanzar hacia salud digital. Y sí, ayuda. Pero un PDF enviado por WhatsApp sigue siendo una fotografía administrativa del resultado, no un dato clínico interoperable.
+
+El PDF sirve para que una persona lea.
+
+No sirve bien para que otro sistema entienda:
+
+- qué examen fue solicitado,
+- qué muestra se procesó,
+- qué analitos componen el resultado,
+- qué unidades y rangos de referencia aplican,
+- qué profesional validó,
+- a qué orden médica responde,
+- qué médico o sistema debería recibirlo de vuelta.
+
+Esa diferencia parece semántica, pero en operación clínica cambia todo.
+
+Cuando el resultado vive solo como documento, el dato muere al final del flujo. Cuando vive como estructura, puede cerrar el ciclo clínico.
+
+## El camino real: de proceso de laboratorio a dato clínico
+
+Un laboratorio no parte desde cero. Ya tiene un proceso. La muestra entra, se recepciona, se procesa, se valida y se informa.
+
+El problema es que muchas veces ese proceso queda encerrado en sistemas que fueron diseñados para operar puertas adentro, no para conversar con el ecosistema completo.
+
+El camino práctico no es reemplazar todo el LIS ni obligar al laboratorio a rehacer su operación. Es agregar una capa que traduzca el flujo real a recursos clínicos interoperables.
+
+En términos simples:
+
+```text
+Orden médica -> muestra -> observaciones -> informe validado -> entrega
+```
+
+En FHIR, ese mismo flujo puede proyectarse así:
+
+```text
+ServiceRequest -> Specimen -> Observation[] -> DiagnosticReport
+```
+
+Ese mapeo es el puente.
+
+No es un ejercicio académico. Es la diferencia entre “el resultado está disponible en un portal” y “el resultado puede volver al sistema del médico que lo pidió”.
+
+<iframe src="/img/blog/laboratorio-clinico-dato-interoperable.html" width="100%" height="620px" style="border:none; border-radius: 8px;" title="Diagrama del laboratorio clínico al dato interoperable"></iframe>
+
+## Lo que aprendimos mirando laboratorios reales
+
+En un post anterior conté que en Examya mapeamos [245 laboratorios clínicos en Chile](/blog/2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile). No lo hicimos como ejercicio de mercado genérico. Lo hicimos para entender cómo se mueve realmente la información.
+
+El hallazgo más importante no fue tecnológico. Fue operacional.
+
+Muchos laboratorios pequeños y medianos no tienen un equipo de integración, no tienen un roadmap FHIR interno y no pueden detener la operación para “modernizarse”. Siguen atendiendo por los canales que funcionan: presencial, teléfono, correo, portal, WhatsApp.
+
+Eso no los hace atrasados. Los hace realistas.
+
+Por eso la interoperabilidad en salud no puede diseñarse como si todos tuvieran el mismo punto de partida. Para un hospital grande, FHIR puede ser un proyecto de arquitectura. Para un laboratorio pequeño, tiene que ser una capa gradual que no rompa su día a día.
+
+## DiagnosticReport es el sobre, no el PDF
+
+FHIR tiene un recurso diseñado para este momento: `DiagnosticReport`.
+
+La idea no es “crear un PDF más bonito”. La idea es representar el informe de laboratorio como un recurso que agrupa observaciones, referencia la orden original y deja explícito el estado del resultado.
+
+Una versión mínima se ve así:
+
+```json
+{
+  "resourceType": "DiagnosticReport",
+  "status": "final",
+  "category": [{ "coding": [{ "code": "LAB" }] }],
+  "code": {
+    "coding": [{ "system": "http://loinc.org", "display": "Hemograma" }]
+  },
+  "subject": { "reference": "Patient/123" },
+  "basedOn": [{ "reference": "ServiceRequest/orden-456" }],
+  "specimen": [{ "reference": "Specimen/muestra-789" }],
+  "result": [
+    { "reference": "Observation/hemoglobina" },
+    { "reference": "Observation/leucocitos" },
+    { "reference": "Observation/plaquetas" }
+  ]
+}
+```
+
+Lo importante no es memorizar el JSON.
+
+Lo importante es entender el cambio de modelo mental: el informe deja de ser el final administrativo del examen y pasa a ser un nodo clínico conectado.
+
+`basedOn` cierra el ciclo con la orden médica. `Specimen` conecta el resultado con la muestra real. `Observation` permite que cada valor tenga unidad, rango, código e interpretación. `status: "final"` deja claro que el resultado fue validado.
+
+El PDF puede seguir existiendo para lectura humana. Pero ya no debería ser la única fuente de verdad.
+
+## El gotcha: el dato estructurado llega tarde
+
+El error que veo mucho es intentar estructurar el dato al final.
+
+Primero se opera como siempre. Después se exporta un PDF. Después alguien intenta leerlo con OCR o copiarlo a otro sistema. Eso sirve como transición, pero no debería ser el destino.
+
+El dato interoperable se diseña antes:
+
+- al recibir la orden,
+- al identificar el examen,
+- al registrar la muestra,
+- al capturar cada observación,
+- al validar el resultado,
+- al entregar el informe.
+
+Si esperas hasta el PDF, ya perdiste contexto.
+
+Perdiste la relación con la orden original. Perdiste parte de la trazabilidad de la muestra. Perdiste estructura semántica. Y obligaste a otro sistema a reconstruir desde texto algo que pudo existir como dato desde el inicio.
+
+Ese es el costo oculto de la “digitalización por documento”.
+
+## Donde entra Examya
+
+En Examya este problema aparece desde un punto concreto: la orden médica que llega por WhatsApp, foto o texto.
+
+El primer paso no es hablar FHIR perfecto. El primer paso es convertir una interacción desordenada en un flujo ordenado: paciente, exámenes solicitados, prestación, precio, laboratorio, estado y resultado.
+
+Desde ahí, la capa interoperable es una proyección.
+
+No reemplaza la operación. La traduce.
+
+Ese patrón ya lo había contado al hablar del [adapter FHIR sobre el stack de Examya](/blog/2026-04-18-fhir-ley-21-668-interoperabilidad-chile): mantener el dominio de negocio funcionando y exponer recursos estándar cuando el ecosistema los necesita.
+
+Para laboratorios, esa capa tiene que ser especialmente cuidadosa. No basta con mapear campos. Hay que respetar el proceso real: toma de muestra, validación técnica, corrección de resultados, reemisión, entrega al paciente y retorno al médico.
+
+## Lo que viene para salud digital en Chile
+
+La Ley 21.668 empuja al sistema hacia interoperabilidad, pero la ley por sí sola no convierte PDFs en datos clínicos.
+
+El trabajo real está en los bordes:
+
+- donde el paciente manda una orden por WhatsApp,
+- donde el laboratorio valida una muestra,
+- donde un resultado sale del analizador,
+- donde el médico necesita verlo dentro de su propio sistema,
+- donde un auditor pide trazabilidad meses después.
+
+Ahí se juega la salud digital práctica.
+
+No en decir “tenemos IA”. No en tener un portal. No en sumar otra app.
+
+En lograr que el dato clínico viaje sin perder significado.
+
+## En resumen
+
+El laboratorio clínico es uno de los mejores lugares para empezar a interoperar porque produce datos estructurables todos los días.
+
+Pero el camino no es pedirle al laboratorio que cambie todo de golpe. El camino real es conectar su operación actual con una capa de datos clínicos interoperables.
+
+Un resultado de laboratorio no debería morir en un PDF.
+
+Debería poder volver como `DiagnosticReport`, con sus `Observation`, su `Specimen`, su `ServiceRequest` original y la trazabilidad suficiente para que otro sistema lo use sin volver a tipearlo.
+
+Ese es el paso que convierte digitalización en salud digital.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
