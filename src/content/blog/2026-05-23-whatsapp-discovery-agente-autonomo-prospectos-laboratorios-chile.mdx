@@ -1,0 +1,108 @@
+---
+title: "WhatsApp Discovery: el agente que encuentra laboratorios por todo Chile mientras duermo"
+date: 2026-05-23
+slug: "2026-05-23-whatsapp-discovery-agente-autonomo-prospectos-laboratorios-chile"
+lang: "es"
+description: "Construí un agente que corre 24/7 en un VPS, scrapea webs de laboratorios clínicos chilenos y descubre sus números de WhatsApp. 147 rondas después, esto es lo que aprendí."
+tags: [AI, Agents, WhatsApp, Web Scraping, Automation, Examya, OpenClaw, PostgreSQL, B2B]
+image: ""
+draft: true
+series: examya
+seriesOrder: 8
+---
+
+## El problema: 216 laboratorios, 31 con WhatsApp
+
+Cuando empezamos a expandir Examya, necesitábamos contactar laboratorios clínicos en Chile. El primer paso era simple: ¿tienen WhatsApp?
+
+La respuesta fue un golpe de realidad. De 216 laboratorios en nuestra base de datos, solo 31 tenían un número de WhatsApp registrado. Eso es un 14.4% de cobertura. El resto existía, tenía sitios web, pero nadie sabía si atendían por WhatsApp.
+
+Hacerlo manualmente implicaba abrir cada sitio web, buscar "contacto", revisar si había un link de WhatsApp, copiar el número, normalizarlo, y registrarlo. A 5 minutos por laboratorio, eran 18 horas de trabajo mecánico.
+
+Decidí que un agente lo haría mejor.
+
+## Lo que construí: WhatsApp Discovery
+
+WhatsApp Discovery es un agente autónomo que corre en mi VPS (srv788271, el mismo donde vive Cotocha). Su trabajo es simple en teoría y complejo en la práctica:
+
+1. Consulta la base de datos `db_monitor` en PostgreSQL
+2. Selecciona laboratorios sin WhatsApp registrado
+3. Scrapea el sitio web de cada uno buscando links `wa.me`, patrones de teléfono chileno, y páginas de contacto
+4. Normaliza los números al formato `+569XXXXXXXX`
+5. Actualiza la base de datos con el número encontrado y la fuente
+
+```python
+# El pipeline simplificado
+def discover_whatsapp(lab):
+    if lab.website:
+        phones = scrape_website(lab.website)
+        whatsapp = extract_whatsapp(phones)
+        if whatsapp:
+            update_db(lab.id, whatsapp, source="web_scraping")
+            return True
+    return False
+```
+
+El agente corre como un cron job de OpenClaw. Cada ronda procesa 10 laboratorios, rota estrategias de búsqueda, y reporta resultados a un thread de Slack.
+
+## Cómo funciona: tres estrategias en rotación
+
+El scraping de un solo tipo no funciona. Los laboratorios tienen sitios de todo tipo, desde WordPress moderno hasta páginas que parecen de 2005. Por eso implementé tres estrategias que rotan automáticamente.
+
+**Estrategia 1: Web scraping directo.** Visita el sitio del laboratorio, busca `<a href="https://wa.me/...">`, patrones de teléfono chileno en texto, y enlaces `tel:`. Funciona en el 30-40% de los casos donde el sitio está razonablemente bien hecho.
+
+**Estrategia 2: Google Search API.** Para laboratorios sin sitio web o donde el scraping falló, busca `"nombre del lab" whatsapp` o `"nombre del lab" +56 9`. Encuentra números que están en directorios médicos o Google Business Profile pero no en la web del propio lab.
+
+**Estrategia 3: Social media bypass.** Revisa biografías de Instagram y Facebook del laboratorio. Muchos labs tienen su WhatsApp en el bio de Instagram pero no en su web. Esta estrategia aumentó el éxito en un 15%.
+
+La rotación no es aleatoria. El agente sigue instrucciones en un archivo `HEARTBEAT.md` que actúa como su memoria de estado. Después de cada ronda, actualiza cobertura, ciudades procesadas, y próxima estrategia.
+
+```sql
+-- La query que alimenta el agente
+SELECT id, name, organization, website
+FROM laboratories
+WHERE whatsapp IS NULL OR whatsapp = '' OR whatsapp = 'N/A'
+ORDER BY organization ASC, name ASC
+LIMIT 10;
+```
+
+## Lo que aprendí: 147 rondas después
+
+El agente lleva 147 rondas. Eso son 147 ejecuciones donde procesó lotes de laboratorios, encontró números, y actualizó la base de datos. Algunas lecciones:
+
+**El formato chileno es un infierno.** Los números aparecen como `+56 9 1234 5678`, `56912345678`, `9 1234 5678`, `(569) 123-5678`, y cada variación imaginable. La normalización tiene que ser robusta, no elegante.
+
+```python
+def normalize_chilean_phone(raw):
+    # Quitar todo lo que no sea dígito
+    digits = re.sub(r'\D', '', raw)
+    # Caso: 912345678 → +56912345678
+    if len(digits) == 9 and digits[0] == '9':
+        return f"+56{digits}"
+    # Caso: 56912345678 → +56912345678
+    if len(digits) == 11 and digits[:3] == '569':
+        return f"+{digits}"
+    return None
+```
+
+**Los timeouts matan.** Muchos sitios de laboratorios están caídos o tardan 30 segundos en cargar. Un timeout de 10 segundos por request fue el sweet spot entre completitud y velocidad. Más de eso y una ronda de 10 labs tardaba 8 minutos.
+
+**La cobertura no es lineal.** Los primeros 40% de números son fáciles (están en la web). Del 40 al 70% cuesta más (Google, Instagram). Del 70% en adelante, cada número encontrado es una victoria.
+
+**El agente necesita memoria.** Sin el archivo `HEARTBEAT.md`, el agente repetía las mismas ciudades y estrategias. La memoria de estado es lo que convierte un script en un agente.
+
+## Lo que viene
+
+El siguiente paso es integrar WhatsApp Discovery con el pipeline de outreach de Examya. Cuando el agente encuentra un número nuevo, el paso lógico es enviar un primer mensaje de contacto.
+
+Pero eso requiere cuidado. No se trata de spam, sino de abrir una conversación relevante. El laboratorio necesita oír cómo Examya puede ayudar a sus pacientes, no recibir un mensaje genérico.
+
+También estoy explorando validación activa con la WhatsApp Business API. Hoy el agente encuentra números, pero no confirma que estén activos. Un segundo paso de validación reduciría los falsos positivos antes del outreach.
+
+La base `db_monitor` ahora tiene una columna `whatsapp_valid` y `whatsapp_validated_at` listas para ese paso. Es cuestión de conectar las piezas.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

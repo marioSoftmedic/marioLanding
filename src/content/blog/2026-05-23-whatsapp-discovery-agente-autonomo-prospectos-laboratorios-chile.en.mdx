@@ -1,0 +1,109 @@
+---
+title: "WhatsApp Discovery: the agent that finds clinical labs across Chile while I sleep"
+date: 2026-05-23
+slug: "2026-05-23-whatsapp-discovery-agente-autonomo-prospectos-laboratorios-chile"
+lang: "en"
+canonicalSlug: "2026-05-23-whatsapp-discovery-agente-autonomo-prospectos-laboratorios-chile"
+description: "I built an agent that runs 24/7 on a VPS, scrapes Chilean clinical lab websites, and discovers their WhatsApp numbers. 147 rounds later, here's what I learned."
+tags: [AI, Agents, WhatsApp, Web Scraping, Automation, Examya, OpenClaw, PostgreSQL, B2B]
+image: ""
+draft: true
+series: examya
+seriesOrder: 8
+---
+
+## The problem: 216 labs, 31 on WhatsApp
+
+When we started expanding Examya, we needed to contact clinical laboratories across Chile. The first step was simple: do they have WhatsApp?
+
+The answer was a reality check. Out of 216 labs in our database, only 31 had a registered WhatsApp number. That's 14.4% coverage. The rest existed, had websites, but nobody knew if they operated on WhatsApp.
+
+Doing it manually meant opening each website, looking for "contact", checking for a WhatsApp link, copying the number, normalizing it, and logging it. At 5 minutes per lab, that's 18 hours of mechanical work.
+
+I decided an agent would do it better.
+
+## What I built: WhatsApp Discovery
+
+WhatsApp Discovery is an autonomous agent running on my VPS (srv788271, the same server where Cotocha lives). Its job is simple in theory and complex in practice:
+
+1. Query the `db_monitor` PostgreSQL database
+2. Select labs without a registered WhatsApp number
+3. Scrape each lab's website looking for `wa.me` links, Chilean phone patterns, and contact pages
+4. Normalize numbers to `+569XXXXXXXX` format
+5. Update the database with the discovered number and its source
+
+```python
+# Simplified pipeline
+def discover_whatsapp(lab):
+    if lab.website:
+        phones = scrape_website(lab.website)
+        whatsapp = extract_whatsapp(phones)
+        if whatsapp:
+            update_db(lab.id, whatsapp, source="web_scraping")
+            return True
+    return False
+```
+
+The agent runs as an OpenClaw cron job. Each round processes 10 labs, rotates search strategies, and reports results to a Slack thread.
+
+## How it works: three rotating strategies
+
+Single-method scraping doesn't work. Labs have websites of all kinds, from modern WordPress to pages that look like they're from 2005. That's why I implemented three strategies that rotate automatically.
+
+**Strategy 1: Direct web scraping.** Visits the lab's website, looks for `<a href="https://wa.me/...">`, Chilean phone patterns in text, and `tel:` links. Works for 30-40% of cases where the site is reasonably well-built.
+
+**Strategy 2: Google Search API.** For labs without a website or where scraping failed, searches for `"lab name" whatsapp` or `"lab name" +56 9`. Finds numbers in medical directories or Google Business Profile that aren't on the lab's own site.
+
+**Strategy 3: Social media bypass.** Checks Instagram and Facebook bios. Many labs have WhatsApp in their Instagram bio but not on their website. This strategy boosted success by 15%.
+
+The rotation isn't random. The agent follows instructions in a `HEARTBEAT.md` file that acts as its state memory. After each round, it updates coverage stats, processed cities, and the next strategy to use.
+
+```sql
+-- The query that feeds the agent
+SELECT id, name, organization, website
+FROM laboratories
+WHERE whatsapp IS NULL OR whatsapp = '' OR whatsapp = 'N/A'
+ORDER BY organization ASC, name ASC
+LIMIT 10;
+```
+
+## What I learned: 147 rounds later
+
+The agent has run 147 rounds. That's 147 executions where it processed batches of labs, found numbers, and updated the database. A few lessons:
+
+**Chilean phone formats are hell.** Numbers appear as `+56 9 1234 5678`, `56912345678`, `9 1234 5678`, `(569) 123-5678`, and every imaginable variation. Normalization has to be robust, not elegant.
+
+```python
+def normalize_chilean_phone(raw):
+    # Strip non-digits
+    digits = re.sub(r'\D', '', raw)
+    # Case: 912345678 → +56912345678
+    if len(digits) == 9 and digits[0] == '9':
+        return f"+56{digits}"
+    # Case: 56912345678 → +56912345678
+    if len(digits) == 11 and digits[:3] == '569':
+        return f"+{digits}"
+    return None
+```
+
+**Timeouts kill.** Many lab sites are down or take 30 seconds to load. A 10-second timeout per request was the sweet spot between completeness and speed. Anything higher and a 10-lab round took 8 minutes.
+
+**Coverage isn't linear.** The first 40% of numbers are easy (they're on the website). From 40 to 70% it gets harder (Google, Instagram). Past 70%, every number found is a victory.
+
+**The agent needs memory.** Without the `HEARTBEAT.md` file, the agent repeated the same cities and strategies. State memory is what turns a script into an agent.
+
+## What's next
+
+The next step is integrating WhatsApp Discovery with Examya's outreach pipeline. When the agent finds a new number, the logical next step is sending an initial contact message.
+
+But that requires care. This isn't about spam, it's about opening a relevant conversation. The lab needs to hear how Examya can help their patients, not receive a generic message.
+
+I'm also exploring active validation with the WhatsApp Business API. Today the agent finds numbers but doesn't confirm they're active. A validation step would reduce false positives before outreach.
+
+The `db_monitor` database now has a `whatsapp_valid` column and `whatsapp_validated_at` ready for that step. It's a matter of connecting the pieces.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
