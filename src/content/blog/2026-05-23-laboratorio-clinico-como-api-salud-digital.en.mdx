@@ -1,0 +1,176 @@
+---
+title: "The clinical lab as a digital health API"
+description: "A clinical lab already receives orders, processes samples, and returns results. The missing layer is treating it as a clinical API."
+date: 2026-05-23
+lang: "en"
+image: "/img/blog/laboratorio-clinico-como-api.png"
+tags: [Digital Health, Interoperability, FHIR, Clinical Labs, Examya, Architecture]
+series: interoperabilidad-chile
+seriesOrder: 8
+related:
+  - "2026-05-22-laboratorio-clinico-dato-interoperable-salud-digital"
+  - "2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile"
+  - "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+draft: false
+canonicalSlug: "2026-05-23-laboratorio-clinico-como-api-salud-digital"
+---
+
+A clinical laboratory already behaves like an API.
+
+It receives inputs, runs an internal process, and returns a response. We just rarely describe it that way in healthcare.
+
+The input can be a medical order, patient data, a physical sample, or a status request. The internal process includes reception, preparation, analysis, technical validation, and result emission. The output can be a value, a report, an alert, a trace, or a result ready to return to the physician.
+
+From an architecture perspective, the lab is not only a provider. It is an operational interface between real healthcare and digital health.
+
+## The lab as an operational interface
+
+In software, an API defines how one system talks to another.
+
+It does not force the outside system to understand every internal detail. It exposes inputs, contracts, states, and outputs. If the contract is well designed, another system can integrate without knowing the entire internal process.
+
+The clinical lab follows that exact pattern:
+
+```text
+Clinical input -> laboratory process -> clinical output
+```
+
+The difference is that for years this interface has been solved through documents, phone calls, emails, portals, and WhatsApp.
+
+That worked because humans could interpret the context. But when the full system needs to interoperate, the human interface stops scaling.
+
+A lab should not have to rebuild its entire operation to connect. But it does need a layer that translates its operation into clear clinical contracts.
+
+## What actually enters a lab
+
+When people talk about interoperability, they often jump straight to the result. But the clinical API starts earlier.
+
+A lab receives several inputs:
+
+- a medical order,
+- an identified patient,
+- a physical sample,
+- a service or test panel,
+- a delivery channel,
+- a coverage or pricing rule,
+- an operational status.
+
+In FHIR, part of that world can be projected as `ServiceRequest`, `Patient`, `Specimen`, `Coverage`, or `Task`.
+
+The point is not to convert everything into FHIR because it sounds modern. The point is that every input needs identity, state, and traceability.
+
+If the order arrives as a WhatsApp photo, it still needs to become an understandable request. If the patient asks for a price, the system still needs to resolve coverage, service, and laboratory. If the sample arrives at the front desk, it still needs to match the original order.
+
+The API does not start at the endpoint. It starts at the operational contract.
+
+<iframe src="/img/blog/laboratorio-clinico-como-api.html" width="100%" height="620px" style="border:none; border-radius: 8px;" title="Diagram of the clinical laboratory as a digital health API"></iframe>
+
+## What the black box processes
+
+The laboratory process has a visible part and a part the patient usually never sees.
+
+The sample is received, identified, prepared, analyzed, technically reviewed, validated, and only then reported.
+
+From the outside, all of that is often reduced to one sentence: “the result is ready.”
+
+For digital health, that sentence is not enough. Between order and result there are states that matter:
+
+- sample received,
+- sample rejected,
+- analysis in progress,
+- preliminary result,
+- validated result,
+- corrected result,
+- delivered result.
+
+Each one of those states can trigger clinical, administrative, or audit decisions.
+
+That is why I like thinking about the lab as a clinical API. A good API does not only return the final data. It also lets you query state, errors, traceability, and versions.
+
+In healthcare, that is not a technical detail. It is part of patient safety.
+
+## What should come out of that clinical API
+
+In the previous post I wrote about why a laboratory result should not remain only as a document. That remains true, but it is only one part of the problem.
+
+If the lab is understood as an API, the output is not just the final report.
+
+The output can be:
+
+```text
+DiagnosticReport -> validated report
+Observation[] -> individual values
+Specimen -> sample traceability
+Task -> operational status
+AuditEvent -> evidence of who did what
+```
+
+`DiagnosticReport` groups the result. `Observation` lets each value carry unit, range, and interpretation. `Specimen` connects the result to a real sample. `Task` can represent pending or completed work. `AuditEvent` helps reconstruct the story when someone needs to review what happened.
+
+The important idea is this: the lab does not only produce results. It produces clinical events.
+
+And clinical events need to travel with context.
+
+## The gotcha: not everything should be public endpoint
+
+Here is a common trap.
+
+When someone hears “lab as API,” they imagine exposing endpoints for everything.
+
+That is not the point.
+
+A lab can behave as a clinical API without opening its entire internal system. In fact, it probably should not. The right approach is to separate three layers:
+
+1. **Internal operation**: LIS, analyzer, validation, scheduling, billing.
+2. **Translation layer**: normalizes inputs, states, and results.
+3. **Interoperable interface**: exposes only what physicians, patients, payers, or auditors need.
+
+That separation protects the lab. It does not force a LIS replacement. It does not break daily operations. It does not turn every integration into a custom project.
+
+The middle layer does the hard work: it understands the real process and translates it into clinical contracts.
+
+## Where Examya fits
+
+In Examya, this pattern appears naturally.
+
+The patient does not think in `ServiceRequest`. The physician does not want to write JSON. The lab does not want to rebuild its internal system.
+
+But the flow exists:
+
+```text
+WhatsApp -> medical order -> FONASA/price -> lab -> result -> physician/patient
+```
+
+Examya can act as an adapter between that real-world flow and an interoperable interface.
+
+On one side, it receives messy inputs: text, photos, price questions, patient data. On the other side, it can project those events as standard resources: `ServiceRequest`, `Specimen`, `Observation[]`, `DiagnosticReport`.
+
+That is the role of a good translation layer: not asking the user to speak the language of the standard, but converting real operations into data other systems can understand.
+
+## Fewer portals, more clinical interfaces
+
+For years, digitizing healthcare meant creating portals.
+
+A portal for the patient. A portal for the physician. A portal for the lab. A portal to download the PDF.
+
+The problem is that a portal is often just a human window. It helps people look at information, but it does not necessarily help systems integrate.
+
+Digital health needs fewer isolated login screens and more well-designed clinical interfaces.
+
+That does not mean removing screens. It means that behind every screen there should be a data contract. If the physician sees a result, their system should also understand it. If the patient receives a notification, the event should also be traceable. If an auditor reviews the case six months later, the evidence should exist.
+
+## In summary
+
+The clinical laboratory can be one of the most important APIs in the healthcare system.
+
+Not because it has beautiful endpoints, but because it already receives clinical requests, processes samples, validates information, and returns data that affects medical decisions.
+
+The missing layer is turning that operation into an interoperable interface: clear inputs, queryable states, structured results, and auditable evidence.
+
+That is the bridge between real healthcare and digital health.
+
+Do not replace the lab. Do not force it to rewrite everything. Translate what it already does every day into a language the rest of the system can use.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
