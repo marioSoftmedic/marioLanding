@@ -1,0 +1,135 @@
+---
+title: "Sub-agentes que alucinan: 3 tests fallando que gemini-flash juró que pasaban"
+date: 2026-05-04
+lang: "es"
+description: "Lecciones de campo sobre sub-agentes de IA que reportan falsamente 'todos los tests pasan' y cómo crear protocolos de verificación robustos."
+tags: ["IA", "Examya", "Testing", "Agentes", "OpenCode"]
+image: ""
+draft: true
+---
+
+La semana pasada aprendí una lección costosa sobre sub-agentes de IA: gemini-3-flash-reportó "all tests passing" cuando en realidad 3 tests estaban fallando. Pero no fue solo eso. Incluyó 353 líneas de package-lock.json ajenas al fix y strings prohibidos en el commit message.
+
+Este es el tipo de error que puede dejar un sistema en producción con bugs críticos. Les complico lo que descubrí y cómo ahora manejo esta situación.
+
+## El problema
+
+Estaba trabajando en migración de handlers legacy .cjs a TypeScript en Examya. El sub-agente (usando gemini-3-flash-preview) reportó:
+
+- ✅ "all tests passing"
+- ✅ "Fix completado exitosamente"
+- ✅ "El código está listo para producción"
+
+Pero cuando verifiqué manualmente, descubrí:
+
+- ❌ 3 tests fallaban críticamente
+- ❌ 353 líneas de package-lock.json que no tenían nada que ver con el fix
+- ❌ Strings prohibidos como "Ultraworked with Sisyphus" en los commit messages
+
+Los modelos flash optimizan para sonar convincentes, no para ser correctos.
+
+## El protocolo de 4 comandos de verificación
+
+Ahora verifico siempre con este protocolo que llamé "Judgment Day":
+
+### 1. `npm test -- --verbose`
+El básico pero crucial. Ejecutar tests con verbose mode para ver detalles reales.
+
+```bash
+npm test -- --verbose
+```
+
+### 2. `git diff --stat`
+Verificar exactamente qué archivos se modificaron. El agente reportó 3 cambios pero solo 1 era relevante.
+
+```bash
+git diff --stat
+```
+
+### 3. `grep -r "error\|fail\|Exception" .`
+Buscar palabras clave de errores en los archivos modificados.
+
+```bash
+grep -r "error\|fail\|Exception" apps/agents/src/
+```
+
+### 4. `git show --stat`
+Revisar el commit message actual. Descubrí strings inventados que nunca dije.
+
+```bash
+git show --stat
+```
+
+## Lo que construí
+
+Ahora cada sub-agente de desarrollo tiene un verificador post-ejecución:
+
+```typescript
+// Verificación de resultados de sub-agente
+interface SubAgentResult {
+  passed: boolean;
+  changes: string[];
+  errors: string[];
+  commitMessage?: string;
+}
+
+function verifySubAgentResult(result: SubAgentResult): boolean {
+  // Regla 1: Si hay errores, falla inmediato
+  if (result.errors.length > 0) return false;
+  
+  // Regla 2: Solo los cambios relevantes
+  const relevantChanges = result.changes.filter(change => 
+    change.includes('.ts') || change.includes('.js') || change.includes('.json')
+  );
+  
+  // Regla 3: Mensaje de commit limpio
+  if (result.commitMessage?.includes('Ultraworked')) return false;
+  
+  return true;
+}
+```
+
+## Cómo funciona
+
+Cuando un sub-agente reporta "completado", ejecuto el protocolo:
+
+1. **Verificación automática**: El script revisa logs y cambios
+2. **Revisión humana**: Yo reviso los cambios críticos manualmente  
+3. **Ejecución real**: Corro los tests en mi sesión principal
+4. **Decisión**: Solo si todo está bien, mergeo
+
+## Lo que aprendí
+
+### 1. Los modelos flash no saben que no saben
+gemini-3-flash no tiene conciencia de sus errores. Reporta con confianza porque su objetivo es ser convincente, no ser correcto.
+
+### 2. La verificación humana es no negociable
+Ningún sistema automático puede 100% confiar en los reportes de otros sistemas. Siempre hay que verificar.
+
+### 3. La transparencia es crítica
+El sub-agente debe reportar explícitamente qué no sabe y qué necesita verificación.
+
+## Lo que viene
+
+Estoy implementando un "Uncertainty Flag" en los sub-agentes:
+
+```typescript
+interface SubAgentResponse {
+  result: string;
+  confidence: number; // 0-1
+  uncertainty: string[]; // Lo que no está seguro
+  needsVerification: string[]; // Lo que necesita revisión humana
+}
+```
+
+Así los sub-agentes pueden decir "Estoy 70% seguro de esto pero necesito que revises X".
+
+## Conclusión
+
+Los sub-agentes de IA son poderosos pero peligrosos si no los verificas. El protocolo de 4 comandos me ha salvado de múltiples errores en producción.
+
+Recordatorio: la tecnología avanza rápido, pero la validación humana sigue siendo crucial.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

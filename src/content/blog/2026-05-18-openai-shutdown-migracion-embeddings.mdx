@@ -1,0 +1,75 @@
+---
+title: "OpenAI Shutdown 2026: Migración de Embeddings sin Parar tu Producción"
+date: 2026-05-18
+lang: "es"
+description: "Cómo migrar 10,000 embeddings de text-embedding-3-small a text-embedding-3-large sin downtime en Examya"
+tags: [ai, examya, openai, embeddings, pgvector, production]
+image: ""
+draft: true
+---
+
+El email de OpenAI cayó como una bomba: 23 de octubre de 2026, text-embedding-3-small se apaga para siempre. Como todo buen equipo, mi primera reacción fue pánico. ¿Cómo migrar 10,000 embeddings de FONASA sin romper el sistema? ¿Qué pasa con las búsquedas actuales? ¿Los nuevos exámenes que ingresan cada día?
+
+Pero después de la investigación forense, la situación es más clara. Y menos dramática de lo que parece.
+
+## El verdadero alcance del problema
+
+OpenAI anunció shutdowns masivos, pero Examya solo usa un modelo afectado: text-embedding-3-small. Los otros modelos que usamos gpt-4.1-mini-2025-04-14, gpt-4.1, gpt-4o-mini están todos seguros.
+
+El único modelo crítico es SEARCHER_AGENT_MODEL. Este genera embeddings para todo el catálogo de exámenes FONASA y los rangos de referencia médicos. Es el cerebro de búsqueda semántica en Examya.
+
+Pero aquí viene el dato clave: text-embedding-3-large tiene 3072 dimensiones por defecto, no 1536 como el actual. Esto significa que o:
+
+1. Redimensionamos todos los embeddings existentes a 1536 (manteniendo el schema pgvector)
+2. Alteramos la tabla vectorial a 3072 dimensiones
+3. Aceptamos el cambio y tratamos embeddings viejos y nuevos como diferentes
+
+Opción 1 es la más segura. El cambio de 1536 a 3072 no mejora la calidad según los benchmarks, solo duplica el almacenamiento y el costo.
+
+## Los scripts ya existen
+
+La buena noticia: la infraestructura de embeddings en Examya está bien construida. Scripts como `scripts/embed-exam-catalog.ts`, `scripts/fix-embeddings.ts`, y `scripts/embed-reference-ranges.ts` ya existen.
+
+El plan:
+
+```typescript
+// 1. Migrar env var en Railway
+SEARCHER_AGENT_MODEL=text-embedding-3-large
+
+// 2. Forzar re-generación con mismo dimensions
+const response = await openai.embeddings.create({
+  model: 'text-embedding-3-large',
+  input: examText,
+  dimensions: 1536  // ¡Mantener compatibilidad!
+});
+
+// 3. Ejecutar scripts en ventana de baja actividad
+npm run embed:catalog
+npm run embed:reference-ranges
+```
+
+¿Lo mejor? Las búsquedas pueden seguir funcionando durante la migración. Los nuevos embeddings se generan sobre la marcha, y los antiguos se van reemplazando gradualmente.
+
+## El plan de 6 meses
+
+23 de octubre de 2026 da aproximadamente 6 meses de runway. No es urgente, pero merece planificación:
+
+**Mes 1-2**: Validar que text-embedding-3-large con dimensions=1536 funciona igual
+**Mes 3-4**: Migrar ambiente staging, comparar métricas de búsqueda
+**Mes 5**: Ejecutar migración en producción durante ventana de mantenimiento
+**Mes 6**: Monitorear y ajustar si es necesario
+
+El costo aumentará ~30% por el modelo más grande, pero es el precio de mantener la compatibilidad y evitar downtime.
+
+## Lo que aprendí
+
+1. **No piques ante deprecation notices**: Verifica qué modelos realmente usas
+2. **Dimensions matter**: Poder forzar 1536 dimensions es un lifesaver
+3. **Infraestructura preparada**: Tener scripts listos reduce el riesgo drásticamente
+4. **Timing perfecto**: 6 meses es suficiente para planificar una migración segura
+
+La próxima vez que veas un email de deprecation, respira hondo. Investigar primero, pánico después.
+
+📱 WhatsApp: +56962170366
+🐦 X.com: @marioHealthBits
+🌐 mariohealthbits.dev

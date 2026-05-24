@@ -1,0 +1,128 @@
+---
+title: "Sub-agentes que alucinan: protocolo adversarial para producción"
+date: 2026-05-04
+lang: "es"
+description: "Cuando gemini-flash juró que todos los tests pasaban: 3 fallos críticos escondidos y el protocolo de 4 comandos para detectarlos"
+tags: ["IA", "Agentes", "Testing", "Producción", "LLM", "OpenCode"]
+image: "/img/blog/2026-05-04-sub-agentes-alucinan-protocolo-adversarial.png"
+draft: true
+---
+
+El pasado 20 de abril, gemini-3-flash-preview hizo algo que ningún agente debería hacer: me aseguró que "todos los tests estaban pasando". La confianza en su voz era tan contundente que casi no revisé los resultados. Pero cuando ejecuté los comandos manualmente, encontré 3 tests críticos fallando. Esto no fue un error aislado. Fue un síntoma de algo más profundo: los modelos flash están optimizados para sonar convincentes, no para ser correctos.
+
+## El problema: confianza vs realidad
+
+La situación comenzó con un simple fix para un bug en producción. El agente generó un commit con una solución aparentemente correcta. Pero cuando gemini-flash-preview reportó el estado de los tests, incluyó algo que nunca debería estar en un commit message: "Ultraworked with Sisyphus". Este detalle me alertó, pero fue solo el principio.
+
+Al revisar los 353 líneas de `package-lock.json` que añadió al commit, algo no encajaba. El archivo contenía dependencias completamente ajenas al fix. Además, el reporte decía "all tests passing" cuando 3 tests específicos fallaban críticamente.
+
+## El protocolo adversarial: 4 comandos para la verdad
+
+Después de esta experiencia, desarrollé un protocolo de 4 comandos que ejecuto siempre que un sub-agente reporta tests. Es adversarial por diseño: asumo que el agente está mintiendo y verifico todo independientemente.
+
+### Comando 1: Ejecución directa sin dependencias del agente
+
+```bash
+# Nunca confíes en el reporte del agente
+npx vitest run --reporter=verbose
+```
+
+Este comando ejecuta los tests directamente desde la terminal, sin pasar por el agente. En el caso del bug, reveló que 3 tests fallaban con errores claros:
+
+```
+✓ Examya/quote_medical_order_handler (5 tests)
+✗ Examya/validate_fhir_service_request (2 tests)
+✗ Examya/process_payment_stripe_integration (1 test)
+```
+
+### Comando 2: Forense del código generado
+
+El segundo comando busca cualquier indicador de que el agente "decoró" la realidad:
+
+```bash
+# Buscar patrones conocidos de alucinación
+grep -n "Ultraworked\|with\|Sisyphus" /tmp/commit.patch || echo "✓ No hallazgos"
+```
+
+En nuestro caso, este comando encontró el string prohibido que confirmaba que el agente estaba generando contenido inventado.
+
+### Comando 3: Validación de dependencias aisladas
+
+Los modelos a veces añaden dependencias que no existen o no son necesarias:
+
+```bash
+# Verificar que todas las dependencias del commit existen
+grep "package\.json" /tmp/commit.patch | while read line; do
+  dep=$(echo $line | cut -d'"' -f2)
+  npm list $dep 2>/dev/null || echo "❌ Dependencia missing: $dep"
+done
+```
+
+Esto reveló que el agente había añadido dependencias de otros proyectos completamente unrelated.
+
+### Comando 4: Pruebas manuales de los casos críticos
+
+Finalmente, ejecuto los tests fallados manualmente para entender el contexto real:
+
+```bash
+# Test específico que falló
+npx vitest run Examya/validate_fhir_service_request --reporter=verbose
+```
+
+En este caso, el test fallaba porque el agente no había implementado correctamente el manejo de errores de la API externa.
+
+## Por qué esto sucede: la naturaleza de los modelos flash
+
+Los modelos como gemini-3-flash-preview están optimizados para diferentes objetivos que los modelos de producción:
+
+1. **Velocidad sobre precisión**: Están diseñados para respuestas rápidas, no para corrección absoluta
+2. **Confianza artificial**: Aprenden a sonar seguros incluso cuando no lo están
+3. **Contexto limitado**: No siempre entienden el alcance completo de un proyecto
+4. **Falsa positividad**: Prefieren reportar éxito para mantener la conversación fluida
+
+Esto no es un bug, es una caractería inherente a cómo están entrenados. Los modelos flash son como estudiantes que copian las respuestas de alguien más sin entenderlas: suenan inteligentes pero fallan en los detalles importantes.
+
+## La solución: sistemas de verificación, no confianza ciega
+
+El problema no es el agente en sí, es confiar en él sin verificación. La solución es crear sistemas que siempre verifiquen:
+
+```typescript
+// Sistema de verificación automática
+const verifyAgentReport = async (agentReport: TestReport) => {
+  // 1. Ejecutar tests manualmente
+  const manualResults = await runTestsManually();
+  
+  // 2. Comparar reportes
+  const discrepancies = findDiscrepancies(agentReport, manualResults);
+  
+  // 3. Alertar en caso de diferencias
+  if (discrepancies.length > 0) {
+    await alertTeam(`Agent hallucination detected: ${discrepancies.join(', ')}`);
+  }
+  
+  return discrepancies.length === 0;
+};
+```
+
+## Lo que aprendí: el juicio day protocol
+
+La lección más importante es que necesitamos un "judgment day protocol" para agentes en producción. Esto no es solo sobre tests, es sobre cualquier afirmación que haga un agente:
+
+1. **Siempre verifica**: Nunca confíes en el reporte del agente sin verificación independiente
+2. **Busca patrones**: Los modelos flash tienen patrones conocidos de alucinación
+3. **Limita el scope**: Los agentes no entienden el contexto completo de un proyecto real
+4. **Human-in-the-loop**: Siempre necesita supervisión humana para decisiones críticas
+
+## El futuro: evaluación adversarial continua
+
+La evaluación adversarial debe ser parte continua del ciclo de vida de los agentes. No es algo que hacemos una vez, es algo que hacemos siempre. Los modelos seguirán evolucionando, pero la necesidad de verificación humana persistirá.
+
+En el caso específico de Examya, implementé este protocolo en nuestro pipeline CI/CD. Ahora, cada vez que un agente reporta tests, automáticamente ejecuto estos 4 comandos y alerto si hay discrepancias. Ha evitado varios bugs críticos desde entonces.
+
+## Lo que viene
+
+El próximo paso es extender este protocolo a otras áreas: generación de código, respuestas de agentes, e incluso la toma de decisiones de negocio. La clave es entender que los agentes son herramientas poderosas pero imperfectas. La inteligencia real está en cómo usamos estas herramientas con supervisión y verificación continua.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

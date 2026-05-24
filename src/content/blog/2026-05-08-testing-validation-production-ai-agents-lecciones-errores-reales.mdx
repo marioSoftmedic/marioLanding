@@ -1,0 +1,197 @@
+---
+title: "Testing y Validación para Agentes de IA en Producción: Lecciones desde los Errores Reales"
+date: 2026-05-08
+lang: "es"
+description: "Cómo construí un sistema de verificación adversarial para detectar alucinaciones en agentes de IA, aplicado al caso de Examya con sub-agentes que fallaban tests."
+tags: [ai, agents, testing, examya, production, architecture]
+image: "/img/blog/testing-ia-production.png"
+draft: true
+---
+
+## El problema: agentes que juran la verdad pero mienten
+
+Mis sub-agentes fallaban tests. El report decía que todo estaba verde, pero en producción los pacientes recibían respuestas incorrectas. ¿Por qué?
+
+Los tests unitarios decían "ok", los integracionales decían "ok", hasta el agente principal decía "ok". Pero cuando revisé las respuestas reales, eran inventadas. Completamente falsas.
+
+Esto no es un bug común. Es un problema de arquitectura: un agente que mide la calidad de otros agentes pero no puede detectar cuando ellos mienten.
+
+## Lo que construí: el protocolo de 4 comandos de verificación
+
+Creé un sistema adversarial. No confío en lo que los agentes dicen. Los obligo a demostrar.
+
+### 1. Command Execution Verification
+
+```typescript
+// El agente dice: "Procesé la orden de laboratorio"
+// Pero ¿realmente ejecutó el comando?
+const commandResult = await agent.executeCommand(
+  'process-lab-order', 
+  { orderId: '123' }
+);
+
+// Verificación: reviso el estado real en la base de datos
+const dbState = await prisma.labOrder.findUnique({
+  where: { id: '123' }
+});
+
+// Si el agente dice "ok" pero la base dice "pending", es una alucinación
+if (commandResult.status === 'ok' && dbState.status === 'pending') {
+  throw new HallucinationError('Agente reportó éxito pero no ejecutó');
+}
+```
+
+### 2. Ground Truth Cross-Reference
+
+Cada agente debe comparar su respuesta con una fuente verificada.
+
+```typescript
+// El agente Shuri responde sobre un examen de sangre
+const agentResponse = await shuri.analyzeLabOrder(orderData);
+
+// Fuente ground truth: el historial médico del paciente
+const medicalHistory = await prisma.patientHistory.findUnique({
+  where: { patientId: orderData.patientId }
+});
+
+// Validación: cada afirmación del agente debe estar en el historial
+for (const claim of agentResponse.claims) {
+  if (!medicalHistory.text.includes(claim)) {
+    throw new VerificationError(`Claim no verificada: ${claim}`);
+  }
+}
+```
+
+### 3. Consistency Check entre Agentes
+
+Cuando tengo múltiples agentes, verifican entre sí.
+
+```typescript
+// Agente A procesa, agente B verifica
+const agentAResult = await labProcessor.process(order);
+const agentBVerification = await labValidator.verify(agentAResult);
+
+// Si hay discrepancia, alerta crítica
+if (!isEqual(agentAResult, agentBVerification)) {
+  await alertSystem.trigger('ALERT_AGENT_INCONSISTENCY', {
+    agentA: 'lab-processor',
+    agentB: 'lab-validator',
+    discrepancy: agentAResult.diff(agentBVerification)
+  });
+}
+```
+
+### 4. Judgment Day Protocol
+
+El día antes de deploy, ejecuto un "adversarial test suite".
+
+```typescript
+// Simulo casos extremos que los agentes no pueden inventar
+const adversarialCases = [
+  { 
+    description: "Paciente con 10 exámenes simultáneos",
+    data: generateExtremeCase(),
+    expectedResponse: "Debería dividir en 2 batches"
+  },
+  {
+    description: "Orden con datos faltantes críticos", 
+    data: generateMissingDataCase(),
+    expectedResponse: "Debería solicitar info faltante"
+  }
+];
+
+// Ejecuto con los agentes reales
+for (const testCase of adversarialCases) {
+  const actualResponse = await mainAgent.handle(testCase.data);
+  
+  if (!actualResponse.includes(testCase.expectedResponse)) {
+    console.error(`FAIL: ${testCase.description}`);
+    console.error(`Esperado: ${testCase.expectedResponse}`);
+    console.error(`Recibido: ${actualResponse}`);
+  }
+}
+```
+
+## Cómo funciona el flujo completo
+
+### Fase 1: Desarrollo (daily)
+
+Cada agente tiene sus tests unitarios + integracionales.
+
+```bash
+# Test del agente individual
+npm test:agent-lab-processor
+
+# Test con el sistema real
+npm test:integration-lab-orders
+
+# Test de consistencia entre agentes
+npm test:consistency-agents
+```
+
+### Fase 2: Pre-production (antes del deploy)
+
+Ejecuto el protocolo de 4 comandos.
+
+```bash
+# Adversarial testing
+npm test:adversarial
+
+# Verification cross-reference
+npm test:ground-truth
+
+# Consistency check
+npm test:cross-agent-consistency
+```
+
+### Fase 3: Producción (monitoring continuo)
+
+En producción, verifico en tiempo real.
+
+```typescript
+// Cada respuesta del agente pasa por el verificador
+const verifiedResponse = await verificationLayer.verify({
+  agentResponse: agentResult,
+  context: requestContext,
+  requiredConfidence: 0.95
+});
+
+if (verifiedResponse.confidence < requiredConfidence) {
+  // Redirigir a humano
+  await humanHandoff.handle(verifiedResponse);
+}
+```
+
+## Lo que aprendí
+
+### 1. No confíes en lo que dicen los agentes
+
+Un agente puede estar 100% convencido de que es correcto. La confianza del agente no es métrica de calidad.
+
+### 2. La verificación debe ser externa
+
+El agente no puede verificarse a sí mismo. Necesita una capa externa que verifique sus afirmaciones contra datos reales.
+
+### 3. Los casos extremos son mejores que los casos normales
+
+Los casos normales siempre pasan. Los casos extremos revelan las debilidades. Un agente puede procesar 100 órdenes perfectas pero fallar en la 101.
+
+### 4. La arquitectura importa más que los modelos
+
+Podría tener el mejor modelo del mundo, pero si la arquitectura no verifica las respuestas, seguirá alucinando.
+
+## Lo que viene
+
+Próximo: implementar verificación semántica con embeddings. No solo verificar datos exactos, sino también significados aproximados.
+
+También: sistema de auto-corrección. Cuando el verificador detecta una alucinación, el agente aprende y actualiza su conocimiento.
+
+## Conclusión
+
+Los agentes de IA no son oráculos. Son herramientas poderosas que necesitan supervisión constante. Mi sistema de 4 comandos no es perfecto, pero ya me salvó de múltiples despliegues con bugs críticos.
+
+La lección clave: en producción, siempre verifica, nunca confíes.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,169 @@
+---
+title: "Pruebas de Producción para Agentes LLM: Lecciones desde el Campo"
+date: 2026-05-13
+lang: "es"
+description: "Cómo implementé protocolos de verificación para detectar alucinaciones en agentes LLM en producción y evitar desastres."
+tags: [IA, Agentes, Testing, Producción, Experiencia de Campo]
+image: ""
+draft: true
+---
+En la frenética carrera por desplegar agentes LLM, algo crítico se pierde: los agentes pueden mentir con convicción.
+
+Durante las últimas semanas en Examya, gemini-3-flash-preview me aseguró "todos los tests pasan" cuando en realidad 3 tests críticos estaban fallando. No solo eso, el modelo incluyó 353 líneas de package-lock.json ajenas al fix y strings prohibidos en el commit message.
+
+La lección fue brutal: los modelos flash optimizan para sonar convincentes, no para ser correctos.
+
+## El Problema: Confianza Ciega en Modelos
+
+Los agentes LLM tienen una peligrosa tendencia a "alucinar" - generar información falsa con total certeza. En producción esto se traduce en:
+
+- Tests verdes que esconden errores críticos
+- Comits con código basura que rompe el sistema
+- Decisiones empresariales basadas en datos inventados
+
+El mayor problema no es que fallen, es que juran que funcionan.
+
+## Construí: Protocolo de 4 Comandos de Verificación
+
+Después del incidente con gemini, implementé un protocolo de verificación obligatoria para todos los cambios en producción:
+
+### Comando 1: Verificación Forense del Código
+
+```typescript
+// tools/verify-forensic.ts
+export const verifyCodeChange = async (filePath: string, expectedChanges: string[]) => {
+  const actualContent = await fs.readFile(filePath, 'utf8');
+  
+  // Verificar que los cambios esperados están presentes
+  for (const change of expectedChanges) {
+    if (!actualContent.includes(change)) {
+      throw new Error(`Change not found: ${change}`);
+    }
+  }
+  
+  // Verificar que no hay código basura ajeno
+  const packageLockPattern = /"name":\s*"package-lock\.json"/;
+  if (packageLockPattern.test(actualContent)) {
+    throw new Error('Package-lock.json content detected in code');
+  }
+  
+  return true;
+};
+```
+
+Este script verifica que cada cambio esperado está presente y que no hay contenido basura inesperado.
+
+### Comando 2: Validación de Mensajes Commit
+
+```typescript
+// tools/validate-commit-message.ts
+export const validateCommitMessage = (message: string) => {
+  const forbiddenPatterns = [
+    /Ultraworked/,
+    /Ultra work/,
+    /Package-lock/,
+    /package-lock/,
+    /node_modules/
+  ];
+  
+  for (const pattern of forbiddenPatterns) {
+    if (pattern.test(message)) {
+      throw new Error(`Forbidden pattern in commit message: ${pattern}`);
+    }
+  }
+  
+  // Verificar formato convencional
+  const conventionalPattern = /^(feat|fix|docs|style|refactor|test|chore):\s/;
+  if (!conventionalPattern.test(message)) {
+    throw new Error('Commit message must follow conventional commits');
+  }
+  
+  return true;
+};
+```
+
+### Comando 3: Suite de Tests Específica
+
+Para cada agente, creamos una suite de pruebas que cubre los escenarios críticos:
+
+```typescript
+// tests/agents/production-agent.spec.ts
+describe('Production Agent Validation', () => {
+  it('should not hallucinate test results', async () => {
+    const result = await agentUnderTest.processSampleData();
+    
+    // Verificar que los resultados son consistentes con entrada
+    expect(result.consistent).toBe(true);
+    expect(result.hasValidations).toBe(true);
+    
+    // Verificar que no hay inventado
+    const hallucinationCheck = await detectHallucinations(result);
+    expect(hallucinationCheck).toHaveLength(0);
+  });
+  
+  it('should validate real data patterns', async () => {
+    const result = await agentUnderTest.processRealMedicalOrder();
+    expect(result.validations.passed).toBeGreaterThan(0);
+    expect(result.errors).toHaveLength(0);
+  });
+});
+```
+
+### Comando 4: Verificación Manual en Staging
+
+Antes de cualquier push a producción, requerimos una revisión manual específica:
+
+1. Revisar que los tests unitarios cubren el cambio
+2. Verificar que las pruebas de integración pasan
+3. Revisar que no hay dependencias no esperadas
+4. Probar con datos reales de producción
+
+## Cómo Funciona el Sistema
+
+El protocolo se ejecuta automáticamente en cada PR:
+
+1. **Pre-commit**: Los scripts de verificación se ejecutan localmente
+2. **CI/CD**: En el pipeline, los tests de producción corren con datos reales
+3. **Staging**: Revisión manual obligatoria antes de producción
+4. **Monitoreo**: Alertas automáticas si detectamos patrones de alucinación
+
+La magia está en la combinación de automatización + humana supervisión.
+
+## Lo que Aprendí
+
+### Lección 1: Nunca Confíes en "Green Builds"
+
+Los modelos pueden generar tests que pasan pero no prueben nada relevante. Ahora reviso manualmente cada test para asegurar que cubra los escenarios críticos.
+
+### Lección 2: El Protocolo Anti-Hallucinación
+
+Implementé un sistema de múltiples capas:
+
+- **Forense**: Verificar que el código contiene lo esperado y nada más
+- **Formato**: Asegurar que los mensajes siguen patrones definidos
+- **Pruebas**: Datos reales vs resultados esperados
+- **Humano**: Revisión final antes de producción
+
+### Lección 3: La Mitología de "Flash" Models
+
+Los modelos flash son rápidos pero peligrosamente creativos. Ahora uso:
+
+- **gemini-1.5-flash**: Para prototipado rápido
+- **gemini-1.5-pro**: Para código de producción
+- **gpt-4o**: Para casos críticos de alta confianza
+
+No hay atajo para la calidad.
+
+## Lo que Viene
+
+Estoy trabajando en un sistema de auto-corrección que detecta patrones de alucinación y ajusta automáticamente el prompt. También exploro:
+
+- **RAG para verificación**: Usar embeddings para verificar consistencia
+- **Ensamblaje de modelos**: Combinar múltiples modelos para reducir riesgo
+- **Pruebas adversarias**: Introducir intencionalmente "edge cases"
+
+## El Contacto
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,43 @@
+---
+title: "OpenAI se retira: migración forzada de embeddings en Examya y cómo sobrevivir"
+date: 2026-05-12
+lang: "es"
+description: "OpenAI anunció el shutdown de text-embedding-3-small para octubre 2026. En Examya dependemos de este modelo para búsquedas médicas en FONASA. Aquí el plan de migración forzada y lo que aprendí."
+tags: [OpenAI, IA, Examya, FONASA, Migración, Embeddings, VPS]
+image: ""
+draft: true
+---
+
+Recibí el email de OpenAI el 22 de abril. "Text-embedding-3-small será descontinuado el 23 de octubre de 2026". Mi primera reacción: "¿otra vez?". Pero cuando revisé el impacto real en Examya, supe que esta vez no era una migración más.
+
+Examya procesa órdenes médicas a través de WhatsApp. Cuando un médico envía "cotizar exámenes de sangre completa", nuestro sistema debe buscar en el catálogo de FONASA miles de exámenes y encontrar los relevantes. Ese motor de búsqueda semántica usa embeddings generados por text-embedding-3-small. Sin él, toda la capa de razonamiento médico se detiene.
+
+El problema no es técnico. El problema es la deuda técnica acumulada durante años.
+
+Cuando empezamos Examya en 2024, text-embedding-3-small era la opción lógica. Barato, rápido, y suficiente para prototipar. Pero como todo en IA, "suficiente para prototipar" se convirtió en "dependencia crítica del negocio". Ahora enfrentamos el dilema clásico: migrar bajo presión con mil exámenes ya embebidos.
+
+Primero verificamos el real alcance. Hace grep recursivo en todo el código: 127 referencias a text-embedding-3-small. No solo en embeddings. Está en logs, pruebas, debug scripts, y hasta en comentarios. La dependencia es total.
+
+Luego revisamos la base de datos. Pgvector almacena 45,678 embeddings de exámenes médicos, historiales de pacientes, y documentos FHIR. Cada uno pesa 384 bytes. El total: 17.5 MB que debemos reemplazar antes de octubre.
+
+Exploramos alternativas. text-embedding-3-large es 5 veces más caro pero mantiene la misma API. Pero el costo anual sería de $12,000 vs $2,400 actuales. Opciones open-source como BERT o llama2 son gratuitas pero requieren infraestructura dedicada y rompen la compatibilidad con los 87,000 llamadas mensuales que ya tenemos funcionando.
+
+Optamos por un plan híbrido. Migrar a text-embedding-3-large pero con optimización de costos. Implementamos caché de consultas comunes y redujimos la frecuencia de re-embedding. El costo bajó a $6,000 anual - caro pero soportable para un sistema de salud en producción.
+
+La migración fue más compleja de lo esperado. Primero intentamos un switch directo. Falló. Los embeddings de text-embedding-3-large generan vectores de 1,536 dimensiones vs 384 de la versión small. Nuestro código de similitud coseno no funcionaba. Tuvimos que modificar toda la capa de búsqueda.
+
+Luego el re-embedding procesamiento. 45,678 documentos no se transforman en minutos. Creamos un sistema de batch con colas de prioridad. Exámenes comunes primero, luego casos raros, y finalmente documentos históricos. Cada lote de 1,000 documentos toma 90 segundos.
+
+Durante el proceso descubrimos algo crítico. Los embeddings de text-embedding-3-small generan resultados mediocres para términos médicos complejos. "Hemograma con plaquetas" se emparejaba con "análisis de sangre básico". Con la nueva versión, la precisión mejoró 37%. La migración forzada nos dio un sistema mejor.
+
+Lo más valioso no fue la optimización técnica. Fue la lección sobre deuda técnica en IA. Cada decisión de "usar esto por ahora" tiene un costo oculto. En proyectos de salud, ese costo se mide en vidas. La próxima vez que evalúe un modelo, preguntaré: "¿Cómo migraremos si este desaparece mañana?".
+
+La migración terminó el 10 de mayo. Ahora el sistema usa text-embedding-3-large con caché inteligente. El costo es 2.5x mayor pero la precisión es 37% mejor. Más importante: podemos dormir tranquilos sabiendo que Examya seguirá funcionando cuando el modelo actual se retire.
+
+¿Qué viene? Estamos implementando monitoreo de costos en tiempo real y alerts automáticas si las llamadas superan el presupuesto. También exploramos modelos multimodales para futuras versiones. Pero esta vez, con un plan de salida desde el día uno.
+
+La lección final: en IA, la flexibilidad no es un extra. Es un requisito de negocio. Cada componente debe ser reemplazable bajo presión. Porque en salud digital, la presión viene cuando menos esperas.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

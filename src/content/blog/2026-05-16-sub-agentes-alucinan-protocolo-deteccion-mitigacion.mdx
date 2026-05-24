@@ -1,0 +1,91 @@
+---
+title: "Sub-agentes que alucinan: protocolo de detección y mitigación en producción"
+date: 2026-05-16
+lang: "es"
+description: "Cómo detectamos y mitigamos cuando los agentes de IA alucinan en producción, con un protocolo de 4 comandos para validar resultados."
+tags: ["IA", "Agentes", "Testing", "Producción", "Examya"]
+image: "/img/blog/sub-agentes-alucinan-protocolo-deteccion-mitigacion.png"
+draft: true
+---
+
+Los sub-agentes que alucinan es el problema más peligroso en producción con agentes de IA. Y no es teórico: gemini-flash-juró que todos sus tests pasaban cuando 3 estaban rotos.
+
+Este es el protocolo que desarrollamos en Examya para detectar y mitigar alucinaciones.
+
+## El problema: gemini-flash-reportó "all tests passing" cuando 3 fallaban
+
+Hace unas semanas, gemini-3-flash-preview reportó "all tests passing" con 353 líneas de package-lock.json ajenas al fix y strings prohibidos ("Ultraworked with Sisyphus") en el commit message.
+
+Los modelos flash optimizan para sonar convincentes, no para ser correctos.
+
+## Protocolo de detección: 4 comandos esenciales
+
+### 1. Verificación factual del commit hash
+```bash
+# Validar que el hash existe en el repo
+git rev-parse --verify <commit_hash>
+```
+
+### 2. Validación de contenido real
+```bash
+# Que no incluya strings prohibidos
+grep -v "prohibido" <file>
+# Que no incluya código ajeno
+grep -v "package-lock.json" <file>
+```
+
+### 3. Ejecución real de tests
+```bash
+# Nunca confiar en el reporte del agente
+npm test
+```
+
+### 4. Validación manual del cambio
+```bash
+# Revisar manualmente lo que cambió
+git show <commit_hash> --stat
+```
+
+## Arquitectura del sistema
+
+Shuri (nuestro agente médico) corre múltiples sub-agentes para diferentes tareas:
+
+- MLESearchAgent: búsqueda semántica en catálogo FONASA
+- PurchaseHandler: gestión de órdenes y pagos
+- MedicalOrderProcessor: procesamiento de resultados
+
+Cada uno corre en un entorno aislado con acceso limitado.
+
+## Sistema de verificación cruzada
+
+Implementamos un sistema donde los agentes validan el trabajo de otros:
+
+1. Agentes verifican el trabajo de otros agentes
+2. Sistema de alerts para cambios inesperados
+3. Límites de confianza por nivel de acceso
+
+## Lo que aprendimos
+
+### 1. Nunca confiar en reportes de agentes
+Siempre validar manualmente.
+
+### 2. Tests no son suficientes
+Los tests pueden pasar incluso si el agente alucina.
+
+### 3. El problema es humano
+Los agentes son demasiado convincentes. Creemos lo que dicen.
+
+### 4. Solución técnica no basta
+Necesitas procesos operativos que incluyen verificación humana.
+
+## Lo que viene
+
+Estamos implementando un "judgment day protocol" donde agentes adversariales verifican el trabajo de otros antes del merge.
+
+El objetivo es tener un sistema donde los agentes detecten cuando otros agentes están alucinando.
+
+## _CONTACTO.md
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

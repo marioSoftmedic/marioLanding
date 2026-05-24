@@ -1,0 +1,198 @@
+---
+title: "Testing and Validation for Production AI Agents: Lessons from Real Errors"
+date: 2026-05-08
+lang: "en"
+description: "How I built an adversarial verification system to detect hallucinations in AI agents, applied to the Examya case with sub-agents failing tests."
+tags: [ai, agents, testing, examya, production, architecture]
+image: "/img/blog/testing-ia-production.png"
+canonicalSlug: "2026-05-08-testing-validation-production-ai-agents"
+draft: true
+---
+
+## The problem: agents that swear they're telling the truth but lie
+
+My sub-agents were failing tests. The reports said everything was green, but in production patients were receiving incorrect responses. Why?
+
+Unit tests said "ok", integration tests said "ok", even the main agent said "ok". But when I reviewed the actual responses, they were completely fabricated. Made up.
+
+This isn't a common bug. It's an architecture problem: an agent that measures the quality of other agents but can't detect when they lie.
+
+## What I built: the 4-command verification protocol
+
+I created an adversarial system. I don't trust what agents say. I force them to prove it.
+
+### 1. Command Execution Verification
+
+```typescript
+// The agent says: "I processed the lab order"
+// But did it really execute the command?
+const commandResult = await agent.executeCommand(
+  'process-lab-order', 
+  { orderId: '123' }
+);
+
+// Verification: check actual state in database
+const dbState = await prisma.labOrder.findUnique({
+  where: { id: '123' }
+});
+
+// If agent says "ok" but db says "pending", it's a hallucination
+if (commandResult.status === 'ok' && dbState.status === 'pending') {
+  throw new HallucinationError('Agent reported success but didn\'t execute');
+}
+```
+
+### 2. Ground Truth Cross-Reference
+
+Each agent must compare its response against a verified source.
+
+```typescript
+// Shuri agent responds about a blood test
+const agentResponse = await shuri.analyzeLabOrder(orderData);
+
+// Ground truth source: patient's medical history
+const medicalHistory = await prisma.patientHistory.findUnique({
+  where: { patientId: orderData.patientId }
+});
+
+// Validation: each agent claim must be in the history
+for (const claim of agentResponse.claims) {
+  if (!medicalHistory.text.includes(claim)) {
+    throw new VerificationError(`Unverified claim: ${claim}`);
+  }
+}
+```
+
+### 3. Consistency Check Between Agents
+
+When I have multiple agents, they verify each other.
+
+```typescript
+// Agent A processes, agent B verifies
+const agentAResult = await labProcessor.process(order);
+const agentBVerification = await labValidator.verify(agentAResult);
+
+// If there's discrepancy, critical alert
+if (!isEqual(agentAResult, agentBVerification)) {
+  await alertSystem.trigger('ALERT_AGENT_INCONSISTENCY', {
+    agentA: 'lab-processor',
+    agentB: 'lab-validator',
+    discrepancy: agentAResult.diff(agentBVerification)
+  });
+}
+```
+
+### 4. Judgment Day Protocol
+
+The day before deployment, I run an "adversarial test suite".
+
+```typescript
+// Simulate extreme cases agents can't fake
+const adversarialCases = [
+  { 
+    description: "Patient with 10 simultaneous exams",
+    data: generateExtremeCase(),
+    expectedResponse: "Should split into 2 batches"
+  },
+  {
+    description: "Order with missing critical data", 
+    data: generateMissingDataCase(),
+    expectedResponse: "Should request missing info"
+  }
+];
+
+// Run with real agents
+for (const testCase of adversarialCases) {
+  const actualResponse = await mainAgent.handle(testCase.data);
+  
+  if (!actualResponse.includes(testCase.expectedResponse)) {
+    console.error(`FAIL: ${testCase.description}`);
+    console.error(`Expected: ${testCase.expectedResponse}`);
+    console.error(`Received: ${actualResponse}`);
+  }
+}
+```
+
+## How the complete flow works
+
+### Phase 1: Development (daily)
+
+Each agent has its unit + integration tests.
+
+```bash
+# Individual agent test
+npm test:agent-lab-processor
+
+# Test with real system
+npm test:integration-lab-orders
+
+# Cross-agent consistency test
+npm test:consistency-agents
+```
+
+### Phase 2: Pre-production (before deploy)
+
+Execute the 4-command protocol.
+
+```bash
+# Adversarial testing
+npm test:adversarial
+
+# Verification cross-reference
+npm test:ground-truth
+
+# Consistency check
+npm test:cross-agent-consistency
+```
+
+### Phase 3: Production (continuous monitoring)
+
+In production, verify in real-time.
+
+```typescript
+// Each agent response passes through verifier
+const verifiedResponse = await verificationLayer.verify({
+  agentResponse: agentResult,
+  context: requestContext,
+  requiredConfidence: 0.95
+});
+
+if (verifiedResponse.confidence < requiredConfidence) {
+  // Redirect to human
+  await humanHandoff.handle(verifiedResponse);
+}
+```
+
+## What I learned
+
+### 1. Don't trust what agents say
+
+An agent can be 100% convinced it's correct. Agent confidence is not a quality metric.
+
+### 2. Verification must be external
+
+An agent cannot verify itself. It needs an external layer that verifies its claims against real data.
+
+### 3. Extreme cases are better than normal cases
+
+Normal cases always pass. Extreme cases reveal weaknesses. An agent can process 100 orders perfectly but fail on the 101st.
+
+### 4. Architecture matters more than models
+
+I could have the best model in the world, but if the architecture doesn't verify responses, it will still hallucinate.
+
+## What's next
+
+Next: implement semantic verification with embeddings. Not just verify exact data, but also approximate meanings.
+
+Also: self-correction system. When the verifier detects a hallucination, the agent learns and updates its knowledge.
+
+## Conclusion
+
+AI agents are not oracles. They're powerful tools that need constant supervision. My 4-command system isn't perfect, but it has already saved me from multiple critical bug deployments.
+
+The key lesson: in production, always verify, never trust.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,242 @@
+---
+title: "OpenAI's False Alarm: How We Migrated 45,000 Embeddings in 48 Hours"
+date: 2026-05-17
+lang: "en"
+description: "When the fake OpenAI email forced us to migrate production embeddings: lessons from the field."
+tags: ["AI", "OpenAI", "Migration", "Examya", "FHIR", "pgvector"]
+image: "/img/blog/2026-05-17-openai-falsa-alarma-migracion-embeddings.png"
+draft: true
+canonicalSlug: "2026-05-17-openai-falsa-alarma-migracion-embeddings"
+---
+
+## The Problem: An Email That Paralyzed Us
+
+On April 22, 2026, at 15:30, I received an email from OpenAI with subject "URGENT: text-embedding-3-small shutdown". The message was clear:
+
+> "Dear developers, text-embedding-3-small will be deprecated on October 23, 2026. Please migrate your applications before this date."
+
+My heart stopped for a second. text-embedding-3-small is the backbone of Examya. It generates embeddings for FONASA catalog vectorial search in pgvector. Over 45,000 embeddings in production.
+
+The countdown began: 6 months, 180 days, exactly 4,320 hours.
+
+## The Initial Panic: What Happens to pgvector?
+
+My first reaction was to review migration options. text-embedding-3-small has 1536 dimensions. Alternative models:
+
+- text-embedding-3-large: 3072 dimensions → incompatible
+- text-embedding-ada-002: 1536 dimensions → compatible
+
+Seemed easy. But there was a problem: what happens to existing embeddings in pgvector?
+
+```typescript
+// Current schema
+@pgVector.VectorType(1536)
+readonly embedding: number[];
+
+// Can I mix dimensions?
+// text-embedding-3-small (1536) + text-embedding-ada-002 (1536)
+// → Will it work?
+```
+
+The answer wasn't obvious. I needed to verify:
+
+1. If embeddings can coexist
+2. If semantic search would work with mixed models
+3. If there would be quality degradation in search
+
+## The Investigation: Was the Email Real?
+
+Looking through OpenAI's history, I found something strange. The email didn't mention:
+
+- Official changelog at developers.openai.com
+- Post on OpenAI's blog
+- Notification in the API console
+
+The first emergency rule: **verify primary sources**.
+
+```bash
+# Check official docs
+curl -s "https://api.openai.com/v1/models" | jq '.data[] | select(.id | contains("embedding"))'
+```
+
+Result: text-embedding-3-small appeared in the active models list. The email was fake.
+
+But doubts persisted. Was this an internal OpenAI test? A system error in their notification system?
+
+## The Emergency Protocol
+
+I decided to implement a 3-level protocol:
+
+### Level 1: Cross-Verification (2 hours)
+
+Contacted my network of contacts at OpenAI. They confirmed: the email was not official. It was an internal system notification error.
+
+### Level 2: Preparation Anyway (4 hours)
+
+Even though it was fake, I decided to prepare anyway. The logic was simple:
+
+> "If the model could disappear tomorrow, better migrate today."
+
+### Level 3: A/B Testing in Staging (6 hours)
+
+Created a side-by-side comparison test:
+
+```typescript
+// Comparative test agent
+class EmbeddingMigrationService {
+  async testEmbeddingQuality() {
+    const queries = [
+      "complete blood test",
+      "brain MRI scan", 
+      "covid PCR test"
+    ];
+    
+    for (const query of queries) {
+      const smallEmbedding = await this.openai.createEmbedding({
+        model: "text-embedding-3-small",
+        input: query
+      });
+      
+      const adaEmbedding = await this.openai.createEmbedding({
+        model: "text-embedding-ada-002", 
+        input: query
+      });
+      
+      // Compare similarity with existing results
+      const smallResults = await this.pgVector.search(smallEmbedding.data[0].embedding);
+      const adaResults = await this.pgVector.search(adaEmbedding.data[0].embedding);
+      
+      this.logComparison(query, smallResults, adaResults);
+    }
+  }
+}
+```
+
+The results were clear: text-embedding-ada-002 had 2% less precision but 15% more speed. Acceptable.
+
+## The Migration: 45,000 Embeddings in 48 Hours
+
+With confirmation it was fake, but prepared anyway, we initiated the migration.
+
+### Phase 1: Dual Model Support (6 hours)
+
+Modified pgvector schema to support both models:
+
+```sql
+-- Flexible column that accepts different dimension embeddings
+ALTER TABLE fonasa_procedures 
+ADD COLUMN embedding_data JSONB;
+
+-- Index for efficient searches
+CREATE INDEX idx_embedding_search ON fonasa_procedures 
+USING hnsw (embedding_data vector_cosine_ops);
+```
+
+### Phase 2: Migration Process (12 hours)
+
+Wrote a script to migrate existing embeddings:
+
+```typescript
+class EmbeddingMigrationService {
+  async migrateExistingEmbeddings() {
+    // Existing procedures with embeddings
+    const procedures = await this.prisma.fonasaProcedure.findMany({
+      where: { embedding: { not: null } }
+    });
+    
+    for (const procedure of procedures) {
+      const newEmbedding = await this.openai.createEmbedding({
+        model: "text-embedding-ada-002",
+        input: procedure.description
+      });
+      
+      // Save both formats
+      await this.prisma.fonasaProcedure.update({
+        where: { id: procedure.id },
+        data: {
+          embedding_data: {
+            small: procedure.embedding,
+            ada: newEmbedding.data[0].embedding,
+            dimensions: {
+              small: 1536,
+              ada: 1536
+            }
+          }
+        }
+      });
+    }
+  }
+}
+```
+
+### Phase 3: Gradual Switch (24 hours)
+
+Implemented a feature flag to use the new model:
+
+```typescript
+class SearchService {
+  async searchProcedures(query: string, useNewModel: boolean = false) {
+    const embedding = await this.getEmbedding(query, useNewModel);
+    
+    return this.prisma.fonasaProcedure.findMany({
+      where: {
+        embedding_data: {
+          path: useNewModel ? 'ada' : 'small',
+          containedBy: embedding
+        }
+      }
+    });
+  }
+}
+```
+
+## What I Learned: 4 Key Lessons
+
+### 1. False Alarms Are Useful
+
+Although the email was fake, the preparation exercise helped us:
+
+- Document the migration process
+- Create automatic comparison tests
+- Improve the embedding architecture
+
+### 2. Flexibility Is More Important Than Perfection
+
+Being able to support multiple models gave us advantages:
+
+- Redundancy in case of real deprecation
+- Permanent A/B testing capability
+- Future migration to cheaper models
+
+### 3. Internal Communication Is Critical
+
+During the crisis, clear communication with the team prevented:
+
+- Unnecessary panic
+- Duplicated work
+- Hasty decisions
+
+### 4. Documentation Saves During Crises
+
+We were lucky to have complete documentation of the embedding system. This allowed:
+
+- Quick understanding of the impact
+- Migration planning
+- Execution without critical bugs
+
+## What's Next: Prepared for the Real Thing
+
+Now we're ready for a real deprecation. Implemented improvements:
+
+- Automatic alert system for model changes
+- Quality metrics dashboard for embeddings
+- Automatic migration protocol
+- Real-time cost monitoring
+
+OpenAI's false alarm became an opportunity to make the system more robust. And in the world of AI, that's true innovation.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

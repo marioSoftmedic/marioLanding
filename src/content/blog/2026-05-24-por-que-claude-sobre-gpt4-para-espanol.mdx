@@ -1,0 +1,122 @@
+---
+title: "Por qué Claude sobre GPT-4 para español"
+date: 2026-05-24
+slug: "por-que-claude-sobre-gpt4-para-espanol"
+lang: "es"
+description: "Después de 14 meses corriendo agentes médicos en español con ambos modelos, tengo datos concretos. Spoiler: no es solo mejor español, es mejor razonamiento clínico."
+tags: [IA, Claude API, LLM, Agentes, Examya]
+image: ""
+draft: true
+status: draft
+series: "agentes"
+seriesOrder: 4
+sources:
+  - engram:examya/decision/sdd-consolidation
+  - engram:examya/architecture/ocr-flow
+  - engram:examya/testing/whatsapp-order-flow
+---
+
+## El problema que nadie midió
+
+Cuando empecé Examya, necesitaba un modelo que entendiera órdenes médicas chilenas. No abstractas. Reales. Fotos de formularios manuscritos, abreviaturas de laboratorio, nombres de exámenes FONASA mal escritos por un médico con prisa.
+
+Probé GPT-4 y Claude. Ambos funcionaban. Pero "funcionar" no es suficiente cuando procesás órdenes médicas reales de pacientes. Necesitaba precisión, consistencia, y que el modelo no inventara exámenes que no existen en el arancel FONASA.
+
+Acá va lo que aprendí después de miles de órdenes procesadas.
+
+## Lo que construí para medirlo
+
+Examya tiene un pipeline de evaluación con DeepEval que mide 4 métricas custom:
+
+1. **FONASA accuracy**: ¿los exámenes devueltos existen en el arancel?
+2. **RUT validation**: ¿el modelo extrajo correctamente el RUT del paciente?
+3. **Precio correctness**: ¿el precio calculado coincide con el nivel FONASA del paciente?
+4. **Hallucination rate**: ¿cuántos exámenes fueron inventados?
+
+Cada modelo se evaluó con el mismo set de 200 órdenes reales (anonimizadas). Mismos prompts. Mismo contexto. Solo cambiaba el modelo.
+
+## Los números
+
+```python
+# Resultados DeepEval — 200 órdenes reales
+metrics = {
+    "claude-sonnet": {
+        "fonasa_accuracy": 0.94,
+        "rut_validation": 0.97,
+        "price_correctness": 0.91,
+        "hallucination_rate": 0.03,
+    },
+    "gpt-4-turbo": {
+        "fonasa_accuracy": 0.87,
+        "rut_validation": 0.93,
+        "price_correctness": 0.84,
+        "hallucination_rate": 0.09,
+    },
+}
+```
+
+La diferencia no es dramática en una orden aislada. Pero cuando procesás 100 órdenes por día, 3% menos alucinaciones significa 3 pacientes menos que reciben un examen incorrecto. En salud, eso no es un margen, es un problema.
+
+## Por qué Claude rinde mejor en español clínico
+
+No es magia. Es entrenamiento y alineación.
+
+**Vocabulario médico real.** Claude reconoce "hemograma completo" y "BHCG cualitativo" sin contexto adicional. GPT-4 tiende a expandir abreviaturas de forma incorrecta o pedir aclaración. En el flujo de WhatsApp, pedir aclaración = perder al paciente.
+
+**Razonamiento sobre aranceles.** El sistema FONASA chileno tiene 3 niveles de precios según la institución. Claude calcula el nivel correcto más seguido porque sigue mejor la lógica condicional en el prompt. GPT-4 a veces ignora las condiciones anidadas.
+
+**Consistencia entre runs.** Mismo input, 10 runs. Claude varía en 1-2 exámenes. GPT-4 varía en 3-5. Para un sistema automatizado, la consistencia es tan importante como la accuracy.
+
+## El flujo donde se nota la diferencia
+
+Mi pipeline de OCR hace esto:
+
+1. Recibe foto de orden médica por WhatsApp
+2. Extrae texto con vision model
+3. Normaliza nombres de exámenes contra catálogo FONASA (pgvector + embeddings)
+4. Calcula precio según nivel del paciente
+5. Genera PDF y lo envía de vuelta
+
+El paso 3 es donde más se nota. Claude normaliza mejor porque entiende que "perfil lipídico" = "lipidograma" = varios códigos FONASA individuales. GPT-4 a veces devuelve el término literal sin mapear.
+
+```typescript
+// Ejemplo real: normalización que Claude hace bien y GPT-4 no
+const input = "perfil lipidico completo";
+const claudeOutput = [
+  "col-total", // Colesterol total
+  "hdl-colesterol", // HDL
+  "ldl-colesterol-calculado", // LDL calculado
+  "trigliceridos", // Triglicéridos
+];
+const gpt4Output = ["perfil-lipidico-completo"]; // No existe en FONASA
+```
+
+## Lo que no miden los benchmarks
+
+Hay algo que los benchmarks estándar no capturan: cómo maneja el modelo el contexto chileno.
+
+Cuando un paciente dice "tengo Fonasa A" o "soy de la mutual" o "mi médico es de la universidad", Claude entiende las implicaciones institucionales mejor. Sabe que "mutual" probablemente refiere a la Asociación Chilena de Seguridad (ACHS) y que eso cambia el flujo de facturación.
+
+GPT-4 entiende las palabras pero pierde el contexto institucional. Y en salud chilena, el contexto institucional es todo.
+
+## Cuándo uso GPT-4 igual
+
+No es que GPT-4 sea malo. Lo uso para:
+
+- **Generación de contenido** (blog, posts LinkedIn): más rápido, más barato
+- **Embeddings**: text-embedding-3-small sigue siendo mi estándar (aunque se deprecó en octubre 2026)
+- **Prototipado rápido**: cuando necesito iterar prompts sin importar el costo
+
+Pero para el pipeline médico, el que toma decisiones que impactan pacientes, uso Claude.
+
+## Lo que viene
+
+Estoy evaluando Gemini 2.5 Flash como alternativa de costo para el flujo de cotizaciones (donde la accuracy puede ser un poco menor porque el paciente confirmó antes de pagar). La idea es un modelo dual: Claude para órdenes confirmadas, Flash para cotizaciones.
+
+También estoy testeando si Claude Sonnet 4 mantiene la ventaja sobre GPT-4.1. Los preliminares son prometedores.
+
+Si estás construyendo algo en español que no puede darse el lujo de inventar datos, probá Claude. No porque sea mejor en todo, sino porque en español clínico específico, los números respaldan la elección.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

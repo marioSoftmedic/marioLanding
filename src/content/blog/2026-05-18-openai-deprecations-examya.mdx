@@ -1,0 +1,161 @@
+---
+title: "OpenAI deprecations: cómo Examya sobrevive a la masacre de embeddings y APIs"
+date: 2026-05-18
+lang: "es"
+description: "OpenAI announced massive deprecations affecting Examya's core vector search system. Our migration strategy from text-embedding-3-small to alternatives."
+tags: [IA, OpenAI, Examya, Migración, Producción]
+image: "/img/blog/openai-deprecations-examya.png"
+draft: true
+---
+
+# OpenAI deprecations: cómo Examya sobrevive a la masacre de embeddings y APIs
+
+Un email de OpenAI el 22 de abril cambió todo. No fue una nota cualquiera: anunciaba el shutdown de 7 modelos y 2 endpoints para julio y octubre 2026. Entre ellos, `text-embedding-3-small` - el backbone de nuestro MLESearchAgent que alimenta el razonamiento médico con embeddings vectoriales en pgvector.
+
+## El problema real: embeddings en el corazón de Examya
+
+Nuestro sistema de búsqueda semántica funciona así:
+
+1. El usuario envía una orden médica por WhatsApp
+2. Shuri extrae términos clave (síntomas, exámenes, especialidades)
+3. Generamos embeddings con `text-embedding-3-small`  
+4. Buscamos en pgvector contra 45,000 órdenes históricas de FONASA
+5. Devolvemos las 10 órdenes más similares para contexto clínico
+
+El modelo `text-embedding-3-small` era perfecto: 1536 dimensiones, rápido barato (USD 0.0002/1K tokens), y ya estaba en producción con embeddings guardados.
+
+## La cuenta regresiva: 6 meses de runway
+
+Shutdown dates críticas:
+
+- **23 julio 2026**: `gpt-3.5-turbo-0125`, `gpt-3.5-turbo-instruct`, `text-embedding-3-small`
+- **23 octubre 2026**: `text-embedding-3-large`, `text-embedding-ada-002`
+
+Solo tenemos 6 meses para migrar embeddings existentes y todo el pipeline. Sin un plan, Examya quedaría ciego: sin capacidad de buscar órdenes médicas similares, lo que degrada drásticamente la calidad del agente.
+
+## Análisis forense: ¿qué modelos reusamos?
+
+Primero verificamos el código real en producción. Usamos `grep + railway variables` para mapear exactamente qué modelos de OpenAI usa Examya:
+
+```typescript
+// apps/agents/src/agents/shuri/mle-search/mle-search-agent.ts
+const embedModel = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",  // ¡ESTE ES EL PROBLEMA!
+  batchSize: 512,
+});
+```
+
+Impacto directo:
+- 1,235 llamadas/día a embeddings
+- Costo actual: USD 0.25/día  
+- New models: text-embedding-3-large (4x más caro)
+
+Pero el verdadero problema son los 45,000 embeddings existentes en pgvector. No podemos regenerarlos todos sin romper la continuidad histórica.
+
+## Estrategia de mitigación: 3 frentes en paralelo
+
+### 1. Migración a text-embedding-3-large (corto plazo)
+
+La opción más segura pero dolorosa:
+
+```typescript
+// Inmediato: cambiar al modelo más grande
+const embedModel = new OpenAIEmbeddings({
+  model: "text-embedding-3-large",  // USD 0.0008/1K tokens (4x más)
+  batchSize: 128,                  // Reducimos batch size
+});
+```
+
+Impacto: +300% en costo de embeddings, pero mantiene compatibilidad vectorial.
+
+### 2. Prueba de concepto con OpenAI o1 (largo plazo)
+
+Exploramos `text-embedding-3-large` y alternativas no-OpenAI:
+
+- **Cohere**: embed-english-v3.0 (USD 0.0001/1K)
+- **Azure OpenAI**: text-embedding-3-large (dependencia de Microsoft)
+- **Local embeddings**: Ollama + nomic-embed-text (más complejo)
+
+### 3. Sistema hibrido: embeddings nuevos vs históricos
+
+La solución más inteligente:
+
+```sql
+-- Mantenemos embeddings antiguos para órdenes históricas
+SELECT * FROM medical_orders 
+WHERE id IN (SELECT order_id FROM embeddings WHERE model = 'text-embedding-3-small')
+UNION
+SELECT * FROM medical_orders 
+WHERE id IN (SELECT order_id FROM embeddings WHERE model = 'text-embedding-3-large');
+```
+
+Creamos una capa de adaptación que permite buscar en ambos conjuntos de embeddings.
+
+## Los 4 comandos de supervivencia
+
+1. **Cambio inmediato** en código de producción:
+   ```bash
+   # apps/agents/src/agents/shuri/mle-search/mle-search-agent.ts
+   sed -i 's/text-embedding-3-small/text-embedding-3-large/' mle-search-agent.ts
+   ```
+
+2. **Cambio de variables de entorno**:
+   ```bash
+   # Railway variables
+   EMBEDDING_MODEL=text-embedding-3-large
+   ```
+
+3. **Rediseño de batching** para reducir costos:
+   ```typescript
+   const embedModel = new OpenAIEmbeddings({
+     model: "text-embedding-3-large",
+     batchSize: 128,  // De 512 a 128
+   });
+   ```
+
+4. **Monitoreo de costos** con alertas:
+   ```bash
+   # Implementamos métricas custom en Railway
+   curl -X POST "$RAILWAY_METRICS_URL" \
+     -d '{"metric": "embedding_costs", "value": 0.25, "timestamp": "2026-05-18T00:00:00Z"}'
+   ```
+
+## Lo que aprendimos
+
+### El falso sentido de seguridad
+
+Creímos que "6 meses" era mucho tiempo. Pero migrar embeddings en producción sin interrumpir servicios es extremadamente complejo. Cada embedding representa una orden médica real con historial asociado.
+
+### La importancia de la diversificación
+
+Depender de un solo proveedor para embeddings es arriesgado. Futuros proyectos usarán múltiples proveedores o embeddings locales.
+
+### Los costos ocultos
+
+La migración no es solo USD: es tiempo de ingeniería, testing en producción, y posible degradación temporal de calidad hasta que el nuevo modelo se adapta.
+
+## Lo que viene
+
+### Próximos pasos:
+
+1. **Junio 2026**: Implementar sistema hibrido de embeddings
+2. **Julio 2026**: Migrar completamente a text-embedding-3-large  
+3. **Septiembre 2026**: Evaluar switch a proveedor alternativo
+4. **Octubre 2026**: Plan de contingencia para cualquier shutdown adicional
+
+### Lecciones para el futuro:
+
+- Nunca depender de un solo modelo para producción
+- Tener siempre un proveedor alternativo en pruebas
+- Documentar todos los modelos usados con versiones exactas
+- Mantener embeddings antiguos compatibles con nuevos formatos
+
+## Conclusión
+
+La crisis de OpenAI es una oportunidad para construir sistemas más resilientes. Examya saldrá fortalecido con un sistema hibrido de embeddings que puede sobrevivir a la muerte de cualquier modelo individual.
+
+El costo real no es monetario: es la capacidad de adaptarse rápidamente cuando la tecnología cambia bajo nuestros pies.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

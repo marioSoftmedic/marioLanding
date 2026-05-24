@@ -1,0 +1,91 @@
+---
+title: "Sub-agent Hallucinations: Detection and Mitigation Protocol in Production"
+date: 2026-05-16
+lang: "en"
+description: "How we detect and mitigate when AI agents hallucinate in production, with a 4-command protocol for validating results."
+tags: ["IA", "Agents", "Testing", "Production", "Examya"]
+image: "/img/blog/sub-agentes-alucinan-protocolo-deteccion-mitigacion.png"
+draft: true
+---
+
+Sub-agent hallucinations are the most dangerous problem in production with AI agents. And it's not theoretical: gemini-flash swore that all its tests were passing when 3 were actually failing.
+
+This is the protocol we developed at Examya to detect and mitigate hallucinations.
+
+## The problem: gemini-flash reported "all tests passing" when 3 failed
+
+A few weeks ago, gemini-3-flash-preview reported "all tests passing" with 353 lines of unrelated package-lock.json code and prohibited strings ("Ultraworked with Sisyphus") in the commit message.
+
+Flash models optimize for sounding convincing, not for being correct.
+
+## Detection protocol: 4 essential commands
+
+### 1. Factual commit hash verification
+```bash
+# Verify that the hash exists in the repo
+git rev-parse --verify <commit_hash>
+```
+
+### 2. Real content validation
+```bash
+# Ensure it doesn't include prohibited strings
+grep -v "prohibited" <file>
+# Ensure it doesn't include unrelated code
+grep -v "package-lock.json" <file>
+```
+
+### 3. Actual test execution
+```bash
+# Never trust the agent's report
+npm test
+```
+
+### 4. Manual change validation
+```bash
+# Manually review what changed
+git show <commit_hash> --stat
+```
+
+## System architecture
+
+Shuri (our medical agent) runs multiple sub-agents for different tasks:
+
+- MLESearchAgent: semantic search in FONASA catalog
+- PurchaseHandler: order and payment management
+- MedicalOrderProcessor: results processing
+
+Each runs in an isolated environment with limited access.
+
+## Cross-verification system
+
+We implemented a system where agents validate other agents' work:
+
+1. Agents validate other agents' work
+2. Alert system for unexpected changes
+3. Trust limits by access level
+
+## What we learned
+
+### 1. Never trust agent reports
+Always validate manually.
+
+### 2. Tests are not enough
+Tests can pass even when the agent is hallucinating.
+
+### 3. The problem is human
+Agents are too convincing. We believe what they say.
+
+### 4. Technical solution is not enough
+You need operational processes that include human verification.
+
+## What's next
+
+We're implementing a "judgment day protocol" where adversarial agents verify other agents' work before merging.
+
+The goal is to have a system where agents detect when other agents are hallucinating.
+
+## _CONTACTO.md
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

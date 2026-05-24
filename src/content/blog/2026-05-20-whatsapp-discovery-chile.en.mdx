@@ -1,0 +1,170 @@
+---
+title: "WhatsApp Discovery: How an Autonomous Agent Scrapes Clinic Prospects Across Chile"
+date: 2026-05-20
+lang: "en"
+description: "The automated system that found WhatsApp numbers for 99+ clinical laboratories across Chile using advanced scraping strategies."
+tags: [WhatsApp, Scraping, Automation, Examya, Chile, Clinical Labs, Bots]
+image: "/img/blog/whatsapp-discovery-chile.png"
+canonicalSlug: "2026-05-20-whatsapp-discovery-chile"
+draft: true
+---
+
+The problem is simple but painful: in Chile, 40% of clinical laboratories don't have WhatsApp. For Examya, this means we can't offer our medical order processing service to nearly half the market.
+
+The traditional solution would be to hire a team of researchers to call each lab manually. Or use Excel sheets with basic web scraping. Both options are slow, expensive, and don't scale.
+
+We decided to build an autonomous agent.
+
+## The real problem
+
+It's not just finding phone numbers. It's covering 100% of clinical laboratories in Chile with current, accurate information. In a country with 300+ labs, this means:
+
+- Verifying if each lab has WhatsApp
+- Finding the correct number when it's hidden
+- Updating numbers that change
+- Doing this continuously, not just once
+
+Human scale isn't enough. We need intelligent automation.
+
+## System architecture
+
+The heart of WhatsApp Discovery is a modular system that automatically rotates strategies. Each "round" of scraping processes 10 labs and tests different approaches.
+
+### Strategy 1: Advanced database query
+
+First, we query our internal database with complex queries:
+
+```sql
+SELECT l.nombre, l.web, l.region, 
+       CASE WHEN l.whatsapp IS NOT NULL AND l.whatsapp != '' 
+            THEN l.whatsapp 
+            ELSE NULL END as whatsapp_directo
+FROM laboratorios l
+WHERE l.whatsapp IS NULL 
+   OR l.whatsapp = ''
+   OR l.whatsapp_actualizado < NOW() - INTERVAL '3 months'
+   AND l.region IN ('LOS LAGOS', 'LOS RÍOS', 'ARICA Y PARINACOTA')
+LIMIT 10;
+```
+
+This filter gives us specific labs that need priority attention.
+
+### Strategy 2: Direct Google Search API
+
+When the database lacks information, we use Google Search API with precise queries:
+
+```javascript
+const searchQuery = `"${laboratorio.nombre}" WhatsApp phone number Chile ${laboratorio.region}`;
+```
+
+We search for specific patterns like:
+- "Laboratory XYZ WhatsApp"
+- "Contact Laboratory XYZ phone"
+- "WhatsApp +56 ${name}"
+
+### Strategy 3: Instagram Bio Bypass scraping
+
+Many labs hide their WhatsApp numbers in Instagram. Here we use advanced techniques:
+
+1. Extract the lab's Instagram profile
+2. Search the bio for WhatsApp mentions
+3. Use regex to find numbers:
+   ```regex
+   /(?:whatsapp|wa\.me|WhatsApp)\s*(?::|:|)\s*(?:\+569|569|9)\d{7}/gi
+   ```
+
+### Strategy 4: Multi-platform discovery
+
+We combine information from multiple sources:
+- Laboratory websites
+- Facebook Business Pages
+- LinkedIn
+- Online medical directories
+- Google Maps
+
+Each source gives us different pieces of the puzzle.
+
+## Strategy rotation
+
+The key is automatic rotation. If a strategy fails 3 times for a region, the system automatically switches to another. This keeps high effectiveness.
+
+The pattern is simple:
+
+```
+Round 127: Database Query + Google Search + Instagram Bio
+Round 128: Enhanced Multi-Platform + Instagram Direct Scraping  
+Round 129: Database Query + Google Search + Instagram Bio (retry)
+```
+
+Each round processes 10 labs and reports results in real-time.
+
+## Robust error handling
+
+The real world is chaotic. Websites go down, APIs have rate limits, numbers change. Our system must be resilient.
+
+```javascript
+try {
+  const resultado = await scrapLaboratorioWhatsApp(laboratorio);
+  if (resultado.whatsapp) {
+    await guardarNumeroWhatsApp(laboratorio.id, resultado.whatsapp);
+    return { success: true, whatsapp: resultado.whatsapp };
+  }
+} catch (error) {
+  logger.error(`Error scraping ${laboratorio.nombre}:`, error.message);
+  // The system automatically retries in the next round
+}
+```
+
+If it fails, the lab gets processed again in the next round with a different strategy.
+
+## Concrete results
+
+In the last 147 rounds:
+
+- **99+ labs** with WhatsApp found
+- **Coverage increased** from 59.6% to 100% target
+- **Average response time**: 2 seconds per lab
+- **Cost per contact**: ~$0.01 vs ~$5 in manual research
+
+What used to take weeks now happens in minutes, with greater accuracy.
+
+## What I learned
+
+### 1. The web is more complex than it seems
+
+Each lab has its own format. Some put WhatsApp in the top right corner, others in the footer, others hide it behind forms. There's no single solution.
+
+### 2. Rotation is key
+
+No strategy works at 100%. The combination of multiple approaches with automatic rotation is what keeps the system effective.
+
+### 3. Quality matters more than quantity
+
+Finding 100 fake numbers doesn't help. We validate each number with automatic format and existence checks.
+
+### 4. Automation must be intelligent
+
+It's not about scraping everything nonstop. It's about being strategic: which priority labs, which strategies to try, when to retry.
+
+## What's next
+
+Soon we'll implement:
+
+- **Automatic validation** of numbers with test calls
+- **Sentiment analysis** to detect outdated numbers
+- **FHIR integration** to update laboratory profiles
+- **Continuous monitoring** of changes to existing numbers
+
+## The real impact
+
+This system isn't just a technical curiosity. It's the foundation for scaling Examya across all Chile. Each WhatsApp number found is a clinic that can now use our service.
+
+More importantly: each automation like this frees up human time to do what we do best: solve complex problems, not repeat tedious tasks.
+
+Automation doesn't replace humans. It empowers them.
+
+## Contact
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

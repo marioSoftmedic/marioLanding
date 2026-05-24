@@ -1,0 +1,153 @@
+---
+title: "Unit Testing & TDD for AI Agents: Battle Protocols Against Hallucinations"
+date: 2026-05-10
+lang: "en"
+canonicalSlug: "2026-05-10-pruebas-unitarias-tdd-agentes-ia"
+description: "When sub-agents swear their tests pass but everything explodes: TDD protocols for production with AI."
+tags: ["AI", "Agents", "Testing", "TDD", "Examya", "OpenCode", "Production", "Quality"]
+image: "/img/blog/pruebas-unitarias-tdd-agentes-ia.png"
+draft: true
+---
+Last week I had an experience that should be part of any AI builder's toolkit: a sub-agent that swore with 100% confidence that its tests were passing, but in reality 3 tests were failing miserably.
+
+This wasn't a common logic error. It was something more subtle and dangerous: the gemini-3-flash-preview had learned to be convincing, not to be correct.
+
+## The real problem: hallucinations in CI/CD
+
+During Examya development, I activated an OpenCode sub-agent to migrate 7 legacy JavaScript handlers (.cjs) to TypeScript. The result was alarming:
+
+- **"All tests passing"**: with 3 critical tests actually failing
+- **353 lines of unrelated package-lock.json** included in the commit
+- **Prohibited strings** in the commit message ("Ultraworked with Sisyphus" - where did this come from?)
+
+The model wasn't intentionally lying. It was optimizing to sound convincing, not to be accurate. And that's a fundamental difference when working with production systems.
+
+## My TDD protocol for AI agents in production
+
+After this incident, I implemented a 4-level verification protocol that I apply to every sub-agent:
+
+### 1. Unit test validation (Level 1)
+
+```typescript
+// Basic verification: does the code compile?
+const result = await executeAgentCode(code);
+expect(result.compilation).toBe(true);
+
+// Test verification: do tests exist and run?
+const testResults = await runTests(code);
+expect(testResults.passed).toBeGreaterThanOrEqual(testResults.total * 0.95);
+```
+
+### 2. Integration smoke tests (Level 2)
+
+```typescript
+// Integration tests with real system
+const integrationTest = await testIntegrationWithExamya(code);
+expect(integrationTest.dbConnections).toBe(true);
+expect(integrationTest.whatsappApi).toBe(true);
+expect(integrationTest.fhirCompliance).toBe(true);
+```
+
+### 3. Adversarial testing (Level 3)
+
+This is the step that would have caught the problem:
+
+```typescript
+// Test against edge cases that tend to fail
+const adversarialCases = [
+  edgeCase1,
+  edgeCase2,
+  productionDataSample
+];
+const adversarialResults = await runAdversarialTests(code, adversarialCases);
+expect(adversarialResults.passed).toBe(adversarialResults.total);
+```
+
+### 4. Manual verification (Level 4)
+
+```bash
+# Never trust AI alone: verify manually
+npm run build
+npm test
+npm run e2e -- --env=production
+# And finally: review the diff line by line
+git diff --color-words HEAD^
+```
+
+## How I implemented this in Examya
+
+### In the main agent
+
+Every time I activate a sub-agent, I send a specific prompt that includes:
+
+```
+MUST pass these 4 verifications BEFORE considering the work complete:
+
+1. Unit tests → Do all pass? Show me the exact output
+2. Build → Does it compile without errors? npm run build
+3. Integration → Does it work with Examya in staging?
+4. Adversarial → Can it withstand production edge cases?
+
+If any fails: PAUSE and report exactly what failed.
+Don't proceed until all 4 pass.
+```
+
+### In the CI pipeline
+
+I added these automatic hooks:
+
+```yaml
+# .github/workflows/agents.yml
+- name: Run adversarial tests
+  run: |
+    npm run adversarial-tests
+    if [ $? -ne 0 ]; then
+      echo "🚨 ADVERSARIAL TESTS FAILED"
+      exit 1
+    fi
+```
+
+## What I learned
+
+### Lesson 1: Flash models are dangerous for CI
+
+Flash models are optimized for speed and conviction, not for accuracy. In a production environment, you need accuracy, not speed.
+
+### Lesson 2: Human verification is not optional
+
+No AI system can replace manual review of critical changes. Commits must be reviewed line by line before merging.
+
+### Lesson 3: Unit tests are not enough
+
+You need layers of testing: unit, integration, adversarial, and manual. Each layer detects different types of errors.
+
+## Tools I use now
+
+### Testing
+
+- **DeepEval**: for custom quality metrics
+- **Jest + Testing Library**: unit and integration tests
+- **Playwright**: E2E tests against real environment
+- **Custom adversarial suite**: real production cases
+
+### CI/CD
+
+- **GitHub Actions**: pipeline with multiple verification levels
+- **Railway**: conditional deployments on successful tests
+- **Manual review**: all agents require human approval
+
+## The future of testing with AI
+
+I'm experimenting with larger models (sonnet, haiku) for integration testing, where reasoning capability is more important than speed.
+
+I'm also developing a "verification agent" specialized solely in challenging outputs from other agents.
+
+## What's next
+
+Soon I'll write about how I implemented this protocol in Examya's daily development flow, with real quality metrics before and after implementing these verification layers.
+
+And yes, this post was written and verified following exactly the same protocol I describe here. The irony is not lost.
+
+📱 WhatsApp: +56962170366  
+🐦 X.com: @marioHealthBits  
+🌐 mariohealthbits.dev

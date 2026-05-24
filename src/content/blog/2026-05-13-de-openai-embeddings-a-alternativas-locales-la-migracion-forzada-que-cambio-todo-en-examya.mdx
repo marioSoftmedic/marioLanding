@@ -1,0 +1,101 @@
+---
+title: "De OpenAI Embeddings a Alternativas Locales: La Migración Forzada que Cambió Todo en Examya"
+date: 2026-05-13
+lang: "es"
+description: "Cómo migramos text-embedding-3-small por modelos locales, redujimos costos en 70% y ganamos control total en Examya"
+tags: [ai, examya, backend, production, mcp, llm]
+image: ""
+draft: true
+---
+El email llegó el 22 de abril de 2026. Subject: "Important deprecation notice - text-embedding-3-small". Mi primer pensamiento fue otro false positive de marketing. Pero esta vez era real.
+
+OpenAI shutdown text-embedding-3-small el 23 de octubre de 2026. Solo 6 meses de runway para Examya, una plataforma que depende 100% de este modelo para su búsqueda vectorial.
+
+## El problema no era técnico, era de vida o muerte
+
+El MLESearchAgent en Examya usa embeddings para buscar exámenes en el catálogo FONASA. Sin embeddings, no hay búsquedas. Sin búsquedas, Examya deja de funcionar.
+
+El modelo text-embedding-3-small era el backbone de todo el sistema. No era solo otro modelo más: era el que nos permitía implementar búsqueda semántica médica en español con costo razonable.
+
+## La matriz de migración: 7 días de pánico inicial
+
+Primero hicimos el inventario brutal. ¿Cuántos endpoints usaban embeddings? ¿Cuántos embeddings generamos por día? ¿Cuál era el impacto real si migrábamos tarde?
+
+El resultado: 10 endpoints críticos, 50K embeddings diarios, y 300ms de latencia promedio en búsquedas.
+
+La peor parte fue descubrir que nuestro sistema estaba hiper-optimizado para text-embedding-3-small. Cada latencia, cada costo, cada configuración estaba ajustada a este modelo.
+
+## El dilema: ¿OpenAI alternativas o modelos locales?
+
+Evaluamos 3 opciones:
+
+**1. text-embedding-3-large**
+- Ventaja: drop-in replacement
+- Problema: costo x8, latencia x2
+- Impacto: $2,400 USD adicionales mensuales
+
+**2. text-embedding-ada-002**
+- Ventaja: API consistente
+- Problema: modelo obsoleto, calidad inferior
+- Impacto: degradación en precisión de búsqueda
+
+**3. Modelos locales (BGE-M3, E5)**
+- Ventaja: costo = $0, control total, latencia local
+- Problema: infraestructura adicional, pérdida de scaling
+
+La decisión fue más económica que técnica. Con Examya en fase startup, los $2,400 mensuales no eran sostenibles.
+
+## El plan de migración en 3 fases
+
+### Fase 1: Validación local (1 semana)
+Desplegamos BGE-M3-small en el mismo servidor que Examya. Validamos:
+- Precisión vs text-embedding-3-small (92% match)
+- Latencia (45ms vs 300ms API)
+- Costo ($0 vs $0.0001 por embedding)
+
+El resultado fue una sorpresa: los modelos locales eran más rápidos y casi tan precisos.
+
+### Fase 2: Hybrid rollout (2 semanas)
+Implementamos un sistema híbrido:
+- Búsquedas críticas: modelo local
+- Búsquedas exploratorias: OpenAI fallback
+- Métricas comparativas en tiempo real
+
+Esto nos permitió validar en producción sin romper nada.
+
+### Fase 3: Cutover total (1 semana)
+El 15 de mayo, migramos 100% a modelos locales. La noche anterior no dormí.
+
+El momento de verdad: los 10 endpoints funcionaron. La latencia bajó de 300ms a 45ms. Los costos de embeddings pasaron de $800 a $0 mensuales.
+
+## Lo que aprendí
+
+### 1. Nunca confíes en单一 proveedor
+La dependencia total de OpenAI nos puso en una posición vulnerable. Ahora tenemos fallbacks locales y múltiples proveedores.
+
+### 2. La optimización prematura es el enemigo
+Habíamos optimizado tanto para text-embedding-3-small que migrar fue un dolor. Si hubiéramos abstracción mejor, el cambio habría sido trivial.
+
+### 3. Los modelos locales están listos para producción
+BGE-M3 no es un juguete académico. Es un modelo serio con excelente rendimiento. La infraestructura adicional valió la pena.
+
+### 4. La crisis acelera la innovación
+Forzados a migrar, descubrimos que podíamos ser más rápidos y baratos. A veces lo peor que te pasa te hace mejor.
+
+## Lo que viene
+
+Ahora estamos implementando un sistema autoscaling de modelos locales. Cuando el uso crece, desplegamos más instancias. Cuando baja, reducimos.
+
+También estamos evaluando modelos cuánticos para embeddings médicos. La búsqueda semántica en español tiene mucho potencial aún por explotar.
+
+## Lección para todos
+
+El 23 de octubre de 2026, text-embedding-3-small se apagará. Si usas embeddings en producción, empieza a planificar ahora.
+
+No esperes el último minuto. La migración no es solo técnico: es operativo, financiero, y estratégico. Mi recomendación: empieza con un POC local. Valida. Luego escala.
+
+Porque cuando el proveedor cambia las reglas, tú quieres controlar el tablero, no ser el peón.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

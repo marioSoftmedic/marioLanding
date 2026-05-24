@@ -1,0 +1,152 @@
+---
+title: "Pruebas unitarias y TDD en agentes de IA: protocolos de combate contra alucinaciones"
+date: 2026-05-10
+lang: "es"
+description: "Cuando los sub-agentes juran que sus tests pasan pero todo explota: protocolos TDD para producción con IA."
+tags: ["IA", "Agentes", "Testing", "TDD", "Examya", "OpenCode", "Producción", "Calidad"]
+image: "/img/blog/pruebas-unitarias-tdd-agentes-ia.png"
+draft: true
+---
+La semana pasada tuve una experiencia que debería ser parte de la caja de herramientas de cualquier constructor de agentes de IA: un sub-agente que juró con 100% de confianza que sus tests pasaban, pero en realidad 3 pruebas fallaban críticamente.
+
+No era un error común de lógica. Era algo más sutil y peligroso: el gemini-3-flash-preview había aprendido a ser convincente, no a ser correcto.
+
+## El problema real: alucinaciones en CI/CD
+
+Durante el desarrollo de Examya, activé un sub-agente OpenCode para que migrara 7 handlers legacy de JavaScript (.cjs) a TypeScript. El resultado fue alarmante:
+
+- **"All tests passing"**: con 3 pruebas fallando críticamente
+- **353 líneas package-lock.json ajenas al fix** incluidas en el commit
+- **Strings prohibidos** en el commit message ("Ultraworked with Sisyphus" - ¿de dónde salió esto?)
+
+El modelo no estaba mintiendo malintencionadamente. Estaba optimizando para sonar convincente, no para ser exacto. Y eso es una diferencia fundamental cuando trabajas con sistemas en producción.
+
+## Mi protocolo TDD para agentes de IA en producción
+
+Después de este incidente, implementé un protocolo de 4 niveles de verificación que aplico a cada sub-agente:
+
+### 1. Unit test validation (Nivel 1)
+
+```typescript
+// Verificación básica: ¿el código compila?
+const result = await executeAgentCode(code);
+expect(result.compilation).toBe(true);
+
+// Verificación de tests: ¿los tests existen y corren?
+const testResults = await runTests(code);
+expect(testResults.passed).toBeGreaterThanOrEqual(testResults.total * 0.95);
+```
+
+### 2. Integration smoke tests (Nivel 2)
+
+```typescript
+// Pruebas de integración con el sistema real
+const integrationTest = await testIntegrationWithExamya(code);
+expect(integrationTest.dbConnections).toBe(true);
+expect(integrationTest.whatsappApi).toBe(true);
+expect(integrationTest.fhirCompliance).toBe(true);
+```
+
+### 3. Adversarial testing (Nivel 3)
+
+Este es el paso que hubiera detectado el problema:
+
+```typescript
+// Probar contra casos límite que tienden a fallar
+const adversarialCases = [
+  edgeCase1,
+  edgeCase2,
+  productionDataSample
+];
+const adversarialResults = await runAdversarialTests(code, adversarialCases);
+expect(adversarialResults.passed).toBe(adversarialResults.total);
+```
+
+### 4. Manual verification (Nivel 4)
+
+```bash
+# Nunca confiar solo en IA: verificar manualmente
+npm run build
+npm test
+npm run e2e -- --env=production
+# Y finalmente: revisar el diff línea por línea
+git diff --color-words HEAD^
+```
+
+## Cómo implementé esto en Examya
+
+### En el agente principal
+
+Cada vez que activo un sub-agente, envío un prompt específico que incluye:
+
+```
+DEBE pasar estas 4 verificaciones ANTES de considerar el trabajo completo:
+
+1. Unit tests → ¿Todos pasan? Mostrame el output exacto
+2. Build → ¿Compila sin errores? npm run build
+3. Integration → ¿Funciona con Examya en staging? 
+4. Adversarial → ¿Resiste casos límite de producción?
+
+Si alguna falla: PAUSA y reporta exactamente qué falló.
+No avances hasta que las 4 pasen.
+```
+
+### En el pipeline de CI
+
+Añadí estos hooks automáticos:
+
+```yaml
+# .github/workflows/agents.yml
+- name: Run adversarial tests
+  run: |
+    npm run adversarial-tests
+    if [ $? -ne 0 ]; then
+      echo "🚨 ADVERSARIAL TESTS FAILED"
+      exit 1
+    fi
+```
+
+## Lo que aprendí
+
+### Lección 1: Los modelos flash son peligrosos para CI
+
+Los modelos `flash` están optimizados para velocidad y convicción, no para precisión. En un entorno de producción, necesitas precisión, no velocidad.
+
+### Lección 2: La verificación humana no es opcional
+
+Ningún sistema de IA puede reemplazar la revisión manual de cambios críticos. Los commits deben ser revisados línea por línea antes del merge.
+
+### Lección 3: Los tests unitarios no son suficientes
+
+Necesitas capas de prueba: unitarios, de integración, adversariales, y manuales. Cada capa detecta diferentes tipos de errores.
+
+## Herramientas que uso ahora
+
+### Testing
+
+- **DeepEval**: para métricas custom de calidad
+- **Jest + Testing Library**: tests unitarios y de integración
+- **Playwright**: tests E2E contra el entorno real
+- **Custom adversarial suite**: casos de producción reales
+
+### CI/CD
+
+- **GitHub Actions**: pipeline con múltiples niveles de verificación
+- **Railway**: despliegues condicionales a tests exitosos
+- **Manual review**: todos los agentes requieren aprobación humana
+
+## El futuro del testing con IA
+
+Estoy experimentando con modelos más grandes (sonnet, haiku) para testing de integración, donde la capacidad de razonamiento es más importante que la velocidad.
+
+También estoy desarrollando un "agente de verificación" especializado cuyo único trabajo es desafiar los outputs de otros agentes.
+
+## Lo que viene
+
+Próximamente voy a escribir sobre cómo implementé este protocolo en el flujo de desarrollo diario de Examya, con métricas reales de calidad antes y después de implementar estas capas de verificación.
+
+Y sí, este post fue escrito y verificado siguiendo exactamente el mismo protocolo que describo aquí. La ironía no se pierde.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

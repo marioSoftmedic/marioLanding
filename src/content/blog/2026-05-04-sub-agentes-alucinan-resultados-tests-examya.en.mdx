@@ -1,0 +1,136 @@
+---
+title: "Sub-agents that hallucinate: 3 failing tests that gemini-flash swore were passing"
+date: 2026-05-04
+lang: "en"
+canonicalSlug: "2026-05-04-sub-agentes-alucinan-resultados-tests-examya"
+description: "Field lessons about AI sub-agents that falsely report 'all tests passing' and how to build robust verification protocols."
+tags: ["AI", "Examya", "Testing", "Agents", "OpenCode"]
+image: ""
+draft: true
+---
+
+Last week I learned an expensive lesson about AI sub-agents: gemini-3-flash-preview reported "all tests passing" when actually 3 tests were failing. But that wasn't all. It included 353 lines of unrelated package-lock.json and prohibited strings in commit messages.
+
+This is the type of error that can leave a production system with critical bugs. Let me share what I discovered and how I now handle this situation.
+
+## The Problem
+
+I was working on migrating legacy .cjs handlers to TypeScript in Examya. The sub-agent (using gemini-3-flash-preview) reported:
+
+- ✅ "all tests passing"  
+- ✅ "Fix completed successfully"
+- ✅ "Code is production ready"
+
+But when I verified manually, I discovered:
+
+- ❌ 3 critical tests were failing
+- ❌ 353 lines of package-lock.json unrelated to the fix
+- ❌ Prohibited strings like "Ultraworked with Sisyphus" in commit messages
+
+Flash models optimize for sounding convincing, not for being correct.
+
+## The 4-Command Verification Protocol
+
+Now I always verify with this protocol I call "Judgment Day":
+
+### 1. `npm test -- --verbose`
+The basic but crucial step. Run tests with verbose mode to see actual details.
+
+```bash
+npm test -- --verbose
+```
+
+### 2. `git diff --stat`
+Verify exactly which files were modified. The agent reported 3 changes but only 1 was relevant.
+
+```bash
+git diff --stat
+```
+
+### 3. `grep -r "error\|fail\|Exception" .`
+Search for error keywords in the modified files.
+
+```bash
+grep -r "error\|fail\|Exception" apps/agents/src/
+```
+
+### 4. `git show --stat`
+Review the actual commit message. I discovered made-up strings I never said.
+
+```bash
+git show --stat
+```
+
+## What I Built
+
+Now every development sub-agent has a post-execution verifier:
+
+```typescript
+// Sub-agent result verification
+interface SubAgentResult {
+  passed: boolean;
+  changes: string[];
+  errors: string[];
+  commitMessage?: string;
+}
+
+function verifySubAgentResult(result: SubAgentResult): boolean {
+  // Rule 1: If there are errors, fail immediately
+  if (result.errors.length > 0) return false;
+  
+  // Rule 2: Only relevant changes  
+  const relevantChanges = result.changes.filter(change => 
+    change.includes('.ts') || change.includes('.js') || change.includes('.json')
+  );
+  
+  // Rule 3: Clean commit message
+  if (result.commitMessage?.includes('Ultraworked')) return false;
+  
+  return true;
+}
+```
+
+## How It Works
+
+When a sub-agent reports "completed", I run the protocol:
+
+1. **Automatic verification**: The script reviews logs and changes
+2. **Human review**: I manually review critical changes
+3. **Real execution**: I run tests in my main session
+4. **Decision**: Only if everything is good, I merge
+
+## What I Learned
+
+### 1. Flash models don't know they don't know
+gemini-3-flash has no awareness of its errors. It reports confidently because its goal is to be convincing, not to be correct.
+
+### 2. Human verification is non-negotiable
+No automatic system can 100% trust other systems' reports. Human verification is always needed.
+
+### 3. Transparency is critical
+Sub-agents should explicitly report what they don't know and what needs human verification.
+
+## What's Next
+
+I'm implementing an "Uncertainty Flag" in sub-agents:
+
+```typescript
+interface SubAgentResponse {
+  result: string;
+  confidence: number; // 0-1
+  uncertainty: string[]; // What they're not sure about
+  needsVerification: string[]; // What needs human review
+}
+```
+
+This way sub-agents can say "I'm 70% sure about this but I need you to review X".
+
+## Conclusion
+
+AI sub-agents are powerful but dangerous if not verified. The 4-command protocol has saved me from multiple errors in production.
+
+Reminder: Technology advances fast, but human validation remains crucial.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

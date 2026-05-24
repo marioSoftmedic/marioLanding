@@ -1,0 +1,129 @@
+---
+title: "OpenAI Deprecations: 6 meses para migrar embeddings de 1536 a 3072 dimensiones en producción"
+date: 2026-05-07
+lang: "es"
+description: "Análisis detallado de la matriz de migración OpenAI para Examya: el desafío crítico de text-embedding-3-small y la decisión técnica entre 1536 vs 3072 dimensiones."
+tags: ["IA", "OpenAI", "Examya", "pgvector", "Migración", "Producción"]
+image: "/img/blog/openai-deprecations-migracion-embeddings.png"
+draft: true
+---
+
+El 22 de abril de 2026, recibí un email que cambió mi roadmap de infraestructura: OpenAI anuncia el shutdown de text-embedding-3-small para el 23 de octubre de 2026. 6 meses de runway para migrar el backbone semántico de Examya.
+
+No era solo un cambio de versión. Era una decisión arquitectónica que involucraba 10,000+ embeddings existentes, una base de datos pgvector y un modelo de producción que ya corre en Railway.
+
+El problema real no era el modelo. Era la dimensión.
+
+## La matriz de impacto real
+
+Tras analizar el códigobase completo con grep y Railway variables, la sorpresa fue grande: de 13 modelos OpenAI en producción, solo 1 estaba realmente en la lista de deprecación.
+
+**Modelos seguros** (sin cambios requeridos):
+- `gpt-4.1-mini-2025-04-14` — 8 servicios críticos
+- `gpt-4.1` — interpretación médica
+- `gpt-4o-mini` — enrutamiento
+- `gpt-4o` — validación (endpoint chatgpt-4o-latest)
+
+**El hit crítico único**:
+- `text-embedding-3-small` → `text-embedding-3-large`
+- Usado en: SEARCHER_AGENT_MODEL
+- Impacto: 100% de la búsqueda semántica del catálogo FONASA
+
+## La decisión técnica que nadie menciona
+
+text-embedding-3-large tiene 3072 dimensiones por defecto. El actual text-embedding-3-small usa 1536. Esta diferencia no es académica:
+
+**Opción 1: Migrar a 3072 dimensiones**
+```typescript
+// Nuevo modelo + nueva dimensión
+await openai.embeddings.create({
+  model: 'text-embedding-3-large',
+  input: text,
+  dimensions: 3072  // double del actual
+})
+```
+
+**Requiere**: ALTER TABLE en pgvector, re-generar todos los embeddings, actualizar scripts de búsqueda.
+
+**Opción 2: Mantener 1536 dimensiones**
+```typescript
+// Mismo vector size, diferente modelo
+await openai.embeddings.create({
+  model: 'text-embedding-3-large', 
+  input: text,
+  dimensions: 1536  // mantener compatibilidad
+})
+```
+
+**Requiere**: Solo actualizar variables de entorno y re-generar embeddings.
+
+La decisión final: mantener 1536 dimensiones. El costo computacional adicional es mínimo comparado con el riesgo de migrar el schema en producción.
+
+## El verdadero costo: re-generar 10,000+ embeddings
+
+El mayor desafío no era técnico, era operativo. Cada embedding en Examya tiene una cadena de dependencia:
+
+1. **FONASA exam catalog** → 8,500+ exámenes con embeddings
+2. **Reference ranges** → 2,200+ rangos de laboratorio  
+3. **Manual RAG** → 500+ documentos médicos
+4. **Patient context** → embeddings de historial clínico
+
+La solución existente ya estaba en el repo:
+
+```typescript
+// scripts/embed-exam-catalog.ts
+for (const exam of fonasaExams) {
+  const embedding = await openai.embeddings.create({
+    model: 'text-embedding-3-large',
+    input: exam.name + ' ' + exam.description,
+    dimensions: 1536
+  })
+  await saveToPgvector(exam.id, embedding.data[0].embedding)
+}
+```
+
+## El plan de 6 meses
+
+**Fase 1: Validación (2 semanas)**
+- Crear branch de prueba en Railway
+- Re-generar embeddings de prueba
+- Validar que la búsqueda semántica funciona igual
+
+**Fase 2: Scripting (2 semanas)**  
+- Actualizar todos los scripts de embeddings
+- Automatizar re-generación batch
+- Crear rollback automático
+
+**Fase 3: Producción (1 fin de semana)**
+- Cambio de modelo en Railway variables
+- Re-generación en batch durante mantenimiento
+- Monitoreo de performance
+
+**Fase 4: Cleanup (1 semana)**
+- Eliminar referencias al modelo antiguo
+- Documentar el cambio
+- Actualizar tests
+
+## Lecciones aprendidas
+
+1. **La falsa alarma**: 8 de mis 9 modelos OpenAI estaban usando `gpt-4.1-mini`, que NO está deprecated. Solo la alerta inicial generó pánico.
+
+2. **La importancia de grep**: Sin análisis de código real, habría migrado modelos innecesarios gastando tiempo valioso.
+
+3. **La decisión backwards-compatible**: Poder mantener 1536 dimensiones evitó un cambio de schema mayor en producción.
+
+4. **Los scripts ya existían**: Tenía los scripts de embeddings listos. Solo hubo que adaptarlos para el nuevo modelo.
+
+## Lo que viene
+
+La migración está planificada para septiembre 2026, aprovechando la ventana de mantenimiento menor. El impacto será transparente para los usuarios finales, pero es un cambio crítico que podría afectar la calidad de búsqueda semántica si no se hace bien.
+
+Mientras tanto, sigo monitoreando las nuevas versiones de OpenAI. Quizás para 2027 migre a embeddings 3072 dimensiones nativos, cuando tenga tiempo para pruebas extensivas.
+
+El aprendizaje final: en producción, siempre asume que las cosas fallarán. Y ten siempre un plan B.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

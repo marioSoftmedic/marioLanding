@@ -1,0 +1,99 @@
+---
+title: "natales.travel: Puerto Natales para turistas anglohablantes"
+date: 2026-05-13
+lang: "es"
+description: "Cómo construí un portal de viajes independiente para turistas en Puerto Natales y Torres del Paine con Next.js 15, PostgreSQL y diseño premium."
+tags: [NextJS, PostgreSQL, Prisma, Turismo, Patagonia, PuertoNatales, Arquitectura]
+image: "/img/blog/2026-05-13-natales-travel-portal.png"
+draft: true
+---
+
+## Problema
+
+Puerto Natales y Torres del Paine son destinos turísticos únicos en Patagonia, pero carecían de un portal digital que unifique información de calidad en inglés para el mercado internacional. Los existentes eran fragmentados, desactualizados o mal diseñados.
+
+El desafío: crear un portal independiente que rivalizara con National Geographic en calidad visual, pero funcionara como plataforma completa para planificar experiencias en la región.
+
+## Lo que construí
+
+**natales.travel** es un portal de destino independiente construido desde cero con un stack moderno:
+
+- **Frontend**: Next.js 15 (App Router) con Tailwind CSS v4
+- **Backend**: PostgreSQL + Prisma 6.19
+- **Internacionalización**: next-intl (EN por defecto, ES con /es/)
+- **Testing**: Vitest con 25 tests passing
+- **Hosting**: Railway para producción
+
+### Arquitectura de diseño
+
+Diseño premium con tema oscuro inspirado en National Geographic meets luxury travel. El homepage incluye héroe inmersivo con siluetas de montañas, patrón de cuadrícula superpuesta y navegación intuitiva.
+
+## Cómo funciona
+
+### Flujo del usuario
+
+1. **Descubrimiento**: Homepage con experiencias destacadas, alojamiento y gastronomía
+2. **Búsqueda**: Filtros por categoría (aventura, relajación, cultura) y temporada
+3. **Planificación**: Guías detalladas con información práctica (transporte, clima, consejos)
+4. **Reservas**: Integración con proveedores locales (fase posterior)
+
+### Stack técnico
+
+```typescript
+// Prisma schema para guías de viaje
+model TravelGuide {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   String
+  locale    String   @default("en")
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+## Lo que aprendí
+
+### 1. Next.js 15 vs Next.js 14
+- App Router en v15 es más maduro y estable de lo esperado
+- next-intl integración fluida con el nuevo router
+- Tailwind v4 con configuración CSS en lugar de JS
+
+### 2. Arquitectura de portal vs marketplace
+- Decisión deliberada: comenzar como portal editorial curado (fase B)
+- Dejar plataforma de proveedores para fase C futura
+- Esto permitió lanzar MVP más rápido con mejor calidad
+
+### 3. Diseño responsive premium
+- Mobile-first con breakpoints específicos para tablet
+- Dark mode para contenido inmersivo, light mode para guías largas
+- Micro-interacciones con CSS puro (no JavaScript)
+
+### 4. SEO multilingüe
+- Rutas /es/ y /en/ con hreflang automático
+- Sitemaps generados dinámicamente
+- Meta tags optimizados para cada idioma
+
+## Lo que viene
+
+### Fase 2: Contenido extendido
+- Guías interactivas de senderismo en Torres del Paine
+- Base de datos de alojamiento con filtros avanzados
+- Sistema de reservas integrado
+
+### Fase 3: Plataforma de proveedores
+- Sistema de autenticación para operadores locales
+- Panel de administración para gestionar experiencias
+- Sistema de reviews y calificaciones
+
+### Fase 4: Mobile app
+- React Native app para iOS y Android
+- Funciones offline para uso en zonas sin cobertura
+- Notificaciones push para promociones y actualizaciones
+
+El objetivo final convertir natales.travel en la referencia digital para turismo en Patagonia, manteniendo el foco en calidad editorial y experiencia de usuario premium.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
