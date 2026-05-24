@@ -1,0 +1,142 @@
+---
+title: "OpenAI depreca modelos en producción: cómo audité mi stack antes de que explotara"
+date: 2026-05-25
+slug: "2026-05-25-openai-depreca-modelos-como-audite-mi-stack-antes-de-explotar"
+lang: "es"
+description: "Recibí el mail de OpenAI: 23 de julio y 23 de octubre, shutdown masivo. Esto es lo que hice para evitar que Examya se caiga. Audit completo, falsas alarmas, y el único modelo crítico que realmente necesita migración."
+tags: [IA, LLM, Examya, Producción, OpenClaw, PostgreSQL, pgvector, Arquitectura, Automatización]
+image: ""
+draft: true
+status: draft
+series: "examya"
+seriesOrder: 8
+sources:
+  - engram:examya/config/openai-deprecation-migration-matrix
+  - engram:examya/architecture/ocr-flow
+  - engram:examya/decision/sdd-consolidation-judgment-day
+---
+
+## El mail que nadie quiere leer
+
+Abrí 2026-04-22 y ahí estaba. OpenAI anunció deprecación masiva. Fechas claras: 23 de julio para algunos, 23 de octubre para el resto. GPT-4, GPT-3.5, text-embedding-3-small. Todos a la hoguera.
+
+Mi primera reacción fue pánico. Examya depende de OpenAI para su pipeline médico completo. OCR de órdenes, embeddings FONASA, intérprete de resultados, validación de exámenes. Si un modelo se apaga sin migrar, el agente de WhatsApp deja de funcionar. Pacientes sin respuestas.
+
+Pero el pánico dura poco. Lo que sigue es método.
+
+## El problema real
+
+No es solo "cambiar un string en una variable de entorno". Examya tiene 14 servicios que llaman a modelos de OpenAI. Cada uno con un propósito diferente:
+
+- **OCR médico**: Lee fotos de órdenes médicas por WhatsApp y extrae exámenes.
+- **Embeddings FONASA**: Vectoriza el catálogo de 10.000+ exámenes para búsqueda semántica.
+- **Intérprete de resultados**: Toma valores de laboratorio y genera explicaciones en español.
+- **Validador**: Confirma que los exámenes pedidos corresponden a la orden.
+- **Normalizador**: Estandariza nombres de exámenes contra el catálogo FONASA.
+- **Router médico**: Decide si un caso necesita atención humana o puede resolver el agente.
+
+Cada uno de estos servicios usa un modelo diferente. Y no todos están en la lista de deprecación.
+
+## El audit: método, no intuición
+
+Lo primero que hice fue cruzar la lista oficial de OpenAI contra mi código y mis variables de entorno en Railway.
+
+```bash
+# grep rápido en el codebase
+grep -r "gpt-4\|gpt-3.5\|text-embedding" apps/ --include="*.ts" | grep -v node_modules | grep -v ".spec."
+```
+
+Después, las variables de producción en Railway:
+
+```bash
+railway variables | grep MODEL
+```
+
+El resultado fue una matriz completa. Y la sorpresa fue que la mayoría de mis modelos ya estaban migrados:
+
+| Variable | Modelo | ¿Deprecated? |
+|----------|--------|-------------|
+| DEFAULT_AI_MODEL | gpt-4.1-mini | No |
+| EXAM_RESULT_INTERPRETER_MODEL | gpt-4.1 | No |
+| JUDGE_AI_MODEL | gpt-4.1-mini | No |
+| SEARCHER_AGENT_MODEL | text-embedding-3-small | **Sí. Crítico.** |
+| GEMINI_VISION_MODEL | gemini-2.5-flash | No (Google) |
+| CLAUDE_MODEL | claude-3-5-sonnet | No (Anthropic) |
+
+De 14 modelos, solo 1 estaba realmente en peligro. Pero ese 1 es el backbone de la búsqueda vectorial.
+
+## La falsa alarma
+
+El mail de OpenAI menciona "gpt-4.1-nano" como deprecado. Inmediatamente pensé en mis 8 variables que usan "gpt-4.1-mini". ¿Están en la lista?
+
+No. `gpt-4.1-mini` no está deprecado. Solo `gpt-4.1-nano`. Una letra de diferencia que hubiera generado horas de migración innecesaria.
+
+La lección: siempre verificar contra la fuente oficial. El email es marketing. La documentación técnica es la verdad.
+
+## El caso crítico: text-embedding-3-small
+
+El único modelo realmente en riesgo es `text-embedding-3-small`, que genera los embeddings para todo el catálogo FONASA. Se usa en 6 servicios y 5 scripts de mantenimiento.
+
+El reemplazo oficial es `text-embedding-3-large`. Pero hay un truco: este modelo genera vectores de 3072 dimensiones por defecto, el doble de los 1536 actuales. Mi tabla pgvector tiene definida `vector(1536)`.
+
+Tengo dos opciones:
+
+```sql
+-- Opción A: ALTER TABLE + re-generar todo (3072 dims)
+ALTER TABLE exam_embeddings ALTER COLUMN embedding TYPE vector(3072);
+
+-- Opción B: Usar parámetro dimensions=1536 en la API (sin ALTER TABLE)
+-- Solo re-generar embeddings con el nuevo modelo
+```
+
+La Opción B es más segura. Misma dimensionalidad, mismo schema, solo cambio el modelo en la API y re-genero los vectores.
+
+```typescript
+// Antes
+const response = await openai.embeddings.create({
+  model: "text-embedding-3-small",
+  input: text,
+});
+
+// Después
+const response = await openai.embeddings.create({
+  model: "text-embedding-3-large",
+  input: text,
+  dimensions: 1536, // mantiene dimensionalidad actual
+});
+```
+
+Simple, pero no trivial. Requiere re-generar ~10.000 embeddings existentes. Los scripts ya existen, pero hay que coordinar la ventana de migración para no afectar usuarios.
+
+## El plan de migración
+
+No es algo que se hace un martes a las 3am sin preparación. Mi plan:
+
+1. **Issue con prioridad alta** en GitHub, tagged con fecha límite (23-oct-2026).
+2. **Branch dedicada** con el cambio de modelo + tests.
+3. **Script de re-embed** progresivo: batch de 1000, verificar similitud, continuar.
+4. **Validación con DeepEval** antes de mergear: verificar que la búsqueda semántica no degradó.
+5. **Deploy en ventana baja** (domingo temprano, Chile).
+6. **Rollback plan**: mantener `text-embedding-3-small` activo hasta confirmar que el nuevo funciona.
+
+Plazo real: 5 meses. No es urgente hoy, pero merece estar planificado.
+
+## Lo que aprendí
+
+**Verificar antes de migrar.** De 14 modelos, solo 1 necesitaba atención real. Si hubiera migrado todo por pánico, habría introducido bugs innecesarios.
+
+**Los embeddings son el eslabón débil.** Cambiar un modelo de chat es trivial: misma API, misma firma. Cambiar un modelo de embeddings toca la base de datos, el schema, y todo el pipeline de búsqueda.
+
+**Documentar todo.** La matriz de migración que armé es ahora una observación en Engram. La próxima vez que OpenAI anuncie deprecaciones, puedo ejecutar el mismo audit en minutos, no horas.
+
+**El fear-driven development es real.** OpenAI manda un mail y medio internet entra en pánico. Lo correcto es: leer la documentación oficial, cruzar contra tu codebase, y actuar solo donde sea necesario.
+
+## Lo que viene
+
+Examya sigue creciendo. La migración de embeddings está planificada para Q3 2026, junto con la evaluación de modelos open-source como alternativa. No porque sean mejores hoy, sino porque tener un plan B nunca está de más cuando tu proveedor puede apagarte con un email.
+
+La pregunta no es si el próximo modelo se va a deprecar. Es si vas a estar listo cuando pase.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
