@@ -1,0 +1,203 @@
+---
+title: "Fhirex by Examya: FHIR pilots without touching production"
+date: 2026-05-25
+lang: "en"
+description: "Why we launched fhirex.examya.cl: FHIR/Core-CL pilots with synthetic data, technical evidence, and IT review before production."
+tags: [Examya, Interoperabilidad, FHIR, Salud Digital, Compliance, Integración, Arquitectura]
+image: "/img/blog/fhirex-pilotos-fhir.png"
+draft: false
+canonicalSlug: "2026-05-25-fhirex-pilotos-fhir-sin-tocar-produccion"
+series: interoperabilidad-chile
+seriesOrder: 9
+related:
+  - "2026-05-23-laboratorio-clinico-como-api-salud-digital"
+  - "2026-04-18-fhir-ley-21-668-interoperabilidad-chile"
+---
+
+## Everyone wants to interoperate, few know where to start
+
+The conversation about clinical interoperability usually starts too big.
+
+“Let’s connect the hospital.”  
+“Let’s interoperate the laboratory.”  
+“Let’s make everything FHIR-ready.”
+
+It sounds good in a presentation, but in practice that sentence is a trap. Nobody should start by connecting everything. Especially not when real clinical data, legacy systems, external vendors, and IT teams responsible for security, auditability, and operational continuity are involved.
+
+That is why we launched [fhirex.examya.cl](https://fhirex.examya.cl/).
+
+Not as a promise of “total interoperability”, but as a more concrete entry point: focused FHIR/Core-CL pilots, designed to start with synthetic data, no PII in the initial stage, and technical evidence before touching production.
+
+## The problem is not only technical
+
+FHIR is not the hard problem. At least not at the beginning.
+
+The hard problem is agreeing on the first safe use case.
+
+A clinic wants to understand whether its HIS can talk to external systems. A laboratory needs to organize requests, results, and diagnostic reports with traceability. An EHR vendor wants to validate a concrete contract. Medical leadership needs to see the flow in clinical language, not as a collection of endpoints.
+
+Each actor sees the same problem from a different angle:
+
+- **Clinical IT** asks about authentication, data governance, logs, and integration risk.
+- **Laboratory teams** ask about requests, results, codes, and traceability.
+- **HIS/EHR vendors** ask about contracts, payloads, errors, and compatibility.
+- **Medical leadership** asks whether the clinical flow makes sense and protects the patient.
+
+If the pilot does not speak those four languages, it stays as a technical demo.
+
+## What Fhirex by Examya is
+
+Fhirex by Examya is a technical pilot proposal for healthcare systems that want to test interoperability without committing production from day one.
+
+The landing page summarizes it like this:
+
+> Connect your clinic, laboratory, or HIS using FHIR Core-CL standards in days, not months. Safe pilots, with synthetic data and no regulatory risk.
+
+The key word is **pilot**.
+
+We are not saying: “change your entire architecture.” We are saying: take a focused clinical flow, represent it with FHIR R4 resources aligned with Core-CL, add traceability where it belongs, and validate whether the technical conversation makes sense.
+
+An initial pilot can start with something as concrete as:
+
+1. Identifying a synthetic patient with `Patient` and a test RUN/RUT.
+2. Representing a request as `ServiceRequest`.
+3. Validating how FONASA services would be mapped when relevant.
+4. Returning results with `Observation` and `DiagnosticReport`.
+5. Reviewing traceability with `AuditEvent` and `Provenance` when an auditable event exists.
+
+That is enough to learn without overbuilding.
+
+## The minimum architecture for a safe pilot
+
+The landing page shows a simplified Core-CL architecture in four steps:
+
+### 1. Authentication
+
+The connection starts with a basic question: who is requesting, from where, and with what permissions?
+
+In the platform, we already have a JWT/API key base and a `CapabilityStatement` that describes OAuth/JWT security as an integration direction. But for a real pilot, it is not useful to promise abstract “ready-made” security. The mechanism has to be validated with the provider’s IT team and the specific system being connected.
+
+### 2. Identification
+
+Next comes patient identity resolution. The current implementation already has FHIR mapping for `Patient` using Chilean RUN/RUT, which makes it possible to discuss identity, MPI, and consistency between systems in concrete terms.
+
+Interoperability fails quickly when identity is not resolved well.
+
+### 3. Clinical transaction
+
+The third step is sending and validating structured clinical resources. In Examya, there are already endpoints and persistence for `ServiceRequest`, `Observation`, and `DiagnosticReport`, but the pilot must define the exact contract to validate with each counterpart.
+
+This is where one of the most important pilot questions appears: is the clinical data structured enough, or does it still live as free text, PDF, or an informal message?
+
+### 4. Reconciliation and audit
+
+Finally, the destination system responds, reconciles, and leaves evidence. A `200 OK` is not enough. We also need to know what was received, who sent it, when it happened, and how it can be audited later.
+
+In the current implementation, `AuditEvent` and `Provenance` exist for compliance and audit events. That is a good base, but it does not mean every possible flow already has complete provenance. In a pilot, that is exactly one of the things that must be validated.
+
+## From free text to a clinical event
+
+One of the contracts we want to validate in pilots transforms a clinical request into a structured `ServiceRequest`:
+
+```json
+{
+  "resourceType": "ServiceRequest",
+  "status": "active",
+  "intent": "order",
+  "code": {
+    "coding": [
+      {
+        "system": "http://api.minsal.cl/v1/fonasa",
+        "code": "0301045",
+        "display": "PERFIL LIPÍDICO"
+      }
+    ],
+    "text": "Px requiere perfil lipidico urgente"
+  },
+  "subject": {
+    "reference": "Patient/core-cl-12345"
+  },
+  "requester": {
+    "reference": "Practitioner/medico-rut-123"
+  }
+}
+```
+
+That example looks simple, but it contains the real shift.
+
+The data stops being only text for human reading and becomes a clinical event that other systems can validate, audit, and process. The important part is not saying “everything is solved.” The important part is testing with each actor whether that contract represents their real operation well.
+
+That is the point of useful interoperability: not replacing real clinical operations, but translating them into contracts that other systems can understand.
+
+## What we already have, and what still needs validation
+
+There is a real base behind the landing page:
+
+- an independent landing page for `fhirex.examya.cl`;
+- FHIR endpoints for `Patient`, `Practitioner`, `Encounter`, `ServiceRequest`, `DiagnosticReport`, `Observation`, `AuditEvent`, and `Provenance`;
+- generic FHIR resource persistence;
+- RUN/RUT mapping in `Patient` and `ServiceRequest`;
+- mappers for results and diagnostic reports;
+- FONASA integrations and mappings in other parts of the platform;
+- unit tests for persistence of `ServiceRequest`, `DiagnosticReport`, `Observation`, `AuditEvent`, and `Provenance`.
+
+There are also limits we should not hide:
+
+- Core-CL today should be read as technical alignment, not formal certification.
+- The `CapabilityStatement` describes OAuth/JWT security, but each pilot must validate the concrete authentication mechanism.
+- The landing page does not capture leads in the backend; it uses a safe email contact flow.
+- A pilot with synthetic data is an operational decision, not an automatic guarantee if someone writes PII into free text.
+- FONASA coding inside each FHIR resource must be validated case by case.
+
+That level of honesty matters. In healthcare, overselling is more expensive than starting small.
+
+## Why start with synthetic data
+
+In healthcare, the right pilot should not need PII.
+
+In fact, at the beginning, it is better not to have it.
+
+If the goal is to validate architecture, contracts, traceability, errors, and integration limits, synthetic data is enough. It lets IT review without exposing real clinical information. It lets medical leadership understand the flow while reducing regulatory risk. It lets the vendor test compatibility without asking for permissions that are not yet appropriate.
+
+The question for the first pilot should not be: “Can we move real data?”
+
+The right question is:
+
+> Can we represent this clinical case in an interoperable, safe, and auditable way?
+
+If the answer is yes, then it makes sense to discuss production.
+
+## What Fhirex by Examya is not
+
+It is not a promise of universal integration in one week.
+
+It is not a replacement for a HIS, LIS, or EHR.
+
+It is not a shortcut to skip data governance.
+
+It is also not an isolated demo disconnected from real operations.
+
+It is a way to start small and well: one use case, clear FHIR resources, synthetic data, technical evidence, and a shared conversation between business, medical, and IT teams. It does not replace the provider’s legal, security, or architecture review.
+
+## What comes next
+
+The next step for Fhirex by Examya is to turn the landing page into a real pilot flow.
+
+The first meeting should not start with a sales pitch. It should start with a map:
+
+- Which system wants to talk to which system.
+- Which clinical event needs to be represented.
+- Which FHIR resource fits.
+- Which data must be synthetic.
+- Which evidence IT needs in order to trust the flow.
+- Which clinical result medical leadership needs to see.
+
+If that map exists, interoperability stops being a big word and becomes a sequence of concrete tests.
+
+That is why we launched `fhirex.examya.cl`: so the conversation starts in the right place.
+
+With a small pilot. With safe data. With FHIR where it helps. And without touching production too early.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
