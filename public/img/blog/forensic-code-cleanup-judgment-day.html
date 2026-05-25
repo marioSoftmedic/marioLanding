@@ -1,200 +1,104 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Forensic Code Cleanup + Judgment Day</title>
-    <style>
-      body {
-        margin: 0;
-        background: #020617;
-        font-family:
-          Inter,
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
-      }
-      .wrap {
-        width: 1200px;
-        height: 630px;
-        display: grid;
-        place-items: center;
-        background:
-          radial-gradient(
-            circle at 20% 20%,
-            rgba(34, 211, 238, 0.18),
-            transparent 30%
-          ),
-          radial-gradient(
-            circle at 80% 10%,
-            rgba(52, 211, 153, 0.18),
-            transparent 28%
-          ),
-          #020617;
-      }
-      svg {
-        width: 1200px;
-        height: 630px;
-      }
-      .title {
-        font-size: 44px;
-        font-weight: 800;
-        fill: #f8fafc;
-        letter-spacing: -1px;
-      }
-      .subtitle {
-        font-size: 20px;
-        fill: #94a3b8;
-      }
-      .box {
-        fill: rgba(15, 23, 42, 0.92);
-        stroke: rgba(148, 163, 184, 0.35);
-        stroke-width: 1.5;
-        rx: 24;
-      }
-      .good {
-        stroke: #34d399;
-      }
-      .warn {
-        stroke: #f59e0b;
-      }
-      .cyan {
-        stroke: #22d3ee;
-      }
-      .label {
-        font-size: 19px;
-        font-weight: 700;
-        fill: #e2e8f0;
-      }
-      .small {
-        font-size: 15px;
-        fill: #94a3b8;
-      }
-      .num {
-        font-size: 34px;
-        font-weight: 900;
-        fill: #34d399;
-      }
-      .arrow {
-        stroke: #64748b;
-        stroke-width: 3;
-        marker-end: url(#arrow);
-        fill: none;
-      }
-      .badge {
-        fill: rgba(52, 211, 153, 0.12);
-        stroke: rgba(52, 211, 153, 0.55);
-      }
-      .badgeText {
-        fill: #a7f3d0;
-        font-size: 16px;
-        font-weight: 700;
-      }
-      .credit {
-        fill: #64748b;
-        font-size: 13px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <svg
-        viewBox="0 0 1200 630"
-        role="img"
-        aria-label="Forensic Code Cleanup + Judgment Day workflow"
-      >
-        <defs>
-          <marker
-            id="arrow"
-            markerWidth="10"
-            markerHeight="10"
-            refX="8"
-            refY="3"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M0,0 L0,6 L9,3 z" fill="#64748b" />
-          </marker>
-        </defs>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Borrar código muerto con método forense</title>
+  <style>
+    body { margin: 0; background: #020617; }
+    .wrap { width: 1200px; height: 630px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Borrar código muerto con método forense">
+  <defs>
+    <radialGradient id="g1" cx="20%" cy="18%" r="45%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.24" />
+      <stop offset="70%" stop-color="#22d3ee" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="g2" cx="82%" cy="12%" r="42%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.22" />
+      <stop offset="75%" stop-color="#34d399" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b" />
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.32" />
+    </filter>
+    <style><![CDATA[
+      .font { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .title { font-size: 46px; font-weight: 850; fill: #f8fafc; letter-spacing: -1px; }
+      .subtitle { font-size: 20px; fill: #cbd5e1; }
+      .label { font-size: 20px; font-weight: 800; fill: #e2e8f0; }
+      .small { font-size: 15px; fill: #94a3b8; }
+      .tiny { font-size: 13px; fill: #64748b; }
+      .num { font-size: 36px; font-weight: 900; fill: #34d399; }
+      .card { fill: rgba(15,23,42,0.94); stroke: rgba(148,163,184,0.32); stroke-width: 1.4; filter: url(#shadow); }
+      .cyan { stroke: #22d3ee; }
+      .green { stroke: #34d399; }
+      .amber { stroke: #f59e0b; }
+      .arrow { fill: none; stroke: #64748b; stroke-width: 3; marker-end: url(#arrow); }
+    ]]></style>
+  </defs>
 
-        <text x="70" y="78" class="title">Forensic Code Cleanup</text>
-        <text x="70" y="110" class="subtitle">
-          Grep primero. Borrar después. Revisar con Judgment Day sobre Gentle
-          AI.
-        </text>
+  <rect width="1200" height="630" fill="#020617" />
+  <rect width="1200" height="630" fill="url(#g1)" />
+  <rect width="1200" height="630" fill="url(#g2)" />
+  <path d="M0 520 C250 470 420 585 650 520 C840 466 960 500 1200 440" fill="none" stroke="#0f172a" stroke-width="80" opacity="0.55" />
 
-        <rect
-          x="70"
-          y="150"
-          width="250"
-          height="145"
-          class="box warn"
-          rx="24"
-        />
-        <text x="95" y="190" class="label">Código zombie</text>
-        <text x="95" y="222" class="small">7 handlers .cjs</text>
-        <text x="95" y="248" class="small">14 test files con mocks</text>
-        <text x="95" y="274" class="small">1 env var obsoleta</text>
+  <text x="70" y="76" class="font title">Borrar código muerto con método forense</text>
+  <text x="70" y="111" class="font subtitle">Grep primero. Evidencia después. Revisión adversarial solo como guardrail final.</text>
+  <rect x="70" y="128" width="520" height="4" rx="2" fill="url(#accent)" />
 
-        <path d="M330 222 C370 222, 390 222, 430 222" class="arrow" />
+  <rect x="70" y="165" width="250" height="145" rx="24" class="card amber" />
+  <text x="95" y="205" class="font label">1 · Señales</text>
+  <text x="95" y="237" class="font small">7 handlers .cjs</text>
+  <text x="95" y="263" class="font small">14 tests con mocks vacíos</text>
+  <text x="95" y="289" class="font small">1 env var obsoleta</text>
 
-        <rect
-          x="440"
-          y="150"
-          width="280"
-          height="145"
-          class="box cyan"
-          rx="24"
-        />
-        <text x="465" y="190" class="label">Forensic pass</text>
-        <text x="465" y="222" class="small">rg consumidores reales</text>
-        <text x="465" y="248" class="small">separar harness vs producción</text>
-        <text x="465" y="274" class="small">borrar solo sin referencias</text>
+  <path d="M330 238 C370 238 392 238 432 238" class="arrow" />
 
-        <path d="M730 222 C770 222, 790 222, 830 222" class="arrow" />
+  <rect x="445" y="165" width="280" height="145" rx="24" class="card cyan" />
+  <text x="470" y="205" class="font label">2 · Forensic pass</text>
+  <text x="470" y="237" class="font small">rg consumidores reales</text>
+  <text x="470" y="263" class="font small">separar tools/ vs apps/</text>
+  <text x="470" y="289" class="font small">probar que está muerto</text>
 
-        <rect
-          x="840"
-          y="150"
-          width="290"
-          height="145"
-          class="box good"
-          rx="24"
-        />
-        <text x="865" y="190" class="label">Judgment Day</text>
-        <text x="865" y="222" class="small">Gentle AI / Alan Buscaglia</text>
-        <text x="865" y="248" class="small">review adversarial en rounds</text>
-        <text x="865" y="274" class="small">blockers antes del merge</text>
+  <path d="M735 238 C775 238 797 238 837 238" class="arrow" />
 
-        <rect x="115" y="365" width="210" height="120" class="box" rx="22" />
-        <text x="145" y="405" class="num">12</text>
-        <text x="145" y="435" class="small">archivos eliminados</text>
+  <rect x="850" y="165" width="280" height="145" rx="24" class="card green" />
+  <text x="875" y="205" class="font label">3 · Eliminar</text>
+  <text x="875" y="237" class="font small">borrar solo sin consumers</text>
+  <text x="875" y="263" class="font small">correr tests</text>
+  <text x="875" y="289" class="font small">guardrail: Gentle AI</text>
 
-        <rect x="380" y="365" width="210" height="120" class="box" rx="22" />
-        <text x="410" y="405" class="num">108</text>
-        <text x="410" y="435" class="small">líneas de mocks fuera</text>
+  <rect x="110" y="380" width="210" height="118" rx="22" class="card" />
+  <text x="140" y="422" class="font num">12</text>
+  <text x="140" y="452" class="font small">archivos eliminados</text>
 
-        <rect x="645" y="365" width="210" height="120" class="box" rx="22" />
-        <text x="675" y="405" class="num">1058</text>
-        <text x="675" y="435" class="small">tests pasando</text>
+  <rect x="375" y="380" width="210" height="118" rx="22" class="card" />
+  <text x="405" y="422" class="font num">108</text>
+  <text x="405" y="452" class="font small">líneas de mocks fuera</text>
 
-        <rect x="910" y="365" width="210" height="120" class="box" rx="22" />
-        <text x="940" y="405" class="num">0</text>
-        <text x="940" y="435" class="small">blockers finales</text>
+  <rect x="640" y="380" width="210" height="118" rx="22" class="card" />
+  <text x="670" y="422" class="font num">1058</text>
+  <text x="670" y="452" class="font small">tests pasando</text>
 
-        <rect x="70" y="535" width="430" height="42" class="badge" rx="21" />
-        <text x="92" y="562" class="badgeText">
-          La mejor migración fue no migrar código muerto
-        </text>
+  <rect x="905" y="380" width="210" height="118" rx="22" class="card" />
+  <text x="935" y="422" class="font num">0</text>
+  <text x="935" y="452" class="font small">blockers finales</text>
 
-        <text x="790" y="565" class="credit">
-          mariohealthbits.dev · Gentle AI:
-          github.com/Gentleman-Programming/gentle-ai
-        </text>
-      </svg>
-    </div>
-  </body>
+  <rect x="70" y="543" width="520" height="45" rx="22" fill="rgba(52,211,153,0.12)" stroke="rgba(52,211,153,0.55)" />
+  <text x="94" y="572" class="font" font-size="17" font-weight="800" fill="#a7f3d0">La mejor migración fue no migrar código muerto.</text>
+
+  <text x="812" y="572" class="font tiny">mariohealthbits.dev · Gentle AI · Alan Buscaglia</text>
+</svg>
+</div>
+</body>
 </html>
