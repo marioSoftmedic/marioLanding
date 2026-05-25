@@ -1,0 +1,111 @@
+---
+title: "Forensic Code Cleanup: cuando borrar código vale más que agregar"
+date: 2026-05-25
+lang: "es"
+description: "7 handlers zombie, 108 líneas de mocks vacíos y un protocolo adversarial de 3 rounds. La historia de cómo el mejor PR de la semana fue el que eliminó 12 archivos."
+tags: [Agents, Development, Testing, Architecture]
+image: ""
+draft: true
+---
+
+## El problema
+
+Issue #461: "Migrar 7 handlers Shuri legacy de .cjs a TypeScript".
+
+Sonaba simple. Migrar archivos viejos a TS, sacar env vars obsoletas, cleanup rutinario. Pero cuando abrí el directorio `apps/agents/src/agents/shuri/handlers/`, algo no cerraba.
+
+Había 7 archivos `.cjs` con imports circulares, un `bridge.cjs` que conectaba con un `registry/` de JSONs, y 14 archivos de test con mocks vacíos.
+
+```typescript
+// 14 veces esto en los tests:
+vi.mock('../handlers/quote_medical_order.cjs', () => ({}));
+vi.mock('../handlers/buy_medical_order.cjs', () => ({}));
+vi.mock('../handlers/apply_coupon.cjs', () => ({}));
+// ...11 más
+```
+
+Mocks que retornan objetos vacíos. Sin assertions. Sin comportamiento verificado. ¿Por qué existían?
+
+## Lo que encontré
+
+La respuesta estaba en PR #423, mergeado semanas antes. Ese PR unificó el flujo de cotización y compra de WhatsApp en un `PurchaseHandler.handleQuote` en TypeScript puro. La migración fue completa.
+
+Pero los archivos viejos nunca se borraron.
+
+Los 7 handlers `.cjs` eran zombies. Código muerto que importaba otros módulos muertos, que a su vez importaban env vars que ya nadie leía. Y los mocks en los tests eran defensivos. Alguien los agregó "por si acaso" durante la migración original y nunca los sacó.
+
+Acá el detective work fue clave. No podía simplemente borrar y rezar.
+
+```bash
+# ¿Alguien importa estos handlers?
+rg "from.*handlers/(quote_medical_order|buy_medical_order)" \
+  --type ts apps/agents/src/ \
+  | grep -v ".cjs" | grep -v "test"
+
+# Resultado: 0 imports reales
+```
+
+Cero. Ningún archivo de producción los usaba. Los únicos que los mencionaban eran los mocks de test. Y los mocks estaban vacíos.
+
+Pero había una trampa. En `tools/shuri/` existían archivos con nombres similares. ¿Eran los mismos?
+
+```bash
+# ¿tools/shuri/ depende de apps/agents/shuri/?
+rg "apps/agents" tools/shuri/
+
+# Resultado: 0 referencias
+```
+
+Dos capas separadas. `tools/shuri/simulate.cjs` era un harness de simulación standalone. No tocaba los handlers zombie. Podía borrar con seguridad.
+
+## Judgment Day: verificación adversarial
+
+Antes de mergeear, corro lo que llamo "Judgment Day". Un protocolo de 3 rounds donde un reviewer adversarial intenta romper el cambio.
+
+**Round 1**: El reviewer encontró 4 issues. Uno CRITICAL: un archivo `.bak` con una API key expuesta en plaintext. Tres WARNING: faltaban avisos de deprecation en documentación vieja.
+
+**Round 2**: Un ángulo de ataque distinto. Encontró 1 archivo más que se había escapado en el primer scan.
+
+**Round 3**: CLEAN. Ambos judges confirman que no queda nada.
+
+```typescript
+// compliance-verify.ts: el runner manual de Judgment Day
+// NO es dead code, es la herramienta que ejecuta las verificaciones
+const testCases = [
+  { name: "No exposed secrets", check: () => scanForSecrets() },
+  { name: "No orphan imports", check: () => verifyImportGraph() },
+  { name: "No zombie env vars", check: () => validateEnvUsage() },
+];
+```
+
+Este protocolo ya me salvó dos veces de mergear secrets expuestos. No es teoría. Es práctica que nació de un error real.
+
+## Lo que aprendí
+
+**1. Los mocks vacíos son una señal de alarma, no de cobertura.**
+
+Si un test mockea un módulo con `() => ({})`, está mintiendo. Dice "esto existe y funciona" cuando en realidad no testea nada. Es peor que no tener test, porque te da falsa confianza.
+
+**2. Separar harness de producción salva vidas.**
+
+`tools/shuri/` y `apps/agents/src/agents/shuri/` compartían nombres pero no dependencias. Si no hubiera verificado con ripgrep, podía haber borrado el harness de simulación por error.
+
+**3. El mejor PR no siempre agrega features.**
+
+PR #469: 12 archivos borrados, 108 líneas de mocks removidas, 1 env var eliminada. 1058/1058 tests pasando. El códigobase quedó más simple, más rápido de compilar, y sin zombie dependencies.
+
+**4. Forensic antes de refactor.**
+
+Nunca empezar una migración sin verificar quién consume realmente el código. Grep primero, refactor después. Siempre.
+
+## Lo que viene
+
+El próximo paso es migrar `service-token.cjs`, el último archivo `.cjs` vivo en Shuri. Ya tengo el forensic listo: `core/shuri-bridge.ts:7` es el único consumer. PR chica, ~1 hora.
+
+Después viene lo grueso: refactor del SlackService y re-enable de OpenTelemetry. Pero eso ya es otro capítulo.
+
+La lección general es simple. El código muerto no es inofensivo. Ocupa head space, ralentiza CI, confunde a nuevos contribuidores, y esconde bugs. Borrarlo con método no es cleanup, es ingeniería.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
