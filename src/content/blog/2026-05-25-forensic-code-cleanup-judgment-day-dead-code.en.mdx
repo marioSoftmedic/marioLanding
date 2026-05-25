@@ -1,77 +1,100 @@
 ---
-title: "Forensic Code Cleanup: When Deleting Code Is More Valuable Than Writing It"
+title: "Forensic Code Cleanup: deleting code with discipline"
 date: 2026-05-25
 lang: "en"
-description: "7 zombie handlers, 108 lines of empty mocks, and a 3-round adversarial protocol. The story of how the best PR of the week was the one that deleted 12 files."
-tags: [Agents, Development, Testing, Architecture]
-image: ""
-draft: true
+description: "How I deleted 12 zombie files in Shuri with forensic cleanup, ripgrep, tests, and adversarial review as the final guardrail."
+tags: [Agents, Development, Testing, Architecture, TypeScript, Production]
+image: "/img/blog/forensic-code-cleanup-judgment-day.png"
+draft: false
 canonicalSlug: "2026-05-25-forensic-code-cleanup-judgment-day-dead-code"
+series: agentes
+seriesOrder: 8
+related:
+  - "2026-05-17-mitigacion-alucinaciones-subagentes-4-comandos"
+  - "2026-05-06-testing-estrategico-agentes-ia"
 ---
 
-## The Problem
+## The issue looked like a simple migration
 
-Issue #461: "Migrate 7 legacy Shuri handlers from .cjs to TypeScript."
+Issue #461 sounded reasonable: migrate 7 legacy Shuri handlers from `.cjs` to TypeScript.
 
-Sounded simple. Migrate old files to TS, remove obsolete env vars, routine cleanup. But when I opened `apps/agents/src/agents/shuri/handlers/`, something felt off.
+It looked mechanical. Open the old files, convert imports, add types, remove obsolete environment variables, close the PR.
 
-There were 7 `.cjs` files with circular imports, a `bridge.cjs` connecting to a `registry/` of JSON files, and 14 test files with empty mocks.
+But when I opened `apps/agents/src/agents/shuri/handlers/`, something felt wrong.
+
+There were 7 `.cjs` handlers, a `bridge.cjs`, references to a JSON `registry/`, and 14 test files with empty mocks. Not partial mocks. Not behavioral doubles. Empty mocks.
 
 ```typescript
-// 14 times this pattern in tests:
+// Repeated across multiple tests
 vi.mock('../handlers/quote_medical_order.cjs', () => ({}));
 vi.mock('../handlers/buy_medical_order.cjs', () => ({}));
 vi.mock('../handlers/apply_coupon.cjs', () => ({}));
-// ...11 more
 ```
 
-Mocks returning empty objects. No assertions. No behavior verified. Why did they exist?
+That is not coverage. It is a warning sign.
 
-## What I Found
+An empty mock can mean two things: the module no longer matters, or the test is lying about a critical dependency. Before migrating anything, I had to investigate.
 
-The answer was in PR #423, merged weeks earlier. That PR unified the WhatsApp quotation and purchase flow into a single `PurchaseHandler.handleQuote` in pure TypeScript. The migration was complete.
+## Forensics before refactoring
 
-But the old files were never deleted.
+The natural temptation was to convert the files to TypeScript and move on. But a migration without forensics can preserve dead code with nicer syntax.
 
-The 7 `.cjs` handlers were zombies. Dead code importing other dead modules, which in turn imported env vars nobody read anymore. And the test mocks were defensive. Someone added them "just in case" during the original migration and never removed them.
-
-This is where detective work was critical. I couldn't just delete and hope.
+The first question was simple: does anything actually consume these handlers?
 
 ```bash
-# Does anyone actually import these handlers?
 rg "from.*handlers/(quote_medical_order|buy_medical_order)" \
   --type ts apps/agents/src/ \
-  | grep -v ".cjs" | grep -v "test"
-
-# Result: 0 real imports
+  | grep -v ".cjs" \
+  | grep -v "test"
 ```
 
-Zero. No production file used them. The only references were test mocks. And the mocks were empty.
+Result: zero real imports.
 
-But there was a trap. In `tools/shuri/` there were files with similar names. Were they the same?
+The legacy handlers were not in the production path. The only files naming them were tests with empty mocks.
+
+The second question was more dangerous: is there another system with similar names?
+
+Yes. `tools/shuri/` contained a simulation harness with similar file names. If I deleted without checking, I could break debugging tools.
 
 ```bash
-# Does tools/shuri/ depend on apps/agents/shuri/?
 rg "apps/agents" tools/shuri/
-
-# Result: 0 references
 ```
 
-Two separate layers. `tools/shuri/simulate.cjs` was a standalone simulation harness. It didn't touch the zombie handlers. Safe to delete.
+Result: zero references.
 
-## Judgment Day: Adversarial Verification
+`tools/shuri/` and `apps/agents/src/agents/shuri/` shared naming, but not dependencies. The simulation harness was a separate scope. The zombie handlers could die.
 
-Before merging, I run what I call "Judgment Day." A 3-round protocol where an adversarial reviewer tries to break the change.
+## What had actually happened
 
-**Round 1**: The reviewer found 4 issues. One CRITICAL: a `.bak` file with an exposed API key in plaintext. Three WARNINGs: missing deprecation notices in old documentation.
+The answer was in a previous PR.
 
-**Round 2**: A different attack angle. Found 1 more file that slipped through the first scan.
+PR #423 had already unified the WhatsApp quote and purchase flow into `PurchaseHandler.handleQuote`, written in TypeScript. The functional migration was done. What remained was technical waste: unused files, circular imports, defensive mocks, and one environment variable nobody needed anymore.
 
-**Round 3**: CLEAN. Both judges confirm nothing remains.
+The right change was not migrating 7 handlers. It was deleting them.
+
+The final PR removed 12 files, 108 lines of empty mocks, and 1 obsolete environment variable. After that, 1058 tests still passed.
+
+That number matters. Deleting without tests is optimism. Deleting with 1058 green tests and reference searches is engineering.
+
+## The forensic method
+
+The core of the work was not adversarial review. It was the forensic method before it.
+
+Before touching files, I built a simple matrix:
+
+| Question | Evidence searched | Result |
+| --- | --- | --- |
+| Who imports these handlers? | `rg` in production | 0 real consumers |
+| Do tests validate behavior? | mocks and assertions | 108 lines of empty mocks |
+| Are there similarly named tools? | `rg` between `tools/` and `apps/` | separate scopes |
+| What replaced the old flow? | previous PR and current handler | `PurchaseHandler.handleQuote` |
+
+That table changed the goal. It was no longer “migrate legacy to TypeScript”. It was prove the legacy was dead.
+
+Only then did the PR make sense: delete files, run tests, and check that no orphan references remained.
 
 ```typescript
-// compliance-verify.ts: the manual Judgment Day runner
-// NOT dead code — it's the tool that executes verifications
+// compliance-verify.ts: manual verification runner
 const testCases = [
   { name: "No exposed secrets", check: () => scanForSecrets() },
   { name: "No orphan imports", check: () => verifyImportGraph() },
@@ -79,34 +102,62 @@ const testCases = [
 ];
 ```
 
-This protocol has saved me twice from merging exposed secrets. It's not theory. It's practice born from a real mistake.
+## Adversarial review as a guardrail
 
-## What I Learned
+After the forensic cleanup, I used Judgment Day only as a final guardrail: an adversarial review to try to break the diff before merge.
 
-**1. Empty mocks are a red flag, not coverage.**
+The scope matters. In older notes I described it as “my Judgment Day protocol,” but today I use it inside a work harness based on **Gentle AI**, the open-source project by [Alan Buscaglia](https://www.linkedin.com/in/alanbuscaglia/): [github.com/Gentleman-Programming/gentle-ai](https://github.com/Gentleman-Programming/gentle-ai).
 
-If a test mocks a module with `() => ({})`, it's lying. It says "this exists and works" when it tests nothing. It's worse than having no test, because it gives false confidence.
+The focus of this post is not Judgment Day. The focus is deleting dead code with evidence. Gentle AI comes at the end to review blockers: secrets, orphan imports, `.bak` files, zombie env vars, and documentation that could mislead the next engineer.
 
-**2. Separating harness from production saves lives.**
+In this case, that review found a `.bak` file with an exposed API key and one additional file that escaped the first pass. Without forensic cleanup, the problem would have been hard to scope. Without adversarial review, the diff could have shipped with hidden risk.
 
-`tools/shuri/` and `apps/agents/src/agents/shuri/` shared names but not dependencies. If I hadn't verified with ripgrep, I could have deleted the simulation harness by mistake.
+## The cleanup mental model
 
-**3. The best PR doesn't always add features.**
+The process became less “refactor” and more forensic investigation:
 
-PR #469: 12 files deleted, 108 mock lines removed, 1 env var eliminated. 1058/1058 tests passing. The codebase became simpler, faster to compile, and free of zombie dependencies.
+1. Map dead-code candidates.
+2. Verify real consumers with `rg`.
+3. Separate production from auxiliary tools.
+4. Delete only what has no consumers.
+5. Run tests.
+6. Use adversarial review as the final guardrail.
+7. Repeat only when real blockers appear.
 
-**4. Forensic before refactor.**
+That order matters. If you start by deleting, you guess. If you start by mapping, you reduce the error surface.
 
-Never start a migration without verifying who actually consumes the code. Grep first, refactor later. Always.
+## What I learned
 
-## What's Next
+### 1. An empty mock is not innocent
 
-The next step is migrating `service-token.cjs`, the last living `.cjs` file in Shuri. The forensic is ready: `core/shuri-bridge.ts:7` is the only consumer. Small PR, about 1 hour.
+An empty mock can hide dead code for months. The test keeps passing because it never exercises the real dependency. That creates an illusion of safety.
 
-After that comes the heavy lifting: SlackService refactor and OpenTelemetry re-enable. But that's another chapter.
+When I see `vi.mock(..., () => ({}))` now, I treat it as an open question: does this module still exist for a reason, or are we protecting historical trash?
 
-The general lesson is simple. Dead code isn't harmless. It occupies head space, slows down CI, confuses new contributors, and hides bugs. Deleting it methodically isn't cleanup. It's engineering.
+### 2. Migrating dead code is technical debt with makeup
 
-📱 [WhatsApp](https://wa.me/56962170366): +56962170366
-🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+Converting `.cjs` to TypeScript would have left the system just as confusing, only typed. That does not improve architecture. It only makes it more expensive to discover the file was useless.
+
+The best migration was not migrating.
+
+### 3. Similar names are a trap
+
+`tools/shuri/` and `apps/agents/src/agents/shuri/` looked like part of the same flow. They were not. Verifying boundaries between harnesses, scripts, and production avoided deleting useful tools.
+
+### 4. Adversarial review is the closing step, not the center
+
+Gentle AI provides a useful framework for disciplined review. But in this case, the main value came earlier: mapping consumers, checking boundaries, and proving the code was dead.
+
+Attribution still matters: I use Alan Buscaglia’s Gentle AI as the review-discipline foundation. But the technical lesson from the PR is simpler: do not migrate dead code; delete it with evidence.
+
+## What comes next
+
+The next candidate is `service-token.cjs`, the last live `.cjs` file in Shuri. The forensics there are narrower: `core/shuri-bridge.ts` appears as a real consumer, so deleting it blindly would be wrong.
+
+The rule is now written: grep first, refactor second.
+
+Dead code is not harmless. It consumes mental space, slows reviews, confuses new contributors, and can hide old secrets. Deleting it with discipline is not cosmetic cleanup. It is architecture.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
 🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
