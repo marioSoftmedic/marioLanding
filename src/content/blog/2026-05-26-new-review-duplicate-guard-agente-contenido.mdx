@@ -1,0 +1,153 @@
+---
+title: "NEW, REVIEW, DUPLICATE: el guard que evita que un agente de contenido escriba el mismo post diez veces"
+date: 2026-05-26
+slug: "2026-05-26-new-review-duplicate-guard-agente-contenido"
+lang: "es"
+description: "Cómo diseñé un guard determinístico con tres estados para evitar que mi agente de contenido repita temas en el blog"
+tags: [agents, automation, testing, architecture]
+image: ""
+draft: true
+series: "agentes"
+seriesOrder: 9
+sources: []
+status: draft
+---
+
+## El problema que nadie ve
+
+Tengo un agente que escribe posts para mi blog. Funciona bien. Demasiado bien.
+
+Cuando le das a un LLM acceso a tu memoria de trabajo, tus proyectos, tus notas de Obsidian, tiende a encontrar los mismos hilos una y otra vez. "pgvector" aparece en todo. "FHIR" aparece en todo. El agente genera un post sobre FHIR, dos semanas después genera otro que es básicamente el mismo ángulo con distinto título.
+
+No es un bug del modelo. Es un bug del sistema.
+
+Un agente de contenido sin guardrails es como unperiodista sin editor. Escribe lo que le parece interesante en el momento, sin acordarse de lo que ya publicó. Si tu memoria es un índice manual que actualizás a mano, olvidás actualizarlo. Si tu memoria es un vector store, el agente recupera lo semánticamente similar y lo repite con otras palabras.
+
+Necesitaba algo determinístico. Sin LLM en el loop. Sin ambigüedad.
+
+## Tres estados, cero ambigüedad
+
+Diseñé un guard con tres estados posibles: **NEW**, **REVIEW** y **DUPLICATE**.
+
+La idea es simple. Antes de generar un post, el agente corre un script que escanea todo: publicados, borradores, archivo, y el repo completo del sitio. Si encuentra overlap suficiente, aborta. Si encuentra overlap sospechoso, pide aprobación humana. Si no encuentra nada, genera.
+
+Después de generar, vuelve a correr el guard contra el contenido ya escrito. Porque a veces el agente genera algo que parece nuevo en el título pero repite el 80% del cuerpo.
+
+Los tres estados se mapean a exit codes del script:
+
+- **Exit 0 (NEW)**: sin overlap detectado. Proceder.
+- **Exit 1 (DUPLICATE)**: overlap fuerte confirmado. Abortar inmediatamente.
+- **Exit 3 (REVIEW)**: overlap parcial o genérico. Notificar y esperar decisión humana.
+
+¿Por qué no exit 2? Porque exit 2 es para errores del script (argumentos faltantes, archivos corruptos). Separar errores de states evita confundir un bug con un duplicate.
+
+## Cómo funciona: el código real
+
+El script es bash. Podría haberlo hecho en Python o TypeScript, pero bash fuerza simplicidad y corre directo en CI.
+
+```bash
+# Config
+BLOG_ROOT="$HOME/repos/obsidian-vault/Proyectos/05_Blog"
+LANDING_ROOT="$HOME/repos/marioLanding/src/content/blog"
+
+# Keywords fuertes: entidades y proyectos específicos
+STRONG_KW_REGEX="openai|embeddings|pgvector|fonasa|examya|whatsapp-discovery|cotocha|engram|obsidian|deepeval|fhir|ley.21668|interoperabilidad|drizzle|nestjs|stripe|mercado.pago"
+
+# Keywords genéricas: demasiado amplias para DUPLICATE solas
+GENERIC_KW_REGEX="patagonia|natales|chile|ia|ai|agents|development|architecture|testing|laboratorio"
+
+# Denylist explícita: temas que ya cubrimos suficiente
+DENYLIST_REGEX="openai.*deprec|deprec.*openai|text-embedding.*deprec"
+```
+
+El flujo de decisión:
+
+```bash
+# 1. Check denylist
+if echo "$TOPIC" | grep -qiE "$DENYLIST_REGEX"; then
+  echo "DUPLICATE: tema en denylist explícita"
+  exit 1
+fi
+
+# 2. Slug exacto ya existe?
+if [ -n "$slug_match" ]; then
+  echo "DUPLICATE: slug exacto ya existe"
+  exit 1
+fi
+
+# 3. Contar keyword overlap
+strong_hits=0
+generic_hits=0
+for kw in $candidate_keywords; do
+  if echo "$kw" | grep -qiE "$STRONG_KW_REGEX"; then
+    strong_hits=$((strong_hits + 1))
+  elif echo "$kw" | grep -qiE "$GENERIC_KW_REGEX"; then
+    generic_hits=$((generic_hits + 1))
+  fi
+done
+
+# 4. Veredicto
+if [ "$strong_hits" -ge 3 ]; then
+  echo "DUPLICATE: $strong_hits keywords fuertes coinciden"
+  exit 1
+elif [ "$generic_hits" -ge 3 ]; then
+  echo "REVIEW: $generic_hits keywords genéricas coinciden"
+  exit 3
+else
+  echo "NEW: sin duplicados detectados"
+  exit 0
+fi
+```
+
+El script escanea el frontmatter de **todos** los `.mdx` del repo del sitio. Extrae título, slug, tags, descripción y headings de cada post existente. Luego compara contra el candidato.
+
+En mi caso, el agente corre este script dos veces: antes de generar (con el topic propuesto) y después (con el contenido ya generado). Si el post-check detecta duplicate, el archivo se mueve automáticamente a una carpeta de archivo y se elimina del repo del sitio.
+
+## Lo que aprendí: keywords fuertes vs genéricas
+
+La decisión de diseño más importante fue separar keywords en dos categorías.
+
+**Keywords fuertes** son entidades específicas. `examya`, `fonasa`, `pgvector`, `cotocha`, `engram`. Si tres de estas coinciden entre un post existente y tu candidato, es casi seguro que estás escribiendo lo mismo. El overlap no es casual.
+
+**Keywords genéricas** son términos amplios. `chile`, `ia`, `agents`, `testing`, `architecture`. Estas solas no indican duplicación. Un post sobre testing de agentes médicos y un post sobre testing de APIs comparten la keyword "testing" pero son temas distintos. Si solo coinciden genéricas, el script devuelve REVIEW en vez de DUPLICATE.
+
+Esto evita falsos positivos sin sacrificar la señal.
+
+Otra decisión: el archivo `_INDEX.md`. Es un índice manual que el agente lee antes de generar. Lista "Temas cubiertos" y "Temas disponibles". El guard lo consulta como primera fuente de verdad. Si el índice dice "Sin temas pendientes", aborta sin siquiera correr el chequeo de keywords.
+
+## El flujo completo en producción
+
+Cuando el agente va a generar un post, el workflow es:
+
+1. **Sync repos**. `git pull` en Obsidian vault y marioLanding.
+2. **Leer `_INDEX.md`**. Verificar que hay temas pendientes.
+3. **Pre-check**. Correr `check-duplicates.sh` con el topic, slug y tags candidatos.
+4. **Si NEW**: generar el post con el LLM.
+5. **Si DUPLICATE**: abortar. Notificar al humano.
+6. **Si REVIEW**: notificar con detalles del match. Esperar decisión.
+7. **Post-check**. Correr el guard otra vez contra el contenido generado.
+8. **Si post-check falla**: archivar el archivo. Notificar.
+9. **Guardar en 3 lugares**: Obsidian borradores, marioLanding ES, marioLanding EN.
+10. **Push** ambos repos con validación de hash.
+
+El post-check es el guardrail que nobody talks about. Es fácil verificar antes de generar. Pero después de generar, cuando ya invertiste tokens y el texto existe, tentación de dejarlo es alta. El guard post-generación fuerza la disciplina: si el contenido final overlappea, se archiva. Punto.
+
+## Lo que viene
+
+El patrón es genérico. No es específico de blogs.
+
+Cualquier agente que produce contenido repetitivo (newsletters, social media, documentación técnica) se beneficia de un guard determinístico pre/post generación. Los tres estados (NEW, REVIEW, DUPLICATE) son un framework que escala.
+
+Próximos pasos en mi implementación:
+
+- **Extender a newsletter**. El mismo guard puede verificar que la newsletter semanal no repita temas de la anterior.
+- **Detección semántica**. Agregar embeddings como capa adicional. Si el coseno similarity entre el candidato y un post existente supera 0.85, marcar REVIEW. Pero nunca como único signal. El guard determinístico es el source of truth.
+- **CI integration**. Correr el guard como pre-commit hook. Si un developer committea un post que overlappea, CI lo rechaza.
+
+La regla de oro: un agente de contenido sin guardrails eventualmente repite. No es "si", es "cuando". Y cuando pasa, el remedio (borrar, reescribir) es más caro que la prevención.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @marioHealthBits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
