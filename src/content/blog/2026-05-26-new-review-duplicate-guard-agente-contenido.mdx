@@ -1,16 +1,15 @@
 ---
 title: "NEW, REVIEW, DUPLICATE: el guard que evita que un agente de contenido escriba el mismo post diez veces"
 date: 2026-05-26
-slug: "2026-05-26-new-review-duplicate-guard-agente-contenido"
 lang: "es"
 description: "Cómo diseñé un guard determinístico con tres estados para evitar que mi agente de contenido repita temas en el blog"
 tags: [agents, automation, testing, architecture]
-image: ""
-draft: true
+image: "/img/blog/new-review-duplicate-guard-agente-contenido.png"
+draft: false
 series: "agentes"
 seriesOrder: 9
 sources: []
-status: draft
+status: published
 ---
 
 ## El problema que nadie ve
@@ -21,7 +20,7 @@ Cuando le das a un LLM acceso a tu memoria de trabajo, tus proyectos, tus notas 
 
 No es un bug del modelo. Es un bug del sistema.
 
-Un agente de contenido sin guardrails es como unperiodista sin editor. Escribe lo que le parece interesante en el momento, sin acordarse de lo que ya publicó. Si tu memoria es un índice manual que actualizás a mano, olvidás actualizarlo. Si tu memoria es un vector store, el agente recupera lo semánticamente similar y lo repite con otras palabras.
+Un agente de contenido sin guardrails es como un periodista sin editor. Escribe lo que le parece interesante en el momento, sin acordarse de lo que ya publicó. Si tu memoria es un índice manual que actualizás a mano, olvidás actualizarlo. Si tu memoria es un vector store, el agente recupera lo semánticamente similar y lo repite con otras palabras.
 
 Necesitaba algo determinístico. Sin LLM en el loop. Sin ambigüedad.
 
