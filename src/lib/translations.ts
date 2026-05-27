@@ -29,6 +29,14 @@ interface Available {
 
 let cache: { blog: Available; project: Available } | null = null;
 
+function projectSlug(entry: { id: string; filePath?: string }): string {
+	const fileName = entry.filePath?.split('/').pop();
+	if (fileName) {
+		return fileName.replace(/\.en\.mdx$/, '').replace(/\.mdx$/, '');
+	}
+	return entry.id.replace(/\.en$/, '');
+}
+
 async function buildIndex(): Promise<{ blog: Available; project: Available }> {
 	if (cache) return cache;
 
@@ -45,7 +53,7 @@ async function buildIndex(): Promise<{ blog: Available; project: Available }> {
 	const allProjects = await getCollection("projects");
 	const project: Available = { es: new Set(), en: new Set() };
 	for (const p of allProjects) {
-		const slug = p.id.replace(/\.en$/, "");
+		const slug = projectSlug(p);
 		project[p.data.lang].add(slug);
 	}
 
