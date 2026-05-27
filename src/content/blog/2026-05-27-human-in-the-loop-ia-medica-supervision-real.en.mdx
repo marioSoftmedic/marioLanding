@@ -1,0 +1,167 @@
+---
+title: "Human-in-the-loop is not enough: designing real oversight for medical AI"
+date: 2026-05-27
+canonicalSlug: "2026-05-27-human-in-the-loop-ia-medica-supervision-real"
+lang: "en"
+description: "Medical AI oversight is not a doctor watching a screen. It requires authority, traceability, escalation, drift monitoring, and auditable evidence."
+tags: [digital-health, ai, compliance, architecture, healthcare]
+image: "/img/blog/human-in-the-loop-ia-medica-supervision-real.png"
+draft: false
+status: published
+---
+
+## The false comfort of a human watching
+
+In medical AI, one reassuring phrase appears everywhere: "there is a human in the loop".
+
+It sounds prudent. It sounds responsible. It sounds like the kind of sentence that reassures a clinical committee, an ethics board, or a regulator.
+
+But in practice it can mean almost anything.
+
+It can mean that a physician reviews every recommendation with time, context, and real authority to intervene. Or it can mean that the system shows one more alert on an already saturated screen, then transfers responsibility to the professional if something goes wrong.
+
+Both are called the same thing: human-in-the-loop.
+
+They should not be.
+
+## Oversight is not presence
+
+The first important distinction is simple: human presence is not the same as human oversight.
+
+A professional can be nominally present and still have no real way to supervise.
+
+If they cannot understand why the system recommended something, they are not supervising.
+
+If they cannot stop the flow, they are not supervising.
+
+If their decision leaves no trace, they are not supervising.
+
+If there is no escalation mechanism when they detect a strange pattern, they are not supervising.
+
+If nobody monitors whether the model started degrading over time, there is no oversight either. There is a person carrying responsibility for a system they do not control.
+
+That is especially delicate in healthcare, because the error does not stay inside a metric. It can reach the patient.
+
+## What I learned building medical agents
+
+At Examya, I have been learning this from the ground up, not from theory.
+
+When a patient sends a medical order through WhatsApp, the system does not just "read an image". There are several layers: OCR, exam normalization, catalog matching, quoting, interpretation, validation, conversational state, and escalation when something does not fit.
+
+Each layer can fail in a different way.
+
+OCR can misread an abbreviation.
+
+A normalizer can map an ambiguous exam to the wrong code.
+
+A conversational agent can sound confident when it should ask for confirmation.
+
+An embedding can retrieve something similar but clinically irrelevant.
+
+So when we talk about human oversight, the question cannot be only "is someone watching?".
+
+The real question is: **at which exact point in the flow can they intervene, with what information, with what authority, and leaving what evidence?**
+
+## The five minimum layers
+
+Today I think of effective human oversight as a five-layer architecture.
+
+### 1. Interpretable signals
+
+The professional needs to see more than a final answer.
+
+They need to know which input the system used, which alternative it discarded, how confident it is, and which part needs confirmation.
+
+You do not always need to explain the whole model. But you do need to show useful signals for decision-making.
+
+"The AI recommends X" is not enough.
+
+"Hemogram detected, high match with FONASA code Y, but the image has low quality around the diagnosis area" changes the conversation.
+
+### 2. Real authority to intervene
+
+Oversight means being able to act.
+
+The human must be able to approve, correct, escalate, or stop the flow. If they can only watch and the system continues anyway, that is not oversight. It is passive observation.
+
+In digital health, this has to be designed into the workflow, not written in a separate policy document.
+
+### 3. Traceability
+
+Every important intervention should leave evidence.
+
+Who intervened. What they saw. What they corrected. What they decided. When. With what input available.
+
+Not for bureaucracy. For learning and accountability.
+
+If the system makes the same mistake three times and nobody can reconstruct it, the organization does not learn.
+
+### 4. Escalation
+
+Not all errors are the same.
+
+Some are corrected case by case. Others reveal a systemic problem: a poorly designed prompt, an outdated catalog, a degraded model, a bad integration, or a clinical flow that should never have been automated.
+
+Real oversight needs escalation thresholds.
+
+When does it move from "I correct this case" to "we stop this feature"?
+
+When does it move from "support reviews it" to "clinical + compliance + engineering review it"?
+
+### 5. Longitudinal monitoring
+
+A model can work well on Monday and silently degrade over weeks.
+
+Data changes. Users change. Order formats change. Laboratories change. The way people write through WhatsApp changes.
+
+That is why human oversight cannot only happen in real time. It also has to look at aggregate behavior: false positives, false negatives, drift, rejected cases, corrected cases, response times, and error patterns.
+
+## The risk of using AI to squeeze clinicians harder
+
+There is another trap.
+
+If AI is measured only by throughput, it can end up increasing pressure on already saturated teams.
+
+More patients handled. More messages processed. More alerts. More validations. More screens.
+
+But not necessarily more real clinical time.
+
+The right metric should not only be "how much more does the system produce".
+
+We should also measure how much time it gives back.
+
+Less double entry. Less manual search. Less copy-paste between systems. Fewer repetitive tasks. More time to explain, listen, and decide with the patient.
+
+If AI does not reduce cognitive load, it can become another layer of work disguised as efficiency.
+
+## Compliance is not a document
+
+In healthcare, compliance should not be the PDF that appears at the end to justify what was already built.
+
+It has to live inside the design.
+
+That means logs, permissions, audit trails, escalation criteria, clear roles, validation evidence, and explicit system limits.
+
+Effective human oversight lives there: at the intersection of clinical work, engineering, privacy, quality, and operations.
+
+It does not belong only to the physician. It does not belong only to the technical team either. It is an organizational responsibility.
+
+## What comes next
+
+At Examya, the next step is to turn these ideas into more visible guardrails inside the product.
+
+Not only that the agent responds well, but that the system can show when it is confident, when it needs confirmation, and when it must leave the automatic flow.
+
+The question that matters to me is not whether medical AI will replace doctors.
+
+The better question is:
+
+**Are we designing systems where humans can truly supervise, or only systems that transfer responsibility to them?**
+
+If the answer is the second one, the problem is not the model. It is the architecture.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
