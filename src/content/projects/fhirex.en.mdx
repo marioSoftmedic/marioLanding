@@ -1,0 +1,41 @@
+---
+title: Fhirex by Examya
+description: "FHIR/Core-CL pilot service for clinics, laboratories and HIS/EHR systems: synthetic data, interoperable clinical resources and technical evidence before touching production."
+lang: 'en'
+emoji: "🧬"
+techStack:
+  - FHIR R4
+  - Core-CL
+  - TypeScript
+  - HealthTech
+  - Interoperability
+  - Compliance
+featured: true
+image: "/img/blog/fhirex-pilotos-fhir.png"
+demoUrl: "https://fhirex.examya.cl/"
+---
+
+**Fhirex by Examya** is a service for starting clinical interoperability pilots using **FHIR R4** and **Core-CL** alignment, without connecting production systems or exposing real patient data on day one.
+
+The proposal is simple: take a focused clinical workflow, represent it with FHIR resources, use synthetic data and generate technical evidence so medical leadership, IT teams and HIS/EHR vendors can evaluate the path before a production integration.
+
+## FHIR pilot service
+
+- **Pilots with synthetic data**: initial validation without PII or unnecessary risk over real clinical data.
+- **Clinical resource mapping**: `Patient`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `AuditEvent` and `Provenance` depending on the use case.
+- **Core-CL alignment**: a technical approach to the Chilean standard for discussing concrete contracts with IT teams and vendors.
+- **Evidence for IT review**: payloads, traceability, expected errors, integration boundaries and criteria for moving toward production.
+
+## Who it is for
+
+Fhirex is designed for **clinics**, **laboratories**, **healthcare providers**, **HIS/EHR vendors** and teams that need to test interoperability without putting critical systems at risk from the start.
+
+A pilot can begin with something as concrete as representing a medical request as a `ServiceRequest`, linking it to a synthetic patient, returning results as `Observation`/`DiagnosticReport` and leaving auditable evidence.
+
+## What it does not promise
+
+It is not a formal Core-CL certification or a universal integration ready in one week. It is a safer, honest way to start small: one use case, synthetic data, clear FHIR contracts and technical review before production.
+
+## Service site
+
+The service already has an independent landing page at **[fhirex.examya.cl](https://fhirex.examya.cl/)** explaining the proposal, boundaries and type of pilot we can design with each counterpart.
