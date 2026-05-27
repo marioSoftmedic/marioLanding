@@ -1,0 +1,50 @@
+---
+title: Fhirex by Examya
+description: "Servicio de pilotos FHIR/Core-CL para clínicas, laboratorios y sistemas HIS/EHR: datos sintéticos, recursos clínicos interoperables y evidencia técnica antes de tocar producción."
+descriptionEn: "FHIR/Core-CL pilot service for clinics, laboratories and HIS/EHR systems: synthetic data, interoperable clinical resources and technical evidence before touching production."
+lang: 'es'
+emoji: "🧬"
+techStack:
+  - FHIR R4
+  - Core-CL
+  - TypeScript
+  - HealthTech
+  - Interoperability
+  - Compliance
+featured: true
+image: "/img/projects/fhirex.png"
+demoUrl: "https://fhirex.examya.cl/"
+---
+
+**Fhirex by Examya** es el servicio para iniciar pilotos de interoperabilidad clínica usando **FHIR R4** y alineamiento **Core-CL**, sin partir conectando producción ni exponiendo datos reales desde el primer día.
+
+La propuesta es simple: tomar un flujo clínico acotado, representarlo con recursos FHIR, usar datos sintéticos y generar evidencia técnica para que dirección médica, TI y proveedores HIS/EHR puedan evaluar el camino antes de una integración productiva.
+
+## Servicio de pilotos FHIR
+
+- **Pilotos con datos sintéticos**: validación inicial sin PII ni riesgo innecesario sobre datos clínicos reales.
+- **Mapeo de recursos clínicos**: `Patient`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `AuditEvent` y `Provenance` según el caso de uso.
+- **Alineamiento Core-CL**: aproximación técnica al estándar chileno para conversar con equipos TI y vendors sobre contratos concretos.
+- **Evidencia para revisión TI**: payloads, trazabilidad, errores esperados, límites de integración y criterios para avanzar a producción.
+
+## Para quién es
+
+Fhirex está pensado para **clínicas**, **laboratorios**, **prestadores de salud**, **vendors HIS/EHR** y equipos que necesitan probar interoperabilidad sin comprometer sistemas críticos desde el inicio.
+
+Un piloto puede partir con algo tan concreto como representar una solicitud médica en `ServiceRequest`, asociarla a un paciente sintético, devolver resultados como `Observation`/`DiagnosticReport` y dejar evidencia auditable.
+
+## Qué no promete
+
+No es una certificación formal Core-CL ni una integración universal lista en una semana. Es una forma segura y honesta de partir chico: un caso de uso, datos sintéticos, contratos FHIR claros y revisión técnica antes de producción.
+
+## Servicios y características
+
+- **Diseño del caso de uso**: definición del flujo clínico inicial, actores, sistemas involucrados y evidencia esperada.
+- **Modelado FHIR R4**: representación de solicitudes, pacientes sintéticos, resultados, informes diagnósticos y eventos auditables.
+- **Validación técnica Core-CL**: revisión de contratos, payloads, códigos, trazabilidad y compatibilidad con sistemas HIS/EHR o LIS.
+- **Ambiente de piloto seguro**: pruebas con datos sintéticos para reducir riesgo regulatorio antes de discutir producción.
+- **Informe de hallazgos**: documentación de brechas, decisiones técnicas, riesgos y próximos pasos para el equipo TI.
+
+## Resultado esperado
+
+Al cierre del piloto, el equipo cuenta con evidencia concreta para decidir si el flujo clínico es interoperable, qué ajustes necesita y qué condiciones deben cumplirse antes de avanzar hacia una integración productiva.

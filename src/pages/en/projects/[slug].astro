@@ -9,7 +9,15 @@ export async function getStaticPaths() {
   const baseProjects = allProjects.filter((p) => p.data.lang === 'es');
 
   return baseProjects.map((esProject) => {
-    const enProject = allProjects.find((p) => p.id === `${esProject.id}.en`);
+    const enProject = allProjects.find((p) => {
+      const filePath = (p as { filePath?: string }).filePath;
+      return p.data.lang === 'en' && (
+        p.id === `${esProject.id}.en` ||
+        p.id === esProject.id ||
+        filePath?.endsWith(`${esProject.id}.en.mdx`)
+      );
+    });
+
     return {
       params: { slug: esProject.id },
       props: { project: enProject ?? esProject },
@@ -52,7 +60,7 @@ const description = project.data.descriptionEn ?? project.data.description;
         ))}
       </div>
 
-      <div class="flex gap-3 mt-8">
+      <div class="flex flex-wrap gap-3 mt-8">
         {project.data.githubUrl && (
           <a href={project.data.githubUrl} target="_blank" rel="noopener noreferrer" aria-label="GitHub (opens in new tab)"
             class="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-xl cursor-pointer"
