@@ -161,6 +161,11 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: ["nestjs", "nest"],
 	},
 	{
+		slug: "nextjs",
+		label: { es: "Next.js", en: "Next.js" },
+		aliases: ["nextjs", "next.js"],
+	},
+	{
 		slug: "typescript",
 		label: { es: "TypeScript", en: "TypeScript" },
 		aliases: ["typescript", "ts"],
@@ -191,14 +196,29 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: ["openai"],
 	},
 	{
+		slug: "gpt",
+		label: { es: "GPT", en: "GPT" },
+		aliases: ["gpt", "gpt-4", "gpt4"],
+	},
+	{
+		slug: "embeddings",
+		label: { es: "Embeddings", en: "Embeddings" },
+		aliases: ["embeddings", "embedding"],
+	},
+	{
+		slug: "railway",
+		label: { es: "Railway", en: "Railway" },
+		aliases: ["railway"],
+	},
+	{
 		slug: "spanish",
 		label: { es: "Español", en: "Spanish" },
-		aliases: ["spanish", "español", "espanol"],
+		aliases: ["spanish", "español", "espanol", "lenguajes", "languages"],
 	},
 	{
 		slug: "web-scraping",
 		label: { es: "Web Scraping", en: "Web Scraping" },
-		aliases: ["web scraping", "scraping"],
+		aliases: ["web scraping", "scraping", "scrapeo"],
 	},
 	{
 		slug: "b2b",
@@ -226,6 +246,11 @@ export const TAG_TAXONOMY: TagDef[] = [
 		slug: "testing",
 		label: { es: "Testing", en: "Testing" },
 		aliases: ["testing", "tests", "pruebas", "tdd"],
+	},
+	{
+		slug: "quality",
+		label: { es: "Calidad", en: "Quality" },
+		aliases: ["quality", "calidad", "qa"],
 	},
 	{
 		slug: "evaluation",
@@ -281,6 +306,21 @@ export const TAG_TAXONOMY: TagDef[] = [
 		slug: "development",
 		label: { es: "Desarrollo", en: "Development" },
 		aliases: ["development", "desarrollo"],
+	},
+	{
+		slug: "migration",
+		label: { es: "Migración", en: "Migration" },
+		aliases: ["migration", "migración", "migracion"],
+	},
+	{
+		slug: "benchmarks",
+		label: { es: "Benchmarks", en: "Benchmarks" },
+		aliases: ["benchmark", "benchmarks", "comparativa", "comparison"],
+	},
+	{
+		slug: "field-experience",
+		label: { es: "Experiencia de Campo", en: "Field Experience" },
+		aliases: ["experiencia de campo", "field experience"],
 	},
 
 	// ── Vision / OCR ──────────────────────────────────────────────────
@@ -366,6 +406,7 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: [
 			"clinical labs",
 			"clinical laboratories",
+			"laboratorios",
 			"laboratorios clinicos",
 			"laboratorios clínicos",
 		],
@@ -420,9 +461,19 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: ["story", "historia"],
 	},
 	{
+		slug: "bots",
+		label: { es: "Bots", en: "Bots" },
+		aliases: ["bots", "bot"],
+	},
+	{
 		slug: "patagonia",
 		label: { es: "Patagonia", en: "Patagonia" },
-		aliases: ["patagonia"],
+		aliases: ["patagonia", "puerto natales", "puertonatales"],
+	},
+	{
+		slug: "tourism",
+		label: { es: "Turismo", en: "Tourism" },
+		aliases: ["turismo", "tourism", "travel"],
 	},
 	{
 		slug: "chile",
@@ -440,6 +491,31 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: ["entrepreneurship", "emprendimiento"],
 	},
 	{
+		slug: "international-expansion",
+		label: { es: "Expansión Internacional", en: "International Expansion" },
+		aliases: [
+			"internationalexpansion",
+			"international expansion",
+			"expansión internacional",
+			"expansion internacional",
+		],
+	},
+	{
+		slug: "partnerships",
+		label: { es: "Alianzas", en: "Partnerships" },
+		aliases: ["partnerships", "partnership", "alianzas", "alianza"],
+	},
+	{
+		slug: "ecuador",
+		label: { es: "Ecuador", en: "Ecuador" },
+		aliases: ["ecuador"],
+	},
+	{
+		slug: "conectamed",
+		label: { es: "ConectaMed", en: "ConectaMed" },
+		aliases: ["conectamed", "conecta med"],
+	},
+	{
 		slug: "content-creation",
 		label: { es: "Creación de Contenido", en: "Content Creation" },
 		aliases: [
@@ -452,7 +528,7 @@ export const TAG_TAXONOMY: TagDef[] = [
 	{
 		slug: "engineering",
 		label: { es: "Ingeniería", en: "Engineering" },
-		aliases: ["engineering", "ingeniería", "ingenieria"],
+		aliases: ["engineering", "ingeniería", "ingenieria", "técnicos", "tecnicos", "technical"],
 	},
 	{
 		slug: "diagnostics",

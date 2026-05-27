@@ -10,7 +10,14 @@ const lang = 'en' as const;
 const t = useTranslations(lang);
 const base = basePath(lang);
 
-const projects = (await getCollection('projects')).filter((p) => p.data.lang === 'es');
+const projectOrder = ['radar', 'fhirex', 'examya', 'openclaw', 'estepa-patagonica'];
+const projectRank = (id: string) => {
+  const rank = projectOrder.indexOf(id);
+  return rank === -1 ? projectOrder.length : rank;
+};
+const projects = (await getCollection('projects'))
+  .filter((p) => p.data.lang === 'es')
+  .sort((a, b) => projectRank(a.id) - projectRank(b.id));
 const allPosts = await getCollection('blog');
 const latestPosts = allPosts
   .filter((p) => !p.data.draft && p.data.lang === lang)
