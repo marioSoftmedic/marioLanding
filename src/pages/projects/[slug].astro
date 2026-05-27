@@ -46,7 +46,10 @@ const base = basePath(lang);
         ))}
       </div>
 
-      <div class="flex gap-3 mt-8">
+      <div class="flex flex-wrap gap-3 mt-8">
+        <a href={`/en/projects/${project.id}`} class="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-xl cursor-pointer">
+          EN
+        </a>
         {project.data.githubUrl && (
           <a href={project.data.githubUrl} target="_blank" rel="noopener noreferrer" aria-label="GitHub (se abre en nueva pestaña)"
             class="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-xl cursor-pointer"

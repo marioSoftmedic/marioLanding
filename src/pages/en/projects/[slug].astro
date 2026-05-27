@@ -26,6 +26,7 @@ const base = basePath('en');
 
 // Use English description if available
 const description = project.data.descriptionEn ?? project.data.description;
+const esSlug = project.id.replace(/\.en$/, '');
 ---
 
 <Base title={`${project.data.title} — Mario Inostroza`} description={description}>
@@ -52,7 +53,10 @@ const description = project.data.descriptionEn ?? project.data.description;
         ))}
       </div>
 
-      <div class="flex gap-3 mt-8">
+      <div class="flex flex-wrap gap-3 mt-8">
+        <a href={`/projects/${esSlug}`} class="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-xl cursor-pointer">
+          ES
+        </a>
         {project.data.githubUrl && (
           <a href={project.data.githubUrl} target="_blank" rel="noopener noreferrer" aria-label="GitHub (opens in new tab)"
             class="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-xl cursor-pointer"
