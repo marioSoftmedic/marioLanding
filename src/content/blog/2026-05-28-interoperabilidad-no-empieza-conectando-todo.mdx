@@ -1,0 +1,209 @@
+---
+title: "La interoperabilidad no empieza conectando todo"
+description: "Por qué los pilotos FHIR/Core-CL deben partir con un flujo acotado, datos sintéticos y evidencia antes de tocar producción."
+date: 2026-05-28
+lang: "es"
+image: "/img/blog/interoperabilidad-no-empieza-conectando-todo.png"
+tags: [examya, interoperability, fhir, digital-health, architecture, chile]
+series: interoperabilidad-chile
+seriesOrder: 11
+related:
+  - "2026-05-25-fhirex-pilotos-fhir-sin-tocar-produccion"
+  - "2026-05-23-laboratorio-clinico-como-api-salud-digital"
+draft: false
+---
+
+La peor forma de partir con interoperabilidad clínica es intentar conectar todo el hospital.
+
+Suena ambicioso. Suena completo. Suena como lo que debería hacerse.
+
+Pero en la práctica, muchas veces es la receta perfecta para que el proyecto quede atrapado entre sistemas legacy, datos reales, contratos ambiguos, equipos TI saturados y reuniones donde nadie quiere asumir el primer riesgo.
+
+Eso fue lo que confirmé revisando conversaciones recientes del ecosistema chileno de salud digital: todos hablan de interoperabilidad, pero los actores que tienen que implementarla necesitan algo mucho más concreto que una promesa grande.
+
+Necesitan un primer caso seguro.
+
+## Lo que nadie cuenta de partir con FHIR
+
+FHIR no es el problema más difícil.
+
+El problema difícil es decidir qué flujo clínico vale la pena probar primero, con qué datos, bajo qué permisos, con qué evidencia y sin romper producción.
+
+Una clínica puede querer interoperar con un laboratorio.
+
+Un laboratorio puede querer devolver resultados estructurados.
+
+Un equipo TI puede querer validar si su HIS o EHR conversa bien con un servicio externo.
+
+Dirección médica puede pedir algo mucho más simple: entender si el flujo tiene sentido clínico y si protege al paciente.
+
+Todos están hablando de la misma palabra —interoperabilidad—, pero no están preguntando lo mismo.
+
+Ahí aparece el primer error: tratar de resolver todo con una integración gigante.
+
+En salud, conectar todo desde el día uno no siempre reduce riesgo. Muchas veces lo aumenta.
+
+## Los datos reales detrás del problema
+
+En Chile ya existe una conversación regulatoria fuerte sobre interoperabilidad.
+
+La Ley 21.668 instaló la obligación de avanzar hacia fichas clínicas interoperables. El ecosistema técnico viene trabajando hace años con HL7, FHIR, Core-CL, CENS, MINSAL y comunidades como HL7 Chile.
+
+Pero entre la norma, el estándar y la operación diaria hay una distancia grande.
+
+Esa distancia se ve en cosas muy concretas:
+
+- exámenes que se repiten porque el resultado anterior no llegó a tiempo;
+- derivaciones que pierden contexto entre atención primaria y hospital;
+- laboratorios que siguen entregando PDFs cuando el sistema necesita datos;
+- equipos TI que entienden el valor, pero no quieren tocar producción sin evidencia;
+- médicos que reciben información incompleta o demasiado tarde.
+
+En una conversación de SimpleSalud, el Dr. Pedro García lo planteaba desde un dolor muy reconocible: la información existe, pero no siempre llega al nivel de atención donde se necesita. Y cuando no llega, el sistema repite, espera y encarece.
+
+Eso no se arregla con una diapositiva de arquitectura.
+
+Se arregla probando flujos reales, pero en condiciones controladas.
+
+## Lo que construimos con Fhirex
+
+Por eso Fhirex by Examya parte desde una idea bastante simple:
+
+> No necesitas interoperar todo para aprender. Necesitas validar un flujo clínico concreto.
+
+El enfoque es hacer pilotos FHIR/Core-CL con datos sintéticos antes de tocar producción.
+
+Un piloto inicial puede ser tan acotado como este flujo:
+
+```text
+ServiceRequest → Observation → DiagnosticReport
+```
+
+Es decir:
+
+1. representar una solicitud médica como `ServiceRequest`;
+2. asociarla a un paciente sintético con `Patient`;
+3. registrar resultados como `Observation`;
+4. agruparlos en un `DiagnosticReport`;
+5. dejar trazabilidad con `AuditEvent` y `Provenance`.
+
+Eso no resuelve toda la interoperabilidad nacional.
+
+Pero sí permite responder preguntas que importan:
+
+- ¿El contrato FHIR representa bien el flujo clínico?
+- ¿Qué campos faltan?
+- ¿Qué códigos se deben mapear?
+- ¿Qué errores aparecen?
+- ¿Qué evidencia necesita TI?
+- ¿Qué puede revisar dirección médica?
+- ¿Qué tan lejos estamos de una integración productiva?
+
+Esa evidencia vale más que una promesa general de “conectar sistemas”.
+
+## El gotcha: datos sintéticos no son una formalidad
+
+A veces se habla de datos sintéticos como si fueran un detalle de seguridad.
+
+No lo son.
+
+Son una herramienta de diseño.
+
+Cuando partes con datos sintéticos puedes probar estructura, contratos, validaciones, errores y flujos sin arrastrar desde el día uno todos los riesgos de producción: datos sensibles, permisos, bases reales, continuidad operacional, auditoría legal y exposición innecesaria.
+
+Eso cambia la conversación con TI.
+
+En vez de pedir acceso temprano a sistemas críticos, puedes decir:
+
+```text
+Probemos primero si el flujo tiene sentido.
+Probemos si el contrato FHIR conversa.
+Probemos si la evidencia técnica alcanza.
+Después hablamos de producción.
+```
+
+Esa diferencia baja la fricción.
+
+Y en salud, bajar fricción no es un detalle. Es lo que permite que los proyectos salgan de la presentación y entren al backlog real.
+
+## Lo que aprendí mirando la Connectathon
+
+La Connectathon es una señal positiva para Chile.
+
+Muestra que existe comunidad, energía técnica y ganas de empujar estándares reales. Pero también muestra algo que no hay que esconder: implementar transacciones clínicas interoperables es exigente.
+
+Los equipos se estresan. Los contratos se interpretan distinto. Los sistemas no siempre responden como uno espera. Lo que en una guía se ve limpio, en implementación aparece lleno de bordes.
+
+Eso no es una crítica a FHIR.
+
+Es una razón para partir mejor.
+
+Un piloto acotado permite que el equipo aprenda sin quedar atrapado en una integración demasiado grande para fallar rápido.
+
+Si el primer objetivo es “conectar todo”, cualquier problema parece fracaso.
+
+Si el primer objetivo es “validar este flujo con evidencia”, cada problema se convierte en aprendizaje técnico.
+
+## Por qué esto importa para laboratorios
+
+Los laboratorios clínicos son una entrada natural para interoperabilidad.
+
+Tienen solicitudes, muestras, resultados, informes, códigos, tiempos, trazabilidad y relación con múltiples prestadores.
+
+Además, ya viven un punto de tensión muy claro: el PDF sigue siendo útil para humanos, pero insuficiente para sistemas.
+
+Un médico puede leer un PDF.
+
+Un sistema necesita entender que un resultado específico corresponde a una observación, que esa observación viene de una solicitud, que pertenece a un paciente, que fue emitida por un laboratorio y que puede auditarse.
+
+Ahí recursos como `ServiceRequest`, `Observation` y `DiagnosticReport` dejan de ser conceptos técnicos y se vuelven una forma de ordenar el ciclo clínico.
+
+No por amor al estándar.
+
+Por continuidad de atención.
+
+## Zoom out: interoperabilidad como reducción de riesgo
+
+La conversación pública suele presentar interoperabilidad como modernización.
+
+Yo la veo cada vez más como reducción de riesgo.
+
+Riesgo de repetir exámenes.
+
+Riesgo de tomar decisiones con información incompleta.
+
+Riesgo de que una derivación pierda contexto.
+
+Riesgo de que un equipo TI implemente tarde, apurado y sin evidencia.
+
+Riesgo de que la norma llegue antes que el aprendizaje interno.
+
+Por eso la estrategia no debería ser esperar a que todo esté cerrado para recién moverse.
+
+Tampoco debería ser conectar producción a la primera.
+
+El punto medio razonable es hacer pilotos seguros: casos acotados, datos sintéticos, evidencia técnica, revisión clínica y aprendizaje antes de comprometer sistemas críticos.
+
+## Lo que viene
+
+La página de Fhirex sobre Ley de Interoperabilidad y FHIR/Core-CL ya está publicada:
+
+👉 [Ley de Interoperabilidad en Salud en Chile: cómo prepararse con FHIR/Core-CL](https://fhirex.examya.cl/ley-interoperabilidad-salud-chile)
+
+El siguiente paso es usarla como punto de apoyo para conversaciones más concretas con actores del ecosistema: HL7 Chile, laboratorios, equipos regionales de inteligencia sanitaria y comunidades vinculadas a CENS/MINSAL.
+
+No para vender humo.
+
+Para contrastar dolores reales.
+
+Si una institución quiere prepararse para interoperabilidad, mi recomendación es partir con una pregunta más chica que “¿cómo conectamos todo?”
+
+La pregunta correcta es:
+
+> ¿Qué flujo clínico podemos validar primero, con datos sintéticos, evidencia técnica y riesgo controlado?
+
+Esa pregunta sí se puede responder esta semana.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
