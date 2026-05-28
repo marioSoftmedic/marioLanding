@@ -23,3 +23,8 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 .vercel
+
+# local agent/runtime artifacts
+.atl/
+.pi/
+.pi-lens/
