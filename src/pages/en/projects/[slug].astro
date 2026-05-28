@@ -34,6 +34,8 @@ const base = basePath('en');
 
 // Use English description if available
 const description = project.data.descriptionEn ?? project.data.description;
+const previewUrl = project.data.previewUrl;
+const previewHost = previewUrl?.startsWith('http') ? new URL(previewUrl).hostname : previewUrl ?? '';
 ---
 
 <Base title={`${project.data.title} — Mario Inostroza`} description={description}>
@@ -83,5 +85,38 @@ const description = project.data.descriptionEn ?? project.data.description;
     <div class="prose max-w-none">
       <Content />
     </div>
+
+    {previewUrl && (
+      <section class="mt-12" aria-labelledby="project-preview-title">
+        <h2 id="project-preview-title" class="text-2xl font-bold tracking-tight mb-5" style="color: var(--text-primary);">Live preview</h2>
+        <div class="overflow-hidden rounded-2xl" style="border: 1px solid var(--border-subtle); background: var(--bg-elevated);">
+          <div class="flex items-center gap-2 px-4 py-3" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+            <span class="h-2.5 w-2.5 rounded-full" style="background: var(--accent-orange);"></span>
+            <span class="h-2.5 w-2.5 rounded-full" style="background: var(--accent-green);"></span>
+            <span class="h-2.5 w-2.5 rounded-full" style="background: var(--accent-cyan);"></span>
+            <div class="ml-2 flex-1 truncate rounded-lg px-3 py-1.5 text-xs" style="background: var(--bg-deep); color: var(--text-muted); font-family: var(--font-mono);">
+              {previewHost}
+            </div>
+          </div>
+          {project.data.previewFallbackImage ? (
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer" class="group block relative" aria-label={`Open ${project.data.title} in a new tab`}>
+              <img src={project.data.previewFallbackImage} alt={`Preview of ${project.data.title}`} class="block h-auto w-full transition-transform duration-500 group-hover:scale-[1.01]" loading="lazy" decoding="async" />
+              <span class="absolute bottom-4 right-4 rounded-xl px-4 py-2 text-sm font-medium shadow-lg" style="background: var(--bg-deep); color: var(--text-primary); border: 1px solid var(--border-default);">Open site</span>
+            </a>
+          ) : (
+            <iframe
+              src={previewUrl}
+              width="100%"
+              height="560"
+              class="block w-full"
+              style="border: none; background: var(--bg-deep);"
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              title={`Preview of ${project.data.title}`}
+            ></iframe>
+          )}
+        </div>
+      </section>
+    )}
   </article>
 </Base>
