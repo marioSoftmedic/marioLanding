@@ -1,0 +1,208 @@
+---
+title: "Ley 21.719 en software clínico: consentimiento y ARCO-P real"
+description: "Cómo convertí privacidad en arquitectura para Examya: consent ledger, ARCO-P, reportes y autoservicio antes de diciembre de 2026."
+date: 2026-05-28
+lang: "es"
+image: "/img/blog/ley-21719-software-clinico-consentimiento-arco-p.png"
+tags: [examya, digital-health, compliance, healthcare, architecture, chile]
+series: interoperabilidad-chile
+seriesOrder: 10
+draft: false
+---
+
+Un checkbox de consentimiento no sirve si seis meses después no puedes demostrar qué aceptó el paciente.
+
+Tampoco sirve si no sabes qué versión de la política aceptó, desde qué canal, con qué propósito, cuándo la revocó o cómo va a ejercer sus derechos sobre esos datos.
+
+Ese fue el punto donde la Ley 21.719 dejó de ser “tema legal” para Examya y se convirtió en arquitectura de producto.
+
+La privacidad no se resuelve con un PDF.
+
+Se resuelve con sistemas que dejan evidencia.
+
+## Lo que nadie cuenta de la privacidad en salud digital
+
+En software clínico, los datos no son cualquier dato.
+
+Una orden médica, un síntoma, un resultado de laboratorio o una orientación diagnóstica entran en una categoría mucho más exigente: datos sensibles de salud.
+
+La Ley 21.719, publicada el 13 de diciembre de 2024, reforma la antigua Ley 19.628 y empuja a Chile hacia un estándar mucho más parecido al GDPR europeo.
+
+Su vigencia plena llega el 1 de diciembre de 2026.
+
+Eso puede sonar lejano, pero para una HealthTech no lo es.
+
+Porque adaptar privacidad no es cambiar un texto en la landing. Es revisar base de datos, API, permisos, UI, auditoría, reportes, flujos de revocación y respuesta ante solicitudes de titulares.
+
+En Examya, el problema era concreto:
+
+> Si un paciente usa WhatsApp para procesar una orden médica, ¿cómo demostramos que autorizó ese tratamiento de datos de forma libre, informada, específica, inequívoca y verificable?
+
+La palabra importante ahí es **verificable**.
+
+## Los datos reales que cambiaron la prioridad
+
+La investigación que guardé en el vault dejó cuatro puntos imposibles de ignorar:
+
+1. La Ley 21.719 fue publicada el **13 de diciembre de 2024**.
+2. Su entrada en vigencia plena es el **1 de diciembre de 2026**.
+3. Los datos de salud son **datos sensibles**.
+4. Las infracciones gravísimas pueden llegar hasta **10.000 UTM**.
+
+También aparece un cambio operativo fuerte: los derechos ARCO-P.
+
+Es decir, una persona puede pedir:
+
+- **Acceso**: saber qué datos tenemos.
+- **Rectificación**: corregir información.
+- **Cancelación**: solicitar supresión cuando corresponda.
+- **Oposición**: oponerse a ciertos tratamientos.
+- **Portabilidad**: recibir sus datos en formato estructurado.
+
+Esto no se implementa con un email genérico escondido en una política de privacidad.
+
+Al menos no si quieres construir infraestructura clínica seria.
+
+## Lo que construimos en Examya
+
+El trabajo quedó dividido en una cadena de cuatro PRs para no mezclar migraciones, backend, reportes y UI en un solo bloque imposible de revisar.
+
+La issue fue la **#479** y terminó cerrada con cuatro piezas:
+
+- **#585**: consent ledger.
+- **#586**: lifecycle ARCO-P en backend, con migraciones de producción.
+- **#587**: reportes de data governance.
+- **#588**: UI de privacidad y autoservicio ARCO-P para pacientes.
+
+La primera pieza fue el **consent ledger**.
+
+No basta guardar `accepted: true`.
+
+Necesitábamos guardar evidencia más útil:
+
+- versión o hash determinístico de la política aceptada;
+- metadata de aceptación;
+- propósito del tratamiento;
+- canal;
+- timestamps;
+- revocación;
+- gate activo para bloquear flujos si falta consentimiento vigente;
+- índices únicos parciales para evitar consentimientos activos duplicados bajo concurrencia.
+
+Ese último detalle parece menor, pero no lo es.
+
+Si dos requests llegan casi al mismo tiempo y ambas crean un consentimiento activo, tu sistema puede quedar legalmente ambiguo. En privacidad, la ambigüedad es deuda técnica.
+
+Después vino el backend ARCO-P.
+
+Ahí el objetivo fue permitir que el paciente pudiera iniciar solicitudes de derechos de titular sin convertir esto en una cadena manual de correos sueltos.
+
+Luego agregamos reportes de data governance:
+
+- conteos del consent ledger;
+- conteos de solicitudes ARCO-P;
+- solicitudes vencidas;
+- sin exponer PII de pacientes en el reporte.
+
+Finalmente vino la parte visible: una página de privacidad para pacientes dentro de la app.
+
+El componente `DataSubjectRequestsPanel` permite cargar solicitudes existentes y crear nuevas solicitudes mediante endpoints protegidos.
+
+También incluye una advertencia importante: no pegar registros clínicos en el formulario.
+
+Ese detalle es bien de producto real.
+
+Cuando diseñas una UI de privacidad, también tienes que evitar que el propio formulario se convierta en una nueva fuente de datos sensibles innecesarios.
+
+## El gotcha: portabilidad no significaba FHIR todavía
+
+La tentación obvia era decir:
+
+“Si hablamos de portabilidad en salud, hagámoslo en FHIR desde el primer día.”
+
+Pero decidimos no hacerlo en esta etapa.
+
+Para este scope, la portabilidad quedó **JSON-first y non-FHIR**.
+
+¿Por qué?
+
+Porque la issue no era construir interoperabilidad clínica completa. Era cerrar una base técnica de gobernanza Ley 21.719: consentimiento, ARCO-P, reportabilidad y autoservicio.
+
+FHIR sigue siendo el camino natural para interoperabilidad, pero meterlo dentro de esta cadena habría aumentado el riesgo y el tamaño del cambio.
+
+Esta fue la decisión correcta: primero gobernanza verificable; después adaptadores clínicos.
+
+Hay una diferencia enorme entre diseñar para FHIR y meter FHIR en cada problema.
+
+## El segundo gotcha: la UI tenía que respetar roles
+
+Otro detalle apareció al implementar el autoservicio.
+
+Los endpoints ARCO-P del backend estaban protegidos para `Role.PATIENT`.
+
+Eso significa que la página nueva en `/settings/privacy` también tenía que bloquear roles que no fueran paciente.
+
+Si no lo hacía, un usuario de otro rol podía llegar a una pantalla que inevitablemente terminaba en errores 403.
+
+No era un bug de seguridad grave, pero sí una mala experiencia y una señal de arquitectura incompleta.
+
+La privacidad no vive solo en el backend.
+
+También vive en cómo explicas, habilitas y restringes la acción desde la interfaz.
+
+## Por qué esto importa más allá de Examya
+
+La salud digital chilena está entrando en una etapa distinta.
+
+Durante años, muchos sistemas pudieron operar con políticas de privacidad genéricas, correos de contacto y consentimiento implícito o poco trazable.
+
+Ese mundo se está acabando.
+
+Con Ley 21.719, interoperabilidad, historia clínica digital y más automatización clínica, el estándar sube.
+
+Y cuando metes IA en el medio, sube todavía más.
+
+No basta con decir “tenemos human-in-the-loop”.
+
+No basta con decir “los datos están seguros”.
+
+Hay que poder demostrar:
+
+- qué dato se trató;
+- con qué finalidad;
+- bajo qué consentimiento;
+- qué versión de política estaba vigente;
+- quién puede acceder;
+- qué puede pedir el paciente;
+- cómo se responde;
+- qué evidencia queda.
+
+Eso es arquitectura.
+
+No branding.
+
+## Lo que viene
+
+La base quedó implementada, pero no considero esto “cumplimiento legal completo”.
+
+Y esa frase es importante.
+
+No soy abogado y este post no es asesoría legal. Lo que sí puedo decir como builder es que ya tenemos una base técnica mucho más seria para conversar con abogados, laboratorios, pacientes y partners.
+
+Los siguientes pasos naturales son:
+
+- profundizar DPIA/EIPD para flujos de IA médica;
+- mejorar reporting interno de cumplimiento;
+- conectar portabilidad con formatos clínicos cuando el caso lo justifique;
+- mantener FHIR como adaptador posterior, no como requisito prematuro;
+- probar estos flujos con usuarios reales antes de que la ley esté encima.
+
+Mi aprendizaje principal fue simple:
+
+> En salud digital, privacidad no puede quedar como documento externo al producto. Tiene que estar modelada en la base de datos, protegida en la API, explicada en la UI y trazada en los reportes.
+
+Si no puedes demostrarlo, probablemente no lo tienes.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

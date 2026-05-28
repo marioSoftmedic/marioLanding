@@ -1,0 +1,209 @@
+---
+title: "Law 21.719 in clinical software: consent and real ARCO-P"
+description: "How I turned privacy into architecture for Examya: consent ledger, ARCO-P, reporting and self-service before December 2026."
+date: 2026-05-28
+lang: "en"
+image: "/img/blog/ley-21719-software-clinico-consentimiento-arco-p.png"
+tags: [examya, digital-health, compliance, healthcare, architecture, chile]
+series: interoperabilidad-chile
+seriesOrder: 10
+draft: false
+canonicalSlug: "2026-05-28-ley-21719-software-clinico-consentimiento-arco-p"
+---
+
+A consent checkbox is useless if six months later you cannot prove what the patient accepted.
+
+It is also useless if you do not know which policy version they accepted, from which channel, for what purpose, when they revoked it, or how they will exercise their rights over that data.
+
+That was the point where Chilean Law 21.719 stopped being a “legal topic” for Examya and became product architecture.
+
+Privacy is not solved with a PDF.
+
+It is solved with systems that leave evidence.
+
+## What nobody tells you about privacy in digital health
+
+In clinical software, data is not just data.
+
+A medical order, a symptom, a lab result or a diagnostic orientation belongs to a much stricter category: sensitive health data.
+
+Law 21.719, published on December 13, 2024, reforms Chile’s old Law 19.628 and moves the country toward a standard much closer to the European GDPR.
+
+It becomes fully enforceable on December 1, 2026.
+
+That may sound far away, but for a HealthTech company it is not.
+
+Because adapting privacy is not changing one sentence on a landing page. It means reviewing database models, APIs, permissions, UI, auditability, reports, revocation flows and how you respond to data subject requests.
+
+In Examya, the problem was concrete:
+
+> If a patient uses WhatsApp to process a medical order, how do we prove that they authorized that data processing in a free, informed, specific, unequivocal and verifiable way?
+
+The important word there is **verifiable**.
+
+## The real data that changed the priority
+
+The research I saved in the vault left four points that were impossible to ignore:
+
+1. Law 21.719 was published on **December 13, 2024**.
+2. It becomes fully enforceable on **December 1, 2026**.
+3. Health data is **sensitive data**.
+4. Very serious violations can reach up to **10,000 UTM**.
+
+It also introduces an operational shift: ARCO-P rights.
+
+A person can request:
+
+- **Access**: know what data we have.
+- **Rectification**: correct information.
+- **Cancellation**: request deletion when applicable.
+- **Opposition**: object to certain types of processing.
+- **Portability**: receive their data in a structured format.
+
+This is not implemented with a generic email hidden inside a privacy policy.
+
+At least not if you want to build serious clinical infrastructure.
+
+## What we built in Examya
+
+We split the work into a chain of four PRs so migrations, backend, reporting and UI would not end up inside one impossible-to-review change.
+
+The GitHub issue was **#479** and it ended with four pieces:
+
+- **#585**: consent ledger.
+- **#586**: ARCO-P backend lifecycle, with production migrations.
+- **#587**: data governance reporting.
+- **#588**: patient privacy UI and ARCO-P self-service.
+
+The first piece was the **consent ledger**.
+
+Saving `accepted: true` is not enough.
+
+We needed more useful evidence:
+
+- deterministic hash or version of the accepted policy;
+- acceptance metadata;
+- processing purpose;
+- channel;
+- timestamps;
+- revocation;
+- active gate to block flows when current consent is missing;
+- partial unique indexes to prevent duplicate active consents under concurrency.
+
+That last detail looks small, but it is not.
+
+If two requests arrive almost at the same time and both create an active consent, the system can become legally ambiguous. In privacy, ambiguity is technical debt.
+
+Then came the ARCO-P backend.
+
+The goal was to let the patient initiate data subject requests without turning the process into a manual chain of loose emails.
+
+After that, we added data governance reports:
+
+- consent ledger counts;
+- ARCO-P request counts;
+- overdue requests;
+- without exposing patient PII in the report.
+
+Finally came the visible part: a patient privacy page inside the app.
+
+The `DataSubjectRequestsPanel` component loads existing requests and creates new ones through protected endpoints.
+
+It also includes an important warning: do not paste clinical records into the form.
+
+That is a real product detail.
+
+When you design a privacy UI, you also have to avoid turning the form itself into a new unnecessary source of sensitive data.
+
+## The gotcha: portability did not mean FHIR yet
+
+The obvious temptation was to say:
+
+“If we are talking about health data portability, let’s do it in FHIR from day one.”
+
+But we decided not to do that in this stage.
+
+For this scope, portability stayed **JSON-first and non-FHIR**.
+
+Why?
+
+Because the issue was not about building full clinical interoperability. It was about closing a technical governance foundation for Law 21.719: consent, ARCO-P, reporting and self-service.
+
+FHIR remains the natural path for interoperability, but adding it into this chain would have increased the risk and size of the change.
+
+This was the right decision: first verifiable governance; then clinical adapters.
+
+There is a huge difference between designing for FHIR and putting FHIR inside every problem.
+
+## The second gotcha: the UI had to respect roles
+
+Another detail appeared while implementing self-service.
+
+The backend ARCO-P endpoints were protected for `Role.PATIENT`.
+
+That means the new `/settings/privacy` page also had to block roles that were not patients.
+
+Otherwise, a user with another role could reach a screen that inevitably ended in 403 errors.
+
+It was not a major security bug, but it was a bad experience and a sign of incomplete architecture.
+
+Privacy does not live only in the backend.
+
+It also lives in how you explain, enable and restrict the action from the interface.
+
+## Why this matters beyond Examya
+
+Chilean digital health is entering a different stage.
+
+For years, many systems could operate with generic privacy policies, contact emails and implicit or weakly traceable consent.
+
+That world is ending.
+
+With Law 21.719, interoperability, electronic health records and more clinical automation, the standard goes up.
+
+And when you put AI in the middle, it goes up even more.
+
+It is not enough to say “we have human-in-the-loop.”
+
+It is not enough to say “the data is secure.”
+
+You need to prove:
+
+- which data was processed;
+- for what purpose;
+- under which consent;
+- which policy version was active;
+- who can access it;
+- what the patient can request;
+- how the request is answered;
+- what evidence remains.
+
+That is architecture.
+
+Not branding.
+
+## What comes next
+
+The foundation is implemented, but I do not consider this “complete legal compliance.”
+
+That sentence matters.
+
+I am not a lawyer, and this post is not legal advice. What I can say as a builder is that we now have a much stronger technical base to talk with lawyers, labs, patients and partners.
+
+The natural next steps are:
+
+- deepen DPIA/EIPD work for medical AI flows;
+- improve internal compliance reporting;
+- connect portability with clinical formats when the use case justifies it;
+- keep FHIR as a later adapter, not as a premature requirement;
+- test these flows with real users before the law is on top of us.
+
+My main lesson was simple:
+
+> In digital health, privacy cannot remain as a document outside the product. It has to be modeled in the database, protected in the API, explained in the UI and traced in the reports.
+
+If you cannot prove it, you probably do not have it.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
