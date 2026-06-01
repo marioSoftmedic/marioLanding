@@ -1,0 +1,227 @@
+---
+title: "El bug invisible de mi segundo cerebro: cuando el VPS escribía en un vault que nadie leía"
+date: 2026-05-26
+slug: "2026-05-26-vps-vault-headless-couchdb-livesync-git-sync"
+lang: "es"
+description: "Cotocha editaba el vault en el VPS, pero nada llegaba a mi Mac. La lección: sincronizar agentes requiere contratos verificables, no suposiciones."
+tags: [obsidian, sync, vps, automation, agents]
+image: "/img/blog/2026-05-26-vps-vault-headless-couchdb-livesync-git-sync.png"
+draft: false
+status: published
+series: "cerebro-digital"
+seriesOrder: 6
+sources:
+  - _PROTOCOL_AGENTS.md
+  - 05_Blog/COTOCHA-SETUP.md
+  - 03_OpenClaw/Wiki/architecture/bridge-bidireccional-engram.md
+  - 03_OpenClaw/Wiki/manual/engram-vps-setup.md
+---
+
+## El bug que parecía sincronización
+
+Durante la mañana estuvimos corrigiendo a Cotocha, mi agente que corre en un VPS y genera contenido para el blog. El problema original era claro: estaba creando artículos duplicados. OpenAI deprecations, embeddings, WhatsApp Discovery, Claude vs GPT-4. Variaciones del mismo tema con distinto slug.
+
+La solución parecía técnica pero acotada. Agregar un guard anti-duplicados. Escanear publicados, borradores, archivo y el repo del sitio. Devolver tres estados: `NEW`, `REVIEW`, `DUPLICATE`.
+
+Pero mientras arreglábamos eso apareció un bug más profundo.
+
+Cotocha decía que había actualizado la documentación del vault. Yo abrí mi Obsidian local y no veía ningún cambio.
+
+Mismo archivo. Mismo vault, supuestamente. Dos realidades distintas.
+
+## La suposición equivocada
+
+La explicación inicial sonaba razonable: "el vault se sincroniza por CouchDB LiveSync".
+
+Tengo CouchDB corriendo. Tengo Obsidian LiveSync en el Mac. Tengo un VPS con una copia del vault. Si Cotocha escribe en `/root/obsidian-vault/`, parecía lógico asumir que esos cambios terminarían llegando a mi Obsidian local.
+
+Pero esa frase escondía una trampa.
+
+**CouchDB LiveSync no sincroniza carpetas. Sincroniza clientes de Obsidian que tienen el plugin corriendo.**
+
+El plugin vive dentro de Obsidian. Mi Mac sí tiene Obsidian. El VPS no. El VPS es headless. No hay cliente Obsidian leyendo `/root/obsidian-vault/` y empujando cambios a CouchDB.
+
+Entonces la copia del VPS no era un participante de LiveSync. Era solo una carpeta en disco.
+
+Y una carpeta en disco no es un sistema distribuido.
+
+## Lo que realmente estaba pasando
+
+La arquitectura real era esta:
+
+```text
+Mac Obsidian  <--LiveSync-->  CouchDB
+
+VPS /root/obsidian-vault  <--Git-->  GitHub obsidian-vault
+Mac Obsidian local        <--Git-->  GitHub obsidian-vault
+```
+
+CouchDB sincronizaba mi Obsidian local. Git sincronizaba la copia headless del VPS.
+
+El contrato operativo del VPS siempre fue Git:
+
+```bash
+cd /root/obsidian-vault
+git pull
+# Cotocha escribe
+git add .
+git commit -m "..."
+git push
+```
+
+Pero en algún momento `.git` quedó renombrado como `.git-disabled`.
+
+Eso cambió todo. Cotocha seguía escribiendo en `/root/obsidian-vault/`, pero ya no había mecanismo activo para sacar esos cambios del VPS.
+
+No fallaba la escritura. Fallaba la sincronización.
+
+Y ese es el peor tipo de bug: el sistema parece funcionar porque el archivo existe donde el agente lo dejó. Solo que nadie más lo ve.
+
+## Por qué esto importa para agentes
+
+Cuando un humano edita una nota local y no sincroniza, normalmente se da cuenta. Obsidian muestra estado, Git muestra cambios, el plugin avisa conflictos.
+
+Un agente no tiene esa intuición.
+
+Si le das una ruta válida y permisos de escritura, va a escribir. Si después no le exiges una verificación externa, va a asumir que terminó.
+
+Ese fue el error de diseño. Confundimos tres cosas distintas:
+
+1. **Write success**: el archivo se guardó en disco.
+2. **Sync success**: el cambio llegó al sistema compartido.
+3. **User-visible success**: Mario lo puede ver en su Obsidian local.
+
+Para un agente de producción, esas tres etapas deben ser verificables por separado.
+
+No basta con `write file successfully`.
+
+## La pista que lo reveló
+
+Le pedí a Cotocha el diff de los archivos que supuestamente había actualizado. Me pasó el resumen. Sonaba correcto.
+
+Pero yo seguía viendo la versión antigua localmente.
+
+Entonces pedimos evidencia de más bajo nivel:
+
+```bash
+grep -n "CouchDB\|git-disabled\|git pull\|git push" \
+  /root/obsidian-vault/Proyectos/_PROTOCOL_AGENTS.md \
+  /root/obsidian-vault/Proyectos/05_Blog/COTOCHA-SETUP.md
+```
+
+En el VPS, los archivos sí estaban modificados.
+
+Después vino el dato decisivo:
+
+```text
+.git-disabled existe
+.git activo no existe
+CouchDB requiere auth
+obsidian-livesync no está instalado en el vault del VPS
+```
+
+Ahí cayó la ficha. El VPS no estaba sincronizando por LiveSync. Y Git estaba desactivado.
+
+Cotocha estaba escribiendo en una isla.
+
+## La corrección
+
+La primera reacción pudo haber sido documentar que el VPS usa CouchDB. Pero eso habría sido peor: convertir una suposición falsa en protocolo oficial.
+
+La decisión correcta fue volver al contrato real:
+
+```text
+VPS headless = Git
+Obsidian Mac = Git + LiveSync
+CouchDB = cliente Obsidian, no filesystem sync headless
+```
+
+Reactivamos Git en el VPS:
+
+```bash
+cd /root/obsidian-vault
+mv .git-disabled .git
+```
+
+Antes de pushear, verificamos:
+
+```bash
+git status --short
+git remote -v
+git branch --show-current
+git log -1 --oneline
+```
+
+Y apareció otra trampa.
+
+El remote de fetch apuntaba a `obsidian-vault`, pero el remote de push apuntaba a `marioLanding`.
+
+```text
+origin  https://github.com/marioSoftmedic/obsidian-vault.git (fetch)
+origin  https://github.com/marioSoftmedic/marioLanding.git (push)
+```
+
+Si hubiéramos hecho `git push` sin mirar, habríamos intentado empujar el vault al repo equivocado.
+
+Ese fue el segundo recordatorio del día: en automatización, un `git remote -v` vale más que mil explicaciones.
+
+## El nuevo contrato
+
+El protocolo quedó más estricto:
+
+```text
+Toda escritura al vault por Cotocha debe terminar en git push.
+Si git push falla, abortar y notificar.
+Nunca asumir que escribir en /root/obsidian-vault llega a Mario sin git push.
+CouchDB LiveSync no sincroniza la copia headless del VPS.
+```
+
+También actualizamos la documentación para que ningún agente vuelva a inferir lo contrario.
+
+La frase importante es esta:
+
+> En sistemas con agentes, la sincronización no puede ser implícita. Tiene que ser un contrato verificable.
+
+Ese contrato incluye comandos, evidencias y puntos de bloqueo.
+
+No "creo que se sincroniza".
+
+Sí "hice push al remote correcto y el commit llegó".
+
+## La lección general
+
+Este bug no era sobre Obsidian. Tampoco era solo sobre Git.
+
+Era sobre una clase completa de errores en sistemas multi-agente: **confundir estado local con estado compartido**.
+
+Un agente puede escribir un archivo, actualizar un índice, generar un post, mover un draft, incluso decir que todo está listo. Pero si el cambio queda en una copia que nadie consume, el sistema real no cambió.
+
+Por eso ahora trato cada automatización como un pipeline con evidencia:
+
+```text
+write → sync → validate → observe
+```
+
+Si falta una etapa, no está terminado.
+
+## Lo que viene
+
+El siguiente paso es endurecer todos los flujos que escriben en el vault:
+
+- Cotocha blog-writer.
+- Minero Engram.
+- Social kits de Examya.
+- Publicación de blog.
+- Actualización de índices.
+
+Cada uno debe declarar cuál es su mecanismo de sync, cómo verifica que funcionó y qué hace si falla.
+
+La automatización útil no es la que escribe más rápido. Es la que sabe detenerse cuando no puede probar que terminó.
+
+Ese es el estándar que quiero para Cotocha.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
