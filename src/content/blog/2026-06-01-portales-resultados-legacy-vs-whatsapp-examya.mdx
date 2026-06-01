@@ -1,0 +1,52 @@
+---
+title: "Por qué los portales de resultados legacy matan la experiencia del paciente"
+description: "Los laboratorios siguen entregando claves impresas para descargar PDFs inentendibles. Cómo Examya usa FHIR y WhatsApp para arreglar esta fricción."
+date: 2026-06-01
+lang: "es"
+image: "/img/blog/portales-resultados-legacy-vs-whatsapp-examya.png"
+tags: [Examya, FHIR, WhatsApp, clinical-labs, B2B]
+draft: false
+status: published
+---
+
+Ir a sacarse sangre ya es una experiencia estresante. Pero lo peor viene después: la recepcionista te pasa un papelito impreso con un RUT y una contraseña generada al azar, y te dice: "Revise sus resultados mañana en resultadoslab.cl". Llegas a tu casa, metes el código en un sitio web que no es responsivo en tu celular, y descargas un PDF lleno de tablas incomprensibles.
+
+El paciente moderno, acostumbrado a que su banco o el delivery le avise todo proactivamente, odia profundamente este flujo.
+
+### Lo que nadie cuenta
+
+¿Por qué los laboratorios y clínicas siguen funcionando así? La culpa no es de la recepcionista, es de la deuda técnica del ecosistema. 
+
+Los LIS (Laboratory Information Systems) legacy fueron diseñados en los 90s para almacenar datos clínicos, no para comunicarlos. Estos sistemas, en el mejor de los casos, escupen archivos en HL7 v2 y se conectan a un portal web externo porque esa era la arquitectura "moderna" en 2010. Hoy, forzar al paciente a ir a buscar su propia información de salud es un suicidio para la retención de clientes.
+
+### Los datos reales
+
+Investigando el flujo de decenas de laboratorios locales, desde recintos en Concepción hasta Santiago, el patrón es idéntico. Más del 40% de las llamadas y mensajes a soporte en un laboratorio promedio son pacientes preguntando: "¿Ya está mi resultado?" o "Perdí el papelito con la clave, ¿cómo entro?". 
+
+Esto es fricción pura. Es tiempo de personal clínico desperdiciado en tareas de call center.
+
+### Lo que construimos
+
+Con Examya, decidimos darle la vuelta a esta arquitectura. Construimos **Fhirex** (nuestro motor de interoperabilidad) conectado a **Shuri** (nuestro agente de IA médica en WhatsApp). 
+
+En vez de obligar al paciente a loguearse en un portal, el LIS de la clínica nos dispara un JSON estructurado como un `DiagnosticReport` en el estándar HL7 FHIR R4 en cuanto el tecnólogo médico valida el examen. Shuri toma ese bundle, procesa la data y le envía un mensaje proactivo al paciente directamente a su WhatsApp. Cero logins, cero portales, cero PDFs ilegibles.
+
+### El gotcha
+
+El desafío real de ingeniería no era conectarse a WhatsApp. Enviar un PDF por WhatsApp web no arregla nada.
+
+El verdadero problema era la traducción clínica segura. ¿Cómo le explicamos al paciente qué significa su examen sin que un LLM tenga alucinaciones? La solución fue armar un pipeline determinista en nuestra `ShuriStateMachine` que extrae los códigos LOINC o SNOMED CT que vienen en el recurso `Observation` de FHIR. Shuri mapea estos códigos y, usando rangos de referencia estrictos, genera un mensaje conversacional: "Mario, tus resultados están listos. Tus niveles de glucosa (95 mg/dL) están dentro del rango normal". La IA está enjaulada; solo traduce y formatea, no diagnostica.
+
+### Zoom out
+
+Esto va mucho más allá de tener un bot moderno. Se trata de la lealtad del paciente y de compliance. 
+
+Cuando un laboratorio le entrega una experiencia sin fricción y proactiva, ese paciente vuelve. Además, con la entrada de la nueva Ley de Protección de Datos Personales (21.719) en Chile, enviar resultados por un correo no encriptado o por un WhatsApp manual desde un celular de la clínica se vuelve un riesgo legal gigante. Shuri maneja el consentimiento ARCO y el opt-in desde el día cero, dejando trazabilidad de todo el proceso.
+
+### Lo que viene
+
+El siguiente paso en Examya es atar estos resultados proactivos con triggers de agendamiento. Si un perfil lipídico sale alterado, Shuri no solo avisa el resultado de forma empática, sino que ofrece automáticamente agendar una hora de telemedicina o presencial con un nutriólogo disponible. Interoperabilidad que genera revenue directo.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

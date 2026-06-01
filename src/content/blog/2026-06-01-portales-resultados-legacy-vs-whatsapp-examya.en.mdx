@@ -1,0 +1,52 @@
+---
+title: "Why legacy lab result portals are killing the patient experience"
+description: "Labs still hand out printed passwords to download incomprehensible PDFs. How Examya uses FHIR and WhatsApp to fix this broken flow."
+date: 2026-06-01
+lang: "en"
+image: "/img/blog/portales-resultados-legacy-vs-whatsapp-examya.png"
+tags: [Examya, FHIR, WhatsApp, clinical-labs, B2B]
+draft: false
+canonicalSlug: "2026-06-01-portales-resultados-legacy-vs-whatsapp-examya"
+---
+
+Getting your blood drawn is stressful enough. But the worst part comes right after: the receptionist hands you a small printed piece of paper with an ID and a randomly generated password, saying, "Check your results tomorrow at resultslab.cl." You get home, type the code into a non-mobile-responsive website, and download a PDF full of incomprehensible medical tables.
+
+Modern patients, accustomed to proactive alerts from their bank or food delivery apps, absolutely hate this workflow.
+
+### The untold truth
+
+Why do clinical laboratories and health centers still operate like this? The fault isn't on the receptionist; it's the ecosystem's technical debt.
+
+Legacy LIS (Laboratory Information Systems) were designed in the 90s to store clinical data, not to communicate it. At best, these systems spit out HL7 v2 files to an external web portal because that was the "modern" architecture back in 2010. Today, forcing the patient to hunt down their own health information is a customer retention suicide.
+
+### The hard data
+
+Researching the flows of dozens of local labs, from Concepcion to Santiago, the pattern is identical. More than 40% of support calls and messages to an average lab come from patients asking: "Are my results ready yet?" or "I lost the paper with the password, how do I log in?".
+
+This is pure friction. It's clinical staff time wasted on call center tasks.
+
+### What we built
+
+With Examya, we decided to flip this architecture upside down. We built **Fhirex** (our interoperability engine) and connected it to **Shuri** (our medical AI agent on WhatsApp).
+
+Instead of forcing the patient to log into a portal, the clinic's LIS fires a structured JSON `DiagnosticReport` bundle using the HL7 FHIR R4 standard as soon as the medical technologist validates the test. Shuri catches that bundle, processes the data, and sends a proactive message directly to the patient's WhatsApp. Zero logins, zero portals, zero unreadable PDFs.
+
+### The gotcha
+
+The real engineering challenge wasn't connecting to WhatsApp. Manually sending a PDF through WhatsApp Web fixes nothing.
+
+The real problem was secure clinical translation. How do we explain the results to the patient without an LLM hallucinating? The solution was to build a deterministic pipeline in our `ShuriStateMachine`. It extracts the LOINC or SNOMED CT codes embedded in the FHIR `Observation` resource. Shuri maps these codes and, using strict reference ranges, generates a conversational message: "Mario, your results are ready. Your glucose levels (95 mg/dL) are within the normal range." The AI is caged; it only translates and formats, it never diagnoses.
+
+### Zoom out
+
+This goes way beyond having a cool modern bot. It's about patient loyalty and regulatory compliance.
+
+When a lab delivers a frictionless, proactive experience, that patient comes back. Moreover, with the new Personal Data Protection Law (21.719) in Chile, sending results via unencrypted emails or a clinic's manual WhatsApp phone becomes a massive legal risk. Shuri handles ARCO consent and opt-ins from day zero, providing full traceability of the communication flow.
+
+### What's next
+
+The next step for Examya is tying these proactive results to scheduling triggers. If a lipid profile comes back abnormal, Shuri won't just deliver the result empathetically; it will automatically offer to schedule a telemedicine or in-person appointment with an available nutritionist. That is interoperability driving direct revenue.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
