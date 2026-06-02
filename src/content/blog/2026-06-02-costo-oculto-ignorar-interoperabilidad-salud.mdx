@@ -1,0 +1,55 @@
+---
+title: "El costo oculto de ignorar la interoperabilidad en salud antes de 2027"
+description: "La Ley 21.668 no es un capricho del MINSAL, es una barrera comercial. Si tu clínica no interopera FHIR en 2027, empezará a perder plata y contratos."
+date: 2026-06-02
+lang: "es"
+image: "/img/blog/costo-oculto-ignorar-interoperabilidad-salud.png"
+tags: [FHIR, Interoperabilidad, Ley 21.668, Examya, B2B]
+draft: false
+---
+
+Cuando hablo con gerentes de clínicas o laboratorios medianos sobre interoperabilidad, la reacción es casi siempre la misma: un suspiro. Lo ven como un "cacho de TI", una imposición normativa del MINSAL que hay que cumplir para evitar multas. 
+
+Pero el verdadero peligro de la Ley 21.668 no es la multa directa. Es el costo silencioso y la hemorragia financiera de quedar aislado del ecosistema de salud.
+
+### Lo que nadie te cuenta de la Ley 21.668
+
+Muchos directorios creen que enviar un PDF por correo o WhatsApp ya es "salud digital". No lo es. La interoperabilidad real exige que los sistemas hablen el mismo idioma (HL7 FHIR), permitiendo que la historia clínica del paciente viaje con él sin intervención humana.
+
+Si tu centro médico no habla FHIR para 2027, el problema no será que tu software sea viejo. El problema será que te vas a quedar fuera de la red. Las aseguradoras (Isapres) y el seguro público (FONASA) van a priorizar y exigir convenios con prestadores cuyos datos fluyan sin fricción. Si auditar tus prestaciones requiere que un humano lea PDFs, serás el proveedor más caro de procesar.
+
+### El impacto real en la última línea
+
+No estamos hablando de teoría. El aislamiento digital pega directo en la rentabilidad:
+
+- **Exámenes duplicados:** Hasta un 20% del gasto de bolsillo del paciente se va en repetir exámenes médicos que ya se hizo, pero que su médico actual no puede ver ni graficar porque están atrapados en el portal de otro laboratorio.
+- **Horas-hombre en burocracia:** Equipos enteros de administración dedicados a transcribir datos de un sistema a otro, validar coberturas a mano y conciliar rechazos de cuentas médicas por falta de trazabilidad.
+- **Pérdida de convenios:** Las redes de salud cerradas van a exigir conectividad FHIR como requisito base para firmar contratos a partir de 2027. 
+
+### El error de construirlo in-house (y por qué nació Fhirex)
+
+Ante este escenario, la respuesta reactiva de muchos gerentes de TI es: *"Bueno, pongamos a los desarrolladores a construir un servidor FHIR"*.
+
+Ese es el error más caro que puedes cometer. Aprender el estándar, mapear diccionarios clínicos locales a SNOMED-CT o LOINC, y mantener la infraestructura segura te va a tomar de 6 a 12 meses. Tu negocio es atender pacientes y procesar exámenes, no ser una empresa de infraestructura en la nube.
+
+Por eso construimos **Fhirex**. En lugar de rehacer todo el stack tecnológico del prestador clínico, instalamos una capa intermedia (un proxy). Fhirex se conecta al software legacy que el laboratorio o clínica ya usa hoy (vía base de datos, API o incluso HL7v2 antiguo), lo traduce a FHIR en tiempo real y lo expone a la red nacional de salud de forma segura.
+
+### El trade-off: Velocidad vs Control absoluto
+
+Podrías tener control absoluto sobre un servidor FHIR construido desde cero en tu sótano, asumiendo los costos de mantenimiento, seguridad y actualizaciones del estándar. O puedes delegar esa complejidad en una capa proxy como Fhirex y estar en cumplimiento normativo en cuestión de días. 
+
+En un escenario donde la fecha límite se acerca y los presupuestos son acotados, la agilidad comercial le gana al orgullo técnico.
+
+### El mercado no va a esperar
+
+El ecosistema de salud chileno está avanzando rápido hacia la estandarización. Las instituciones que vean la interoperabilidad como una ventaja competitiva y no como un impuesto, serán las que ganen las licitaciones y fidelicen a los pacientes en los próximos años. El resto, lentamente, será marginado por ineficiencia.
+
+### Lo que viene
+
+En Examya estamos enfocados en cerrar el ciclo completo. El siguiente paso con Fhirex es expandir los adaptadores nativos para los LIS (Laboratory Information Systems) más usados en Chile, permitiendo que la transición a FHIR sea un proceso plug-and-play. El objetivo es simple: que ninguna pyme de salud se quede fuera del estándar nacional por barreras tecnológicas.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
