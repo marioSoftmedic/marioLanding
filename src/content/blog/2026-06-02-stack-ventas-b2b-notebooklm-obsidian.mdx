@@ -1,0 +1,51 @@
+---
+title: "Mi stack B2B: Cómo uso NotebookLM y Obsidian para cerrar negocios en salud"
+description: "Vender software clínico requiere procesar horas de reuniones y PDFs densos. Así armé un workflow con IA para convertir documentos en propuestas letales."
+date: 2026-06-02
+lang: "es"
+image: "/img/blog/stack-ventas-b2b-notebooklm-obsidian.png"
+tags: [IA, Negocios, Obsidian, B2B, HealthTech, Automatización]
+draft: false
+---
+
+Vender software B2B en salud (HealthTech) no se trata de mostrar un dashboard bonito. Se trata de entender flujos de trabajo increíblemente complejos, como el pipeline de un laboratorio de biología molecular o la integración de un LIS (Laboratory Information System) legacy. 
+
+Si en una reunión de una hora con un director médico pierdes un detalle técnico clave, pierdes el negocio. Tomar notas a mano ya no escala.
+
+### Lo que nadie te cuenta de la venta técnica
+
+El problema de las reuniones B2B es la densidad de contexto. El cliente te lanza sus dolores operativos, normativas del MINSAL, y quejas sobre su infraestructura actual, todo mezclado. 
+
+La mayoría de los equipos de ventas toman 5 viñetas genéricas en un CRM. El resultado es una propuesta comercial estándar que no resuena con el dolor real del cliente. Para competir y ganar, necesitas devolverle al cliente sus propias palabras, pero estructuradas como una solución técnica.
+
+### El sistema: NotebookLM + Obsidian + Engram
+
+Para escalar esto como un founder técnico, armé un pipeline de procesamiento de contexto. Cuando prospecto laboratorios o clínicas para Examya, sigo esta estructura exacta:
+
+**1. Captura de la sobrecarga documental:** El cliente rara vez te dice "mi problema es este". Te mandan un correo con tres PDFs, el flujo legacy de sus sistemas y tú sales de la reunión (o el bot que toma notas por ti) con una página de notas densas llenas de acrónimos médicos.
+
+**2. NotebookLM como motor semántico:** Creo un "Notebook" por prospecto en Google NotebookLM y subo todo ahí (documentos, mis notas, PDFs). NotebookLM actúa como un cerebro aislado y especializado solo en ese cliente. En lugar de leer 100 páginas de manuales, le pregunto: *"¿Cuáles son los 3 cuellos de botella técnicos de su actual flujo de agendamiento?"* o *"Genera el esqueleto de un brochure comercial atacando sus dolores específicos"*.
+
+**3. Obsidian + Engram como memoria permanente:** Aquí es donde ocurre la magia. NotebookLM genera la inteligencia táctica, pero yo muevo los insights clave, la estructura de la propuesta y las decisiones de arquitectura a mi Vault de Obsidian. Y gracias a **Engram** (el sistema de memoria persistente creado por Alan Buscaglia), todo eso queda vectorizado en mi sistema local.
+
+### El gotcha: El aislamiento del contexto
+
+Al principio usaba solo NotebookLM, pero me di cuenta de un bug en mi propio proceso: **NotebookLM es amnésico entre proyectos**. Si un laboratorio A me cuenta sobre un problema con un formato HL7, y el laboratorio B tiene el mismo problema, NotebookLM no cruza los datos. 
+
+Por eso la extracción a Obsidian y Engram es crítica. Engram me permite centralizar los patrones. Así, la próxima vez que un cliente mencione "HL7", mi Engram ya tiene la arquitectura de solución lista para que un agente la inyecte en la nueva propuesta.
+
+### Zoom out: El Superpoder del Solopreneur
+
+Con este stack, un equipo pequeño (o un solopreneur) puede operar con la fuerza de un departamento de Sales Engineering entero. 
+
+Llegas a la segunda reunión con un brochure visual hiper-personalizado, diagramas de arquitectura precisos y una propuesta que ataca dolores que el cliente apenas mencionó de pasada. Esa agilidad comercial es tu ventaja injusta contra las grandes corporaciones de software médico que tardan semanas en enviar una cotización estándar.
+
+### Lo que viene
+
+El siguiente paso es automatizar la transición. Actualmente hago el query en NotebookLM y paso los insights a Obsidian de forma manual. Estoy evaluando usar una capa de agentes (con Cotocha) para que, al dejar caer un PDF o archivo de notas en una carpeta, el agente extraiga los dolores B2B y me genere el esqueleto del brochure directamente en el Vault.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

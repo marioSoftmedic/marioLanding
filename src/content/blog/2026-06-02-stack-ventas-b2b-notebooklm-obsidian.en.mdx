@@ -1,0 +1,52 @@
+---
+title: "My B2B tech stack: How I use NotebookLM and Obsidian to close healthcare deals"
+description: "Selling clinical software requires processing hours of meetings and dense PDFs. Here is the AI workflow I use to turn raw documents into lethal proposals."
+date: 2026-06-02
+lang: "en"
+image: "/img/blog/stack-ventas-b2b-notebooklm-obsidian.png"
+tags: [AI, Obsidian, B2B, HealthTech, Automation]
+draft: false
+canonicalSlug: "2026-06-02-stack-ventas-b2b-notebooklm-obsidian"
+---
+
+Selling B2B software in HealthTech isn't about showing off a pretty dashboard. It's about understanding incredibly complex workflows, like a molecular biology lab's pipeline or the integration challenges of a legacy LIS (Laboratory Information System).
+
+If you miss a key technical detail during a one-hour meeting with a medical director, you lose the deal. Taking manual notes just doesn't scale anymore.
+
+### The unspoken truth of technical sales
+
+The problem with B2B meetings is context density. The client throws their operational pains, health ministry regulations, and infrastructure complaints at you all at once.
+
+Most sales teams jot down 5 generic bullet points in a CRM. The result is a standard commercial proposal that fails to resonate with the client's actual pain. To compete and win, you need to mirror the client's exact words back to them, structured as a technical solution.
+
+### The System: NotebookLM + Obsidian + Engram
+
+To scale this as a technical founder, I built a context-processing pipeline. When I prospect labs or clinics for Examya, I follow this exact structure:
+
+**1. Raw document overload:** Clients rarely just tell you their problem. They send you an email with three PDFs, the legacy flow of their systems, and you walk out of the meeting with a page of dense notes full of medical acronyms.
+
+**2. NotebookLM as a semantic engine:** I create a "Notebook" per prospect in Google NotebookLM and upload everything there (documents, my notes, PDFs). NotebookLM acts as an isolated brain specialized only in that client. Instead of reading 100 pages of manuals, I ask it: *"What are the top 3 technical bottlenecks in their current scheduling flow?"* or *"Generate a commercial brochure outline targeting their specific pain points."*
+
+**3. Obsidian + Engram as permanent memory:** This is where the magic happens. NotebookLM generates the tactical intelligence, but I move the key insights, proposal structures, and architectural decisions into my Obsidian Vault. And thanks to **Engram** (the persistent memory system created by Alan Buscaglia), all of that is vectorized into my local system.
+
+### The gotcha: Context isolation
+
+At first, I only used NotebookLM, but I noticed a bug in my own process: **NotebookLM is amnesic across projects**. If Lab A tells me about a problem with an HL7 format, and Lab B has the exact same issue, NotebookLM won't cross-reference the data.
+
+That's why the extraction to Obsidian and Engram is critical. Engram allows me to centralize patterns. So, the next time a client mentions "HL7", my Engram already has the solution architecture ready for an agent to inject into the new proposal.
+
+### Zoom out: The Solopreneur Superpower
+
+With this stack, a small team (or a solopreneur) can operate with the force of an entire Sales Engineering department.
+
+You arrive at the second meeting with a hyper-personalized visual brochure, precise architecture diagrams, and a proposal that directly attacks pain points the client barely mentioned in passing. That commercial agility is your unfair advantage against massive medical software corporations that take weeks to send a standardized quote.
+
+### What's next
+
+The next step is automating the transition. Currently, I run the query in NotebookLM and manually move the insights to Obsidian. I am evaluating an agent layer (with Cotocha) so that simply dropping a PDF or note file into a folder triggers the agent to extract the B2B pain points and generate the brochure outline directly in my Vault.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
