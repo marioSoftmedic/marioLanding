@@ -37,6 +37,7 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "puppeteer": "^25.1.0"
   }
 }
