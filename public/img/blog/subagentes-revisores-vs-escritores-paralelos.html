@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Judgment Day - Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #34d399;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-left: 1.75rem;
+    }
+    
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    
+    svg {
+      width: 100%;
+      min-width: 900px;
+      display: block;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .card ul {
+      list-style: none;
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+    
+    .card li {
+      margin-bottom: 0.375rem;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Judgment Day: Subagentes como revisores</h1>
+      </div>
+      <p class="subtitle">Por qué invertimos el patrón de concurrencia en la escritura de código</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 500">
+        <!-- Definitions -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- =================================================================
+             ANTI-PATTERN
+             ================================================================= -->
+        <rect x="30" y="40" width="300" height="420" rx="12" fill="rgba(136, 19, 55, 0.05)" stroke="#fb7185" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="180" y="65" fill="#fb7185" font-size="12" font-weight="600" text-anchor="middle">❌ Escritores Paralelos</text>
+        <text x="180" y="80" fill="#fb7185" font-size="9" text-anchor="middle">(Anti-patrón)</text>
+
+        <!-- Orchestrator -->
+        <rect x="110" y="100" width="140" height="40" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="180" y="125" fill="white" font-size="11" font-weight="600" text-anchor="middle">Orquestador Tareas</text>
+
+        <!-- Agents -->
+        <rect x="50" y="200" width="80" height="40" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="90" y="225" fill="white" font-size="10" font-weight="600" text-anchor="middle">Agente 1</text>
+
+        <rect x="140" y="200" width="80" height="40" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="180" y="225" fill="white" font-size="10" font-weight="600" text-anchor="middle">Agente 2</text>
+
+        <rect x="230" y="200" width="80" height="40" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="270" y="225" fill="white" font-size="10" font-weight="600" text-anchor="middle">Agente 3</text>
+
+        <!-- Arrows Orchestrator to Agents -->
+        <line x1="180" y1="140" x2="90" y2="195" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="180" y1="140" x2="180" y2="195" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="180" y1="140" x2="270" y2="195" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Codebase -->
+        <rect x="110" y="320" width="140" height="50" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="180" y="340" fill="white" font-size="11" font-weight="600" text-anchor="middle">Git / Codebase</text>
+        <text x="180" y="356" fill="#fb7185" font-size="9" text-anchor="middle">Conflictos de Merge</text>
+
+        <!-- Arrows to Codebase (Red) -->
+        <line x1="90" y1="240" x2="150" y2="315" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrowhead-red)"/>
+        <line x1="180" y1="240" x2="180" y2="315" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrowhead-red)"/>
+        <line x1="270" y1="240" x2="210" y2="315" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrowhead-red)"/>
+        <text x="180" y="285" fill="#fb7185" font-size="9" text-anchor="middle" font-weight="bold">Colisión de estado</text>
+
+        <!-- =================================================================
+             GOOD PATTERN
+             ================================================================= -->
+        <rect x="360" y="40" width="600" height="420" rx="12" fill="rgba(6, 78, 59, 0.05)" stroke="#34d399" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="660" y="65" fill="#34d399" font-size="12" font-weight="600" text-anchor="middle">✅ Judgment Day (Scout-Worker-Reviewer)</text>
+        <text x="660" y="80" fill="#34d399" font-size="9" text-anchor="middle">Patrón invertido de revisión</text>
+
+        <!-- Writer -->
+        <rect x="420" y="100" width="140" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="490" y="120" fill="white" font-size="11" font-weight="600" text-anchor="middle">Agente Escritor</text>
+        <text x="490" y="136" fill="#94a3b8" font-size="9" text-anchor="middle">(Secuencial)</text>
+
+        <!-- Arrow Writer to Codebase -->
+        <line x1="490" y1="150" x2="490" y2="215" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="525" y="185" fill="#94a3b8" font-size="9" text-anchor="middle">Push / Commit</text>
+
+        <!-- Codebase -->
+        <rect x="420" y="220" width="140" height="40" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="490" y="245" fill="white" font-size="11" font-weight="600" text-anchor="middle">Git / Codebase</text>
+
+        <!-- Arrow Codebase to Review Orchestrator -->
+        <line x1="560" y1="240" x2="625" y2="240" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead-green)"/>
+        <text x="590" y="235" fill="#34d399" font-size="9" text-anchor="middle">Trigger</text>
+
+        <!-- Review Orchestrator -->
+        <rect x="630" y="220" width="160" height="40" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="710" y="245" fill="white" font-size="11" font-weight="600" text-anchor="middle">Review Orchestrator</text>
+
+        <!-- Arrows from Review Orchestrator to Reviewers (Blind parallel) -->
+        <line x1="710" y1="260" x2="520" y2="345" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="710" y1="260" x2="710" y2="345" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="710" y1="260" x2="900" y2="345" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Reviewers -->
+        <rect x="460" y="350" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="520" y="370" fill="white" font-size="11" font-weight="600" text-anchor="middle">Juez Oracle</text>
+        <text x="520" y="386" fill="#94a3b8" font-size="9" text-anchor="middle">Calidad de Código</text>
+
+        <rect x="650" y="350" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="710" y="370" fill="white" font-size="11" font-weight="600" text-anchor="middle">Juez Oracle</text>
+        <text x="710" y="386" fill="#94a3b8" font-size="9" text-anchor="middle">Seguridad</text>
+
+        <rect x="840" y="350" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="900" y="370" fill="white" font-size="11" font-weight="600" text-anchor="middle">QA Executor</text>
+        <text x="900" y="386" fill="#94a3b8" font-size="9" text-anchor="middle">Testing + Context</text>
+
+        <!-- Blind box dashed boundary around reviewers -->
+        <rect x="440" y="335" width="540" height="80" rx="8" fill="transparent" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="448" y="348" fill="#a78bfa" font-size="8">Ejecución Ciega (Sin Agreement Bias)</text>
+
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>El problema de la concurrencia</h3>
+        </div>
+        <ul>
+          <li>• Conflictos de estado y race conditions</li>
+          <li>• Desperdicio de tokens en merge conflicts</li>
+          <li>• Falta de sincronización implícita de un equipo humano</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Solución: Judgment Day</h3>
+        </div>
+        <ul>
+          <li>• Escritura estrictamente secuencial</li>
+          <li>• Validación masivamente paralela</li>
+          <li>• Jueces evalúan y sintetizan hallazgos de forma independiente</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Agreement Bias</h3>
+        </div>
+        <ul>
+          <li>• Si los jueces ven el contexto del otro, asienten (bias)</li>
+          <li>• Solución: aislamiento estricto inicial</li>
+          <li>• Solo comparten contexto tras evaluar de forma independiente</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      mariohealthbits.dev • Orquestación Multi-Agente
+    </p>
+  </div>
+</body>
+</html>
