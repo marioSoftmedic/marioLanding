@@ -1,0 +1,65 @@
+---
+title: "How to sell AI to labs without promising to replace their human team"
+description: "The rookie mistake in B2B healthtech is selling total automation. Why positioning Examya as a front-desk co-pilot accelerates closing deals."
+date: 2026-06-04
+lang: "en"
+image: "/img/blog/vender-ia-clinica-sin-reemplazar-humanos.png"
+tags: [b2b, digital-health, examya, ai, clinical-labs]
+draft: false
+series: "examya"
+seriesOrder: 8
+related: [2026-05-23-laboratorio-clinico-como-api-salud-digital, 2026-05-27-human-in-the-loop-ia-medica-supervision-real]
+canonicalSlug: "2026-06-04-vender-ia-clinica-sin-reemplazar-humanos"
+---
+
+There is a textbook mistake everyone makes when trying to sell AI software in the healthcare sector: walking into the meeting promising that the algorithm will automate 100% of the work and replace three reception staff members.
+
+It sounds great on a Silicon Valley pitch deck. But when you sit in front of the medical director of a clinical lab in Chile, their risk alarms go off immediately. In healthcare, total automation without supervision is synonymous with clinical negligence and lawsuits.
+
+### What nobody tells you about B2B sales in healthcare
+
+When you sell B2B to clinics or labs, you are not selling technology; you are selling *risk mitigation* and *operational efficiency*.
+
+If you tell a technical director that an LLM is going to read the medical order, charge, and schedule the patient without any intervention from their staff, what they hear is: "a hallucinating bot will misquote a critical exam, the patient will arrive without the correct fasting instructions, and the legal liability will be mine." The deal dies right there.
+
+### The real data: Examya's co-pilot approach
+
+With Examya, we quickly learned to change the sales pitch. Instead of positioning our Shuri agent as a replacement for the front desk, we sell it as a **triage co-pilot**.
+
+The promise is not "Shuri does everything alone." The promise is: "Shuri uses OCR to extract the national ID and exams from the patient's crumpled photo, crosses that data with your pricing tariff in milliseconds, and delivers a perfect draft to your human team so they only have to press 'Approve'."
+
+We shifted from selling "replacement" to selling "superpowers for your current team."
+
+### What we built: Human-in-the-loop as a sales feature
+
+This isn't just marketing; it's architecture. In Examya's backend, we implemented the `ShuriStateMachine` class under the Human-in-the-loop (HITL) pattern.
+
+```typescript
+// The explicit approval state is our best sales pitch
+export const TriageState = {
+  EXTRACTING_DATA: 'extracting',
+  MATCHING_FONASA: 'pricing',
+  WAITING_HUMAN_APPROVAL: 'human_review', // <-- This is where deals are closed
+  PATIENT_NOTIFIED: 'notified'
+}
+```
+
+That `WAITING_HUMAN_APPROVAL` state is the most important slide in the pitch deck. We show the lab that the human always has the final say. The AI does 90% of the boring work (transcribing and searching for codes), and the human team does the critical 10% (validation).
+
+### The gotcha: trust is earned in layers
+
+If your AI fails to transcribe an order, the front-desk human corrects it before the patient even knows. The risk becomes zero.
+
+The interesting part is what happens month by month. In week one, the team reviews every single order meticulously. By month three, when they see that Examya's OCR and RAG have an absurdly high accuracy rate matching medical codes, validation becomes a mere two-second formality. They start trusting the algorithm because *they had the option to distrust it*.
+
+### Zoom out
+
+This is the GTM (Go-To-Market) thesis for AI in regulated industries. If you kick the door open saying AI replaces people, you generate organizational antibodies. If you come in saying AI removes the administrative burden from the team so they can better serve complex patients, they open the budget for you.
+
+### What's next
+
+Our next step in the commercial roadmap is to package these accuracy metrics. We want to show new prospects exactly how many man-hours current labs saved in the `WAITING_HUMAN_APPROVAL` stage during their first quarter of use.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,64 @@
+---
+title: "Cómo vender IA a laboratorios sin prometer reemplazar a su equipo humano"
+description: "El error novato en healthtech B2B es vender automatización total. Por qué posicionar a Examya como un co-piloto del counter de atención acelera el negocio."
+date: 2026-06-04
+lang: "es"
+image: "/img/blog/vender-ia-clinica-sin-reemplazar-humanos.png"
+tags: [b2b, digital-health, examya, ai, clinical-labs]
+draft: false
+series: "examya"
+seriesOrder: 8
+related: [2026-05-23-laboratorio-clinico-como-api-salud-digital, 2026-05-27-human-in-the-loop-ia-medica-supervision-real]
+---
+
+Hay un error de manual que todos cometen cuando intentan vender software de IA en el sector salud: entrar a la reunión prometiendo que el algoritmo va a automatizar el 100% del trabajo y reemplazar a tres personas de recepción.
+
+Suena genial en un pitch deck en Silicon Valley. Pero cuando te sientas frente al director médico de un laboratorio clínico en Chile, sus alarmas de riesgo se disparan al máximo. En salud, automatización total sin supervisión es sinónimo de negligencia clínica y demandas. 
+
+### Lo que nadie cuenta de la venta B2B en salud
+
+Cuando vendes B2B a clínicas o laboratorios, no estás vendiendo tecnología; estás vendiendo *mitigación de riesgo* y *eficiencia operativa*. 
+
+Si le dices a un director técnico que un LLM va a leer la orden médica, cobrar y agendar al paciente sin ninguna intervención de su personal, lo que él escucha es: "un bot alucinador va a cotizar mal un examen crítico, el paciente llegará sin las indicaciones de ayuno correctas, y la responsabilidad legal será mía". El negocio se cae ahí mismo.
+
+### Los datos reales: el enfoque co-piloto de Examya
+
+Con Examya aprendimos rápido a cambiar el discurso de venta. En lugar de posicionar a nuestro agente Shuri como un reemplazo del counter de atención, lo vendemos como un **co-piloto de triaje**.
+
+La promesa no es "Shuri hace todo solo". La promesa es: "Shuri usa OCR para extraer el RUT y los exámenes de la foto arrugada del paciente, cruza esos datos con tu arancel de FONASA en milisegundos, y le entrega un borrador perfecto a tu equipo humano para que solo tengan que apretar 'Aprobar'".
+
+Pasamos de vender "reemplazo" a vender "superpoderes para tu equipo actual". 
+
+### Lo que construimos: Human-in-the-loop como feature de ventas
+
+Esto no es solo marketing, es arquitectura. En el backend de Examya, implementamos la clase `ShuriStateMachine` bajo el patrón Human-in-the-loop (HITL). 
+
+```typescript
+// El estado de aprobación explícita es nuestro mejor argumento de ventas
+export const TriageState = {
+  EXTRACTING_DATA: 'extracting',
+  MATCHING_FONASA: 'pricing',
+  WAITING_HUMAN_APPROVAL: 'human_review', // <-- Aquí se cierra el negocio
+  PATIENT_NOTIFIED: 'notified'
+}
+```
+
+Ese estado `WAITING_HUMAN_APPROVAL` es la diapositiva más importante del pitch. Le mostramos al laboratorio que el humano siempre tiene la última palabra. La IA hace el 90% del trabajo aburrido (transcribir y buscar códigos), y el equipo humano hace el 10% crítico (validación).
+
+### El gotcha: la confianza se gana por capas
+
+Si tu IA falla en transcribir una orden, el humano del counter la corrige antes de que el paciente se entere. El riesgo se vuelve cero.
+
+Lo interesante es lo que pasa mes a mes. En la semana uno, el equipo revisa cada orden con lupa. En el mes tres, cuando ven que el OCR y el RAG de Examya tienen una precisión absurda cruzando códigos de FONASA, la validación se vuelve un mero trámite de dos segundos. Empiezan a confiar en el algoritmo porque *tuvieron la opción de desconfiar*.
+
+### Zoom out
+
+Esta es la tesis de GTM (Go-To-Market) para IA en industrias reguladas. Si entras pateando la puerta y diciendo que la IA reemplaza a las personas, generas anticuerpos organizacionales. Si entras diciendo que la IA le quita la carga administrativa al equipo para que puedan atender mejor a los pacientes complejos, te abren el presupuesto.
+
+### Lo que viene
+
+Nuestro siguiente paso en el roadmap comercial es empaquetar estas métricas de precisión. Queremos mostrarle a los nuevos prospectos exactamente cuántas horas-hombre se ahorraron los laboratorios actuales en la etapa de `WAITING_HUMAN_APPROVAL` durante su primer trimestre de uso.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
