@@ -1,0 +1,59 @@
+---
+title: "The B2B objection that kills healthtech startups: 'We can't migrate our LIS'"
+description: "Why trying to replace clinical lab legacy systems is commercial suicide, and how the 'zero-migration' approach saves sales."
+date: 2026-06-04
+lang: "en"
+image: "/img/blog/objecion-ventas-b2b-migrar-lis.png"
+tags: [b2b, digital-health, examya, clinical-labs, fhir]
+draft: false
+series: "examya"
+seriesOrder: 9
+related: [2026-05-25-fhirex-pilotos-fhir-sin-tocar-produccion, 2026-05-28-interoperabilidad-no-empieza-conectando-todo]
+canonicalSlug: "2026-06-04-objecion-ventas-b2b-migrar-lis"
+---
+
+This week I had a commercial meeting with the technical director of a mid-sized clinical lab. I showed him how Examya uses OCR to process medical orders via WhatsApp and match pricing with national health funds in seconds. He loved it. You could see the spark in his eyes as he calculated the hours his team would save.
+
+And then he dropped the phrase that kills 90% of healthtech projects in LATAM: *"I love it, but it's impossible for us to migrate our current LIS (Laboratory Information System) to use it. We've been using it for 10 years."*
+
+### What nobody tells you about legacy systems
+
+Software engineers hate old systems. We see a LIS built in 2015, with a gray Windows 98 interface and on-premise databases, and our first instinct is: "I'm going to build a cloud SaaS platform that replaces this garbage."
+
+It is commercial suicide. That ugly, slow LIS is the clinic's operational and financial backbone. Replacing it means training 50 people, paralyzing operations for a week, and risking billing losses. Nobody is going to take that risk for your startup.
+
+### The real data: the "Zero-Migration" pattern
+
+At Examya, we learned this lesson the hard way. When the director threw the LIS objection at me, my response wasn't trying to convince him that our system was better. My response was: *"We don't want to touch your LIS. We don't even want you to look at it."*
+
+I explained that Examya is built as a service layer (API gateway) that sits *on top* of their current infrastructure. We use a design pattern that we internally call "Zero-Migration."
+
+### What we built: Fhirex Adapter
+
+To make this promise a reality, we had to build the technology to back it up. That's how the concept behind Fhirex was born: an adapter layer that reads the legacy LIS database (be it SQL Server, Oracle, or old PostgreSQL) and translates it on the fly to FHIR format (the healthcare interoperability standard).
+
+```typescript
+// We extract information without modifying the core system
+const fhirPatient = await legacyAdapter.translatePatientToFHIR(legacyPatientId);
+const pricing = await shuriRAG.matchExams(fhirPatient.exams);
+```
+
+We don't install new software on their computers, we don't migrate their data to our cloud, and we don't ask them to change their cash flows. We just connect in the background, read, and send the response to the patient via WhatsApp.
+
+### The gotcha: Technical friction vs. adoption friction
+
+We had to take on a massive technical debt building adapters for old, ugly systems. The technical friction on our end skyrocketed.
+
+But in exchange, the client's adoption friction dropped to zero. The sales cycle went from 6 months of negotiations about "how to migrate data" to 3 weeks for "connecting the read-only database." In B2B, you should always prefer to absorb technical complexity if it eliminates operational risk for the client.
+
+### Zoom out
+
+If you are building B2B healthtech, tattoo this on your arm: your product must coexist with legacy, not try to murder it in the first pilot. Innovation in traditional industries is not about replacing old iron, but about building elegant bridges that connect them to the future.
+
+### What's next
+
+Next week we begin packaging these legacy adapters into reusable modules so that initial integration with any lab in Chile, regardless of the LIS they use, drops from weeks to a couple of days.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

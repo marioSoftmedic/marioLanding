@@ -1,0 +1,58 @@
+---
+title: "La objeción B2B que mata a las startups de salud: 'No podemos migrar nuestro LIS'"
+description: "Por qué intentar reemplazar los sistemas legacy de los laboratorios es un suicidio comercial, y cómo el enfoque 'zero-migration' salva las ventas."
+date: 2026-06-04
+lang: "es"
+image: "/img/blog/objecion-ventas-b2b-migrar-lis.png"
+tags: [b2b, digital-health, examya, clinical-labs, fhir]
+draft: false
+series: "examya"
+seriesOrder: 9
+related: [2026-05-25-fhirex-pilotos-fhir-sin-tocar-produccion, 2026-05-28-interoperabilidad-no-empieza-conectando-todo]
+---
+
+Esta semana tuve una reunión comercial con el director técnico de un laboratorio mediano. Le mostré cómo Examya usa OCR para procesar las órdenes médicas por WhatsApp y cruzar los precios con FONASA en segundos. Le encantó. Se veía el brillo en sus ojos al calcular las horas que se ahorraría su equipo.
+
+Y entonces dijo la frase que mata el 90% de los proyectos de healthtech en LATAM: *"Me encanta, pero es imposible que migremos nuestro LIS (Laboratory Information System) actual para usarlo. Llevamos 10 años con él"*.
+
+### Lo que nadie te cuenta de los sistemas legacy
+
+Los ingenieros de software odiamos los sistemas antiguos. Vemos un LIS construido en 2015, con una interfaz gris de Windows 98 y bases de datos on-premise, y nuestro primer instinto es: "Voy a construir una plataforma SaaS en la nube que reemplace esta basura".
+
+Es un suicidio comercial. Ese LIS feo y lento es la columna vertebral operativa y financiera de la clínica. Reemplazarlo significa capacitar a 50 personas, paralizar la operación durante una semana y arriesgar la pérdida de facturación. Nadie va a asumir ese riesgo por tu startup.
+
+### Los datos reales: el patrón "Zero-Migration"
+
+En Examya aprendimos esta lección a golpes. Cuando el director me tiró la objeción del LIS, mi respuesta no fue intentar convencerlo de que nuestro sistema era mejor. Mi respuesta fue: *"No queremos tocar tu LIS. Ni siquiera queremos que lo mires"*.
+
+Le expliqué que Examya está construido como una capa de servicio (API gateway) que se sienta *encima* de su infraestructura actual. Usamos un patrón de diseño que internamente llamamos "Zero-Migration".
+
+### Lo que construimos: Fhirex Adapter
+
+Para hacer esta promesa realidad, tuvimos que construir la tecnología que la respaldara. Así nació el concepto detrás de Fhirex: una capa adaptadora que lee la base de datos legacy del LIS (sea SQL Server, Oracle o PostgreSQL viejo) y la traduce al vuelo a formato FHIR (el estándar de interoperabilidad en salud).
+
+```typescript
+// Extraemos la información sin modificar el sistema core
+const fhirPatient = await legacyAdapter.translatePatientToFHIR(legacyPatientId);
+const pricing = await shuriRAG.matchExams(fhirPatient.exams);
+```
+
+No instalamos software nuevo en sus computadores, no migramos sus datos a nuestra nube, y no les pedimos que cambien sus flujos de caja. Solo nos conectamos por detrás, leemos, y le enviamos la respuesta al paciente por WhatsApp.
+
+### El gotcha: La fricción técnica vs fricción de adopción
+
+Tuvimos que asumir una deuda técnica enorme construyendo adaptadores para sistemas antiguos y feos. La fricción técnica de nuestro lado subió un montón.
+
+Pero a cambio, la fricción de adopción del cliente bajó a cero. El ciclo de ventas pasó de 6 meses de negociaciones sobre "cómo migrar datos" a 3 semanas para "conectar la base de datos de lectura". En B2B, siempre debes preferir absorber la complejidad técnica si eso elimina el riesgo operativo del cliente.
+
+### Zoom out
+
+Si estás construyendo healthtech B2B, tatúate esto: tu producto debe coexistir con el legacy, no intentar asesinarlo en el primer piloto. La innovación en industrias tradicionales no se trata de reemplazar los fierros viejos, sino de construir puentes elegantes que los conecten con el futuro.
+
+### Lo que viene
+
+La próxima semana empezamos a empaquetar estos adaptadores legacy en módulos reutilizables para que la integración inicial con cualquier laboratorio en Chile, independientemente del LIS que usen, baje de semanas a un par de días.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
