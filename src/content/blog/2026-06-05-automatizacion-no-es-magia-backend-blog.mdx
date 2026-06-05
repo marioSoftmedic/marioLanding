@@ -1,0 +1,56 @@
+---
+title: "La automatización no es magia: el backend detrás de estos posts"
+description: "Un vistazo transparente a cómo orquesto agentes locales para escribir, diagramar y publicar este blog sin intervención manual."
+date: 2026-06-05
+lang: "es"
+image: "/img/blog/automatizacion-no-es-magia-backend-blog.png"
+tags: [automation, builder, pkm, agents]
+draft: false
+series: "cerebro-digital"
+seriesOrder: 8
+related: [2026-06-03-indice-vault-importa-mas-que-cantidad-notas, 2026-04-04-cerebro-digital-engram-obsidian-blog-redes]
+---
+
+Escribir un blog técnico mientras construyes una startup es difícil. Mantener la cadencia de dos posts diarios, en español e inglés, con diagramas arquitectónicos y copy para redes sociales, es humanamente imposible sin quemarte.
+
+Esta semana, muchos me preguntaron en LinkedIn cómo lo estoy haciendo. La respuesta corta es automatización. La respuesta larga es que la automatización no es magia; es infraestructura aburrida y determinística. 
+
+### Lo que nadie te cuenta de los "agentes autónomos"
+
+Si le dices a un LLM "escribe un post para mi blog y publícalo", te va a escupir un texto genérico de 300 palabras, lleno de emojis, y va a romper tu repositorio porque no entiende tu framework. 
+
+Los agentes autónomos puros son un mito en producción. Lo que funciona es el **flujo orquestado**. En mi caso, mi agente local (Cotocha) no es un escritor libre; es un operador de un *runbook* estricto.
+
+### Los datos reales: el pipeline de publicación
+
+Cuando le digo a Cotocha "prepara el draft AM de hoy", esto es lo que ocurre en background en menos de 3 minutos:
+
+1. **Lectura de Estado:** Cotocha lee mi `_EDITORIAL-CALENDAR.md` para saber el pilar del día, y consulta el `_INDEX.md` para ver qué número de serie corresponde.
+2. **Generación Bilingüe:** Redacta el contenido en `.mdx` usando una skill específica que fuerza mi tono (sin palabras como "revolucionario" ni voseo).
+3. **Diagramación como Código:** En lugar de usar herramientas visuales, Cotocha inyecta un HTML/SVG nativo siguiendo un *design system* predefinido de colores y opacidades.
+4. **Conversión Headless:** Para que el OpenGraph de Twitter y LinkedIn funcione, el agente corre un script local con Puppeteer que abre el HTML invisiblemente, renderiza las fuentes JetBrains Mono y saca un PNG de 1200x630.
+5. **Multi-Repo Sync:** Finalmente, mueve los archivos, actualiza los índices y hace `git push` a dos repositorios en paralelo (mi vault de Obsidian y el repo de Astro en Vercel).
+
+### Lo que construí: La skill `blog-publish`
+
+El secreto de que esto no explote es una skill (un prompt inyectado dinámicamente) llamada `blog-publish`. Esta skill actúa como un **guardrail de CI/CD semántico**. 
+
+Si el agente intenta publicar un post sin imagen, sin el *canonical slug* para la versión en inglés, o usando un tag que no existe en mi `_TAXONOMY.md`, la ejecución falla por diseño y el agente tiene que corregirlo antes de hacer el commit.
+
+### El gotcha: El problema de las herramientas de conversión visual
+
+Esta misma semana tuve un problema con los diagramas. Estaba usando la librería `sharp` para pasar el SVG a PNG. Fallaba horriblemente porque aislaba el vector y perdía las tipografías de Google Fonts y el CSS. Tuve que detener la máquina, ordenarle al agente que botara `sharp`, instalara `puppeteer` en el repo, y reescribiera el script de conversión. 
+
+La automatización no es configurar y olvidar. Es iterar sobre la infraestructura que soporta a la IA.
+
+### Zoom out
+
+No necesitas ser una empresa grande para operar como una. Las herramientas de hoy te permiten construir líneas de ensamblaje digital en tu propio computador. La clave no está en el modelo fundacional que uses (GPT-4 o Claude), sino en los rieles arquitectónicos que le pones alrededor. 
+
+### Lo que viene
+
+La próxima semana voy a detallar cómo conecto esto con Engram, mi memoria persistente. Mostraré cómo el agente recuerda las correcciones que le hago (como "nunca prometas features que no existen") y las aplica automáticamente en los posts del día siguiente sin que yo tenga que repetir la instrucción.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

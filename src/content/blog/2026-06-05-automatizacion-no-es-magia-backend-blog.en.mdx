@@ -1,0 +1,57 @@
+---
+title: "Automation isn't magic: the backend behind these posts"
+description: "A transparent look at how I orchestrate local agents to write, diagram, and publish this blog without manual intervention."
+date: 2026-06-05
+lang: "en"
+image: "/img/blog/automatizacion-no-es-magia-backend-blog.png"
+tags: [automation, builder, pkm, agents]
+draft: false
+series: "cerebro-digital"
+seriesOrder: 8
+related: [2026-06-03-indice-vault-importa-mas-que-cantidad-notas, 2026-04-04-cerebro-digital-engram-obsidian-blog-redes]
+canonicalSlug: "2026-06-05-automatizacion-no-es-magia-backend-blog"
+---
+
+Writing a technical blog while building a startup is hard. Maintaining a cadence of two daily posts, in Spanish and English, with architectural diagrams and social media copy, is humanly impossible without burning out.
+
+This week, many people asked me on LinkedIn how I'm doing it. The short answer is automation. The long answer is that automation isn't magic; it's boring, deterministic infrastructure.
+
+### What nobody tells you about "autonomous agents"
+
+If you tell an LLM "write a post for my blog and publish it," it will spit out a generic 300-word text, full of emojis, and break your repository because it doesn't understand your framework.
+
+Pure autonomous agents are a myth in production. What actually works is the **orchestrated flow**. In my case, my local agent (Cotocha) isn't a free writer; it's an operator following a strict *runbook*.
+
+### The real data: the publishing pipeline
+
+When I tell Cotocha "prepare today's AM draft," here is what happens in the background in less than 3 minutes:
+
+1. **State Reading:** Cotocha reads my `_EDITORIAL-CALENDAR.md` to know the topic of the day, and checks `_INDEX.md` to see what series number corresponds.
+2. **Bilingual Generation:** It drafts the content in `.mdx` using a specific skill that enforces my tone (no buzzwords like "revolutionary").
+3. **Diagramming as Code:** Instead of using visual tools, Cotocha injects native HTML/SVG following a predefined *design system* of colors and opacities.
+4. **Headless Conversion:** To ensure Twitter and LinkedIn OpenGraph works, the agent runs a local script with Puppeteer that invisibly opens the HTML, renders the JetBrains Mono fonts, and takes a 1200x630 PNG screenshot.
+5. **Multi-Repo Sync:** Finally, it moves files, updates indexes, and runs `git push` to two repositories in parallel (my Obsidian vault and the Astro repo on Vercel).
+
+### What I built: The `blog-publish` skill
+
+The secret to keeping this from blowing up is a skill (a dynamically injected prompt) called `blog-publish`. This skill acts as a **semantic CI/CD guardrail**.
+
+If the agent tries to publish a post without an image, without the *canonical slug* for the English version, or using a tag that doesn't exist in my `_TAXONOMY.md`, the execution fails by design and the agent has to fix it before committing.
+
+### The gotcha: The problem with visual conversion tools
+
+Just this week I had an issue with the diagrams. I was using the `sharp` library to convert SVG to PNG. It failed horribly because it isolated the vector and lost the Google Fonts typography and CSS. I had to stop the machine, command the agent to drop `sharp`, install `puppeteer` in the repo, and rewrite the conversion script.
+
+Automation is not set-and-forget. It's iterating over the infrastructure that supports the AI.
+
+### Zoom out
+
+You don't need to be a large enterprise to operate like one. Today's tools allow you to build digital assembly lines on your own computer. The key is not the foundational model you use (GPT-4 or Claude), but the architectural rails you put around it.
+
+### What's next
+
+Next week I will detail how I connect all this to Engram, my persistent memory. I will show how the agent remembers the corrections I make (like "never promise features that don't exist") and applies them automatically to the next day's posts without me having to repeat the instruction.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

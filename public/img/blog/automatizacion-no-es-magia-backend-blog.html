@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Pipeline Backend de mariohealthbits.dev</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #34d399;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-left: 1.75rem;
+    }
+    
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    
+    svg {
+      width: 100%;
+      min-width: 900px;
+      display: block;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .card ul {
+      list-style: none;
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+    
+    .card li {
+      margin-bottom: 0.375rem;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Pipeline Editorial de Cotocha</h1>
+      </div>
+      <p class="subtitle">Automatización no es magia: es orquestación y contratos de estado</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 480">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <rect x="50" y="40" width="880" height="380" rx="12" fill="rgba(6, 78, 59, 0.05)" stroke="#34d399" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="65" y="65" fill="#34d399" font-size="12" font-weight="600">Local Machine / VPS Agent Environment</text>
+
+        <!-- Step 1 -->
+        <rect x="80" y="100" width="160" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="160" y="125" fill="white" font-size="11" font-weight="600" text-anchor="middle">1. Lectura de Estado</text>
+        <text x="160" y="145" fill="#a78bfa" font-size="9" text-anchor="middle">_EDITORIAL-CALENDAR.md</text>
+        <text x="160" y="160" fill="#a78bfa" font-size="9" text-anchor="middle">_INDEX.md</text>
+
+        <line x1="240" y1="140" x2="285" y2="140" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Step 2 -->
+        <rect x="295" y="100" width="160" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="375" y="125" fill="white" font-size="11" font-weight="600" text-anchor="middle">2. Generación Bilingüe</text>
+        <text x="375" y="145" fill="#22d3ee" font-size="9" text-anchor="middle">Skill: astro-blog-post</text>
+        <text x="375" y="160" fill="#22d3ee" font-size="9" text-anchor="middle">.mdx (ES) / .en.mdx (EN)</text>
+
+        <line x1="455" y1="140" x2="500" y2="140" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Step 3 -->
+        <rect x="510" y="100" width="160" height="80" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="590" y="125" fill="white" font-size="11" font-weight="600" text-anchor="middle">3. Diagramación</text>
+        <text x="590" y="145" fill="#fbbf24" font-size="9" text-anchor="middle">Skill: architecture-diagram</text>
+        <text x="590" y="160" fill="#fbbf24" font-size="9" text-anchor="middle">HTML + SVG Nativo</text>
+
+        <line x1="590" y1="180" x2="590" y2="215" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Step 4 -->
+        <rect x="510" y="225" width="160" height="80" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="590" y="250" fill="white" font-size="11" font-weight="600" text-anchor="middle">4. Conversión Headless</text>
+        <text x="590" y="270" fill="#94a3b8" font-size="9" text-anchor="middle">Puppeteer / scripts/convert</text>
+        <text x="590" y="285" fill="#94a3b8" font-size="9" text-anchor="middle">HTML -> PNG OpenGraph</text>
+
+        <line x1="510" y1="265" x2="455" y2="265" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Step 5 (Guardrail) -->
+        <rect x="295" y="225" width="160" height="80" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="375" y="250" fill="white" font-size="11" font-weight="600" text-anchor="middle">5. CI/CD Semántico</text>
+        <text x="375" y="270" fill="#fb7185" font-size="9" text-anchor="middle">Skill: blog-publish</text>
+        <text x="375" y="285" fill="#fb7185" font-size="9" text-anchor="middle">cotocha-draft-checker</text>
+
+        <line x1="295" y1="265" x2="240" y2="265" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Step 6 -->
+        <rect x="80" y="225" width="160" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="160" y="250" fill="white" font-size="11" font-weight="600" text-anchor="middle">6. Multi-Repo Sync</text>
+        <text x="160" y="270" fill="#34d399" font-size="9" text-anchor="middle">Commit Astro Repo</text>
+        <text x="160" y="285" fill="#34d399" font-size="9" text-anchor="middle">Commit Obsidian Vault</text>
+
+        <!-- Final Deploy -->
+        <line x1="160" y1="305" x2="160" y2="345" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        
+        <rect x="100" y="355" width="120" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="160" y="375" fill="white" font-size="11" font-weight="600" text-anchor="middle">Vercel Deploy</text>
+        <text x="160" y="388" fill="#fb923c" font-size="8" text-anchor="middle">Live URL</text>
+
+        <!-- Social Mkt Output -->
+        <path d="M 240 280 L 260 280 Q 275 280 275 300 L 275 355 Q 275 375 295 375 L 340 375" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <rect x="350" y="355" width="150" height="40" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="425" y="375" fill="white" font-size="11" font-weight="600" text-anchor="middle">Social Media Handoff</text>
+        <text x="425" y="388" fill="#22d3ee" font-size="8" text-anchor="middle">X Thread + LinkedIn Copy</text>
+
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Contratos Previos</h3>
+        </div>
+        <ul>
+          <li>• Lectura obligatoria de `_INDEX` y Calendar</li>
+          <li>• Determina si es serie y asigna número</li>
+          <li>• Evita sobreescrituras en el blog</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Headless Conversion</h3>
+        </div>
+        <ul>
+          <li>• Dejamos `sharp` por Puppeteer local</li>
+          <li>• Carga web fonts y CSS exactos</li>
+          <li>• Exporta un PNG 1200x630 para OpenGraph</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>CI/CD Semántico</h3>
+        </div>
+        <ul>
+          <li>• El agente NO publica si falla el checker</li>
+          <li>• Valida canonicalSlug y frontmatter nulo</li>
+          <li>• Asegura un deployment verde en Vercel</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      mariohealthbits.dev • Infraestructura & Agentes
+    </p>
+  </div>
+</body>
+</html>
