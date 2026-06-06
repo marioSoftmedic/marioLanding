@@ -1,0 +1,62 @@
+---
+title: "What changes when your AI agent has real working memory"
+description: "Stuffing PDFs into the prompt isn't memory, it's a static database. Why connecting Engram to Cotocha ended our coding 'Groundhog Day'."
+date: 2026-06-06
+lang: "en"
+image: "/img/blog/agente-ia-memoria-operativa-vs-contexto.png"
+tags: [ai, agents, memory, engram, architecture]
+draft: false
+series: "agentes"
+seriesOrder: 11
+related: [2026-04-09-sincronizacion-bidireccional-mac-vps-engram-cerebro-que-nunca-se-apaga, 2026-06-03-subagentes-revisores-vs-escritores-paralelos]
+canonicalSlug: "2026-06-06-agente-ia-memoria-operativa-vs-contexto"
+---
+
+Developing with LLMs today feels like Groundhog Day. Every time you open a new chat window in Cursor, Claude, or ChatGPT, you are faced with a brilliant engineer who suffers from severe amnesia. You have to explain all over again that you use Drizzle ORM, that timestamps are strictly UTC, and that they shouldn't use the word "revolutionary" in their copy.
+
+To solve this, the industry pushed RAG (Retrieval-Augmented Generation): stuffing all your company's PDFs and documents into a vector database for the agent to read.
+
+### What nobody tells you about RAG
+
+RAG is excellent for looking up static knowledge (e.g., "what is the national health code for this exam"), but **it completely fails for operational context.**
+
+If at 3 AM yesterday you made an architectural decision because a concurrency bug brought down the database, that decision isn't in any PDF. It is tactical, dynamic, mutable knowledge. If your agent has nowhere to write and remember that state, tomorrow it will make the exact same mistake.
+
+### The real data: Ephemeral Memory vs Working Memory
+
+With our Cotocha orchestrator, we made the leap from having an agent that only "reads" to one that "writes memories." We connected it to Engram, a persistent memory system that survives context resets and token flushing.
+
+The difference in productivity is absurd. I no longer spend 15 minutes assembling the context prompt. The agent boots up, connects to its local SQLite database, and rebuilds its own state.
+
+### What we built: The proactive memory protocol
+
+I don't ask the agent to remember things; I force it to record its state by architectural design. We implemented a protocol where, after every major task or bugfix, the agent makes a tool call to `mem_save`:
+
+```typescript
+// The agent self-registers the learning without me asking
+await engram.mem_save({
+  title: "Migration from Sharp to Puppeteer for PNGs",
+  type: "architecture",
+  content: "Sharp does not read web fonts or external CSS. For the blog's OpenGraph, we MUST use headless Puppeteer with deviceScaleFactor: 2. Do not attempt librsvg again."
+});
+```
+
+The next day, if I ask it to generate an image, the agent first runs a `mem_search`, finds its own trauma from the day before, and avoids stumbling over the same stone.
+
+### The gotcha: Garbage in, garbage remembered
+
+Having working memory brings a technical debt problem that ephemeral LLMs don't have: if the agent learns something incorrect and records it as absolute truth, it will defend it to the death in the next session.
+
+Un-audited memory becomes toxic. To avoid this, we close every coding day with a `session_summary`, where the agent and I consolidate what we learned, discard failed attempts, and leave a clean slate for the future.
+
+### Zoom out
+
+Truly autonomous agents are not three-page prompts or giant RAG systems. They are orchestrated flows with the ability to alter their own state over time. If your AI cannot learn from its mistakes on Tuesday so it won't make them on Wednesday, it's not an agent; it's just a sophisticated calculator.
+
+### What's next
+
+Recording memory is easy; the problem is maintaining its quality. Next week I will detail how we implemented a `Knowledge Health Auditor`, a sub-agent that reviews the Obsidian vault and the Engram memory looking for logical contradictions in the project's decisions.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
