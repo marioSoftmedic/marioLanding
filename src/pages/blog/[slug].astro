@@ -4,6 +4,7 @@ import { getCollection, render } from 'astro:content';
 import { useTranslations, basePath } from '../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../lib/tags';
 import RelatedPosts from '../../components/RelatedPosts.astro';
+import PostCTA from '../../components/PostCTA.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'es');
@@ -115,6 +116,14 @@ const articleSchema = {
       <div class="prose-blog">
         <Content />
       </div>
+
+      <PostCTA
+        lang="es"
+        tags={post.data.tags}
+        leadMagnet={post.data.leadMagnet}
+        newsletterTopic={post.data.newsletterTopic}
+        source={`post-${slug}`}
+      />
 
       <RelatedPosts post={post} lang="es" />
 

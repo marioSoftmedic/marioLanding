@@ -5,6 +5,7 @@ import Timeline from '../../components/Timeline.astro';
 import { getCollection } from 'astro:content';
 import { useTranslations, basePath } from '../../i18n/utils';
 import { HUBS, hubPath } from '../../lib/hubs';
+import NewsletterSignup from '../../components/NewsletterSignup.astro';
 
 const lang = 'en' as const;
 const t = useTranslations(lang);
@@ -313,6 +314,10 @@ const homeSchema = [
             </svg>
           </a>
         ))}
+      </div>
+
+      <div class="mt-10">
+        <NewsletterSignup lang={lang} source="home-blog-en" />
       </div>
     </div>
   </section>

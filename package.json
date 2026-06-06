@@ -11,6 +11,9 @@
     "preview": "astro preview",
     "astro": "astro",
     "validate-posts": "node scripts/validate-posts.mjs",
+    "newsletter:digest": "node scripts/generate-newsletter-digest.mjs",
+    "newsletter:validate": "node scripts/validate-newsletter-draft.mjs",
+    "newsletter:preview": "node scripts/render-newsletter-preview.mjs",
     "prepare": "husky || true"
   },
   "overrides": {

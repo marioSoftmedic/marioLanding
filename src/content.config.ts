@@ -1,39 +1,53 @@
-import { defineCollection, z } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
 
 const projects = defineCollection({
-  loader: glob({ pattern: '**/*.mdx', base: './src/content/projects' }),
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    descriptionEn: z.string().optional(),
-    emoji: z.string(),
-    techStack: z.array(z.string()),
-    featured: z.boolean().default(false),
-    image: z.string().optional(),
-    githubUrl: z.string().optional(),
-    demoUrl: z.string().optional(),
-    previewUrl: z.string().optional(),
-    previewFallbackImage: z.string().optional(),
-    lang: z.enum(['es', 'en']).default('es'),
-  }),
+	loader: glob({ pattern: "**/*.mdx", base: "./src/content/projects" }),
+	schema: z.object({
+		title: z.string(),
+		description: z.string(),
+		descriptionEn: z.string().optional(),
+		emoji: z.string(),
+		techStack: z.array(z.string()),
+		featured: z.boolean().default(false),
+		image: z.string().optional(),
+		githubUrl: z.string().optional(),
+		demoUrl: z.string().optional(),
+		previewUrl: z.string().optional(),
+		previewFallbackImage: z.string().optional(),
+		lang: z.enum(["es", "en"]).default("es"),
+	}),
 });
 
 const blog = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
-  schema: z.object({
-    title: z.string(),
-    date: z.coerce.date(),
-    description: z.string(),
-    tags: z.array(z.string()).default([]),
-    image: z.string().optional(),
-    draft: z.boolean().default(false),
-    lang: z.enum(['es', 'en']).default('es'),
-    canonicalSlug: z.string().optional(),
-    series: z.string().optional(),
-    seriesOrder: z.number().int().positive().optional(),
-    related: z.array(z.string()).default([]),
-  }),
+	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/blog" }),
+	schema: z.object({
+		title: z.string(),
+		date: z.coerce.date(),
+		description: z.string(),
+		tags: z.array(z.string()).default([]),
+		image: z.string().optional(),
+		draft: z.boolean().default(false),
+		lang: z.enum(["es", "en"]).default("es"),
+		canonicalSlug: z.string().optional(),
+		series: z.string().optional(),
+		seriesOrder: z.number().int().positive().optional(),
+		related: z.array(z.string()).default([]),
+		audience: z.string().optional(),
+		funnelStage: z.enum(["awareness", "consideration", "decision"]).optional(),
+		primaryCta: z
+			.enum(["newsletter", "resource", "contact", "demo"])
+			.optional(),
+		leadMagnet: z
+			.enum([
+				"interoperability-checklist",
+				"lis-whatsapp-guide",
+				"healthbits-brief",
+			])
+			.optional(),
+		newsletterTopic: z.string().optional(),
+		newsletterPriority: z.number().int().min(0).max(5).optional(),
+	}),
 });
 
 export const collections = { projects, blog };

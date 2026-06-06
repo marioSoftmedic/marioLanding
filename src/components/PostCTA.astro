@@ -1,0 +1,36 @@
+---
+import type { Lang } from '../lib/tags';
+import NewsletterSignup from './NewsletterSignup.astro';
+
+interface Props {
+  lang?: Lang;
+  tags?: string[];
+  leadMagnet?: string;
+  newsletterTopic?: string;
+  source?: string;
+}
+
+const {
+  lang = 'es',
+  tags = [],
+  leadMagnet,
+  newsletterTopic,
+  source = 'post',
+} = Astro.props;
+---
+
+<div class="post-cta">
+  <NewsletterSignup
+    lang={lang}
+    tags={tags}
+    leadMagnet={leadMagnet}
+    newsletterTopic={newsletterTopic}
+    source={source}
+  />
+</div>
+
+<style>
+  .post-cta {
+    margin: 3rem 0 2rem;
+  }
+</style>

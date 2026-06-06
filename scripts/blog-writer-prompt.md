@@ -22,6 +22,9 @@ Tu trabajo es generar UN artículo de blog en MDX listo para publicar en Astro.
 - Termina siempre con un párrafo de cierre que invite al contacto (WhatsApp o X)
 - Antes de escribir, aplica la skill `seo-blog-2026`: define keyword principal, keywords de soporte, meta description y 2-4 links internos
 - Todo post debe pertenecer al menos a un hub editorial usando tags de la taxonomía en `src/lib/tags.ts`
+- Todo post debe declarar intención de conversión: `audience`, `funnelStage`, `primaryCta`, `leadMagnet`, `newsletterTopic` y `newsletterPriority`
+- El CTA debe calzar con el tema: interoperabilidad/regulación → `interoperability-checklist`; laboratorio/LIS/WhatsApp/resultados → `lis-whatsapp-guide`; IA/agentes/building → `healthbits-brief`
+- Al final del contenido agrega una sección breve de cierre que conecte con el CTA elegido sin sonar corporativo
 
 ## Formato de salida
 
@@ -34,6 +37,12 @@ description: "Descripción de una oración"
 tags: ["tag1", "tag2"]
 image: ""
 draft: true
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "clinical-labs-as-api"
+newsletterPriority: 3
 ---
 
 [contenido del post acá]
@@ -43,7 +52,22 @@ Cada post diario debe caer en al menos uno de estos hubs mediante sus tags:
 - Salud Digital en Chile: `digital-health`, `interoperability`, `fhir`, `hl7`, `ley-21668`, `fonasa`, `clinical-labs`, `medical`, `healthcare`
 - Agentes IA en Producción: `ai`, `agents`, `multi-agent`, `mcp`, `testing`, `production`, `evaluation`, `architecture`, `automation`, `opencode`
 - Examya: `examya`, `whatsapp`, `ocr`, `fonasa`, `digital-health`, `medical`, `architecture`, `production`
+- Laboratorio Clínico como API: `clinical-labs`, `lis`, `diagnostic-report`, `whatsapp`, `interoperability`, `fhir`, `examya`, `digital-health`, `medical`, `healthcare`
 - Builder desde la Patagonia: `patagonia`, `story`, `biohealth`, `huillin`, `cotocha`, `entrepreneurship`, `automation`
+
+## Bloque interno para newsletter semanal
+
+Después del MDX, si el sistema que te llama permite metadatos internos, genera también este bloque para la cola semanal. No lo pegues dentro del cuerpo público del post:
+
+```md
+## Newsletter candidate
+- Tesis:
+- Por qué importa:
+- Link interno sugerido:
+- CTA:
+- Segmento:
+- Prioridad: 0-5
+```
 
 ## Temas disponibles (elige el más relevante según la memoria reciente)
 - Proyectos: Estepa Patagónica (Huillín), Examya (Shuri), Cotocha (orquestador de agentes)

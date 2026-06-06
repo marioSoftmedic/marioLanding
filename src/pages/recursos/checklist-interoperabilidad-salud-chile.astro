@@ -1,0 +1,59 @@
+---
+import Base from '../../layouts/Base.astro';
+import NewsletterSignup from '../../components/NewsletterSignup.astro';
+
+const title = 'Checklist de interoperabilidad en salud para Chile';
+const description = 'Una guía práctica para revisar preparación regulatoria, técnica y operativa frente a Ley 21.668, FHIR y evidencia clínica interoperable.';
+const checklist = [
+  'Inventario de sistemas que crean, almacenan o envían datos clínicos.',
+  'Mapa de datos críticos: paciente, orden, resultado, informe diagnóstico y consentimiento.',
+  'Identificadores consistentes: RUN/RUT, laboratorio, profesional, prestación y episodio.',
+  'Estrategia FHIR: recursos mínimos, perfiles Core-CL aplicables y límites del piloto.',
+  'Evidencia auditable: logs, estados, responsables, trazabilidad y control de cambios.',
+  'Gobierno de consentimiento, derechos ARCO-P y acceso por rol.',
+  'Plan de piloto con datos sintéticos antes de tocar producción.',
+];
+---
+
+<Base title={`${title} — Mario Inostroza`} description={description}>
+  <section class="py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+      <a href="/blog" class="inline-flex items-center gap-2 text-sm mb-10 transition-colors duration-200" style="color: var(--text-faint);">
+        ← Volver al blog
+      </a>
+
+      <header class="mb-10">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">Recurso gratuito</p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">{title}</h1>
+        <p class="text-lg leading-relaxed" style="color: var(--text-muted);">{description}</p>
+      </header>
+
+      <div class="glass-card p-6 mb-10">
+        <h2 class="text-2xl font-bold tracking-tight mb-4">Checklist base</h2>
+        <ul class="grid gap-3">
+          {checklist.map((item) => (
+            <li class="flex gap-3" style="color: var(--text-secondary);">
+              <span aria-hidden="true" style="color: var(--accent-orange);">✓</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="prose-resource">
+        <h2>Cómo usarlo</h2>
+        <p>No es una certificación ni asesoría legal. Es una pauta ejecutiva para ordenar la conversación entre dirección médica, TI, calidad y proveedores antes de iniciar un piloto de interoperabilidad.</p>
+        <p>La señal importante no es tener todos los puntos resueltos. La señal importante es saber cuáles son riesgos técnicos, cuáles son brechas de proceso y cuáles requieren decisión institucional.</p>
+      </div>
+
+      <div class="mt-12">
+        <NewsletterSignup lang="es" leadMagnet="interoperability-checklist" newsletterTopic="interoperability" source="resource-interoperability-checklist" />
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .prose-resource h2 { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; }
+  .prose-resource p { color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.25rem; font-size: 1.05rem; }
+</style>

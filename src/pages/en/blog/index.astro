@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content';
 import { useTranslations, basePath } from '../../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../../lib/tags';
 import { HUBS, hubPath } from '../../../lib/hubs';
+import NewsletterSignup from '../../../components/NewsletterSignup.astro';
 
 const lang = 'en' as const;
 const t = useTranslations(lang);
@@ -36,6 +37,10 @@ const formatDate = (date: Date) =>
             {t('blog.tags.heading')}
           </a>
         </div>
+      </div>
+
+      <div class="mb-12">
+        <NewsletterSignup lang={lang} source="blog-index-en" />
       </div>
 
       {posts.length === 0 ? (

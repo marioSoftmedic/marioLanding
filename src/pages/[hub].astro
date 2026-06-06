@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 import { HUBS, hubPath, postsForHub } from '../lib/hubs';
 import { tagsForPost, tagDisplay } from '../lib/tags';
+import NewsletterSignup from '../components/NewsletterSignup.astro';
 
 export async function getStaticPaths() {
   return HUBS.map((hub) => ({
@@ -57,6 +58,9 @@ const schema = {
         </div>
       </header>
 
+      <div class="mb-12">
+        <NewsletterSignup lang={lang} tags={hub.tags} newsletterTopic={hub.id} source={`hub-${hub.id}`} />
+      </div>
 
       {hubPosts.length === 0 ? (
         <p class="py-12 text-center" style="color: var(--text-muted);">Todavía no hay posts publicados para este hub.</p>

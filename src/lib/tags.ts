@@ -412,6 +412,27 @@ export const TAG_TAXONOMY: TagDef[] = [
 		],
 	},
 	{
+		slug: "lis",
+		label: { es: "LIS", en: "LIS" },
+		aliases: ["lis", "laboratory information system", "sistema de laboratorio"],
+		description: {
+			es: "Sistemas de información de laboratorio y su integración con canales modernos.",
+			en: "Laboratory information systems and their integration with modern channels.",
+		},
+	},
+	{
+		slug: "diagnostic-report",
+		label: { es: "DiagnosticReport", en: "DiagnosticReport" },
+		aliases: [
+			"diagnostic-report",
+			"diagnostic report",
+			"diagnosticreport",
+			"informe diagnostico",
+			"informe diagnóstico",
+			"resultado de laboratorio",
+		],
+	},
+	{
 		slug: "medical",
 		label: { es: "Médico", en: "Medical" },
 		aliases: ["medical", "medico", "médico"],
@@ -528,7 +549,14 @@ export const TAG_TAXONOMY: TagDef[] = [
 	{
 		slug: "engineering",
 		label: { es: "Ingeniería", en: "Engineering" },
-		aliases: ["engineering", "ingeniería", "ingenieria", "técnicos", "tecnicos", "technical"],
+		aliases: [
+			"engineering",
+			"ingeniería",
+			"ingenieria",
+			"técnicos",
+			"tecnicos",
+			"technical",
+		],
 	},
 	{
 		slug: "diagnostics",

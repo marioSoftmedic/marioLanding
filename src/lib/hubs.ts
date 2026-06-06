@@ -43,6 +43,37 @@ export const HUBS: HubDef[] = [
 		],
 	},
 	{
+		id: "clinical-lab-api",
+		slug: { es: "laboratorio-clinico-api", en: "clinical-lab-api" },
+		eyebrow: { es: "Guía B2B", en: "B2B Guide" },
+		title: {
+			es: "Laboratorio Clínico como API",
+			en: "Clinical Lab as an API",
+		},
+		description: {
+			es: "Resultados, LIS legacy, WhatsApp, DiagnosticReport y capas adaptadoras para convertir el laboratorio en infraestructura digital útil.",
+			en: "Results delivery, legacy LIS, WhatsApp, DiagnosticReport and adapter layers for turning clinical labs into useful digital infrastructure.",
+		},
+		keywords: [
+			"laboratorio clínico como API",
+			"resultados por WhatsApp",
+			"LIS interoperabilidad",
+			"DiagnosticReport FHIR",
+		],
+		tags: [
+			"clinical-labs",
+			"lis",
+			"diagnostic-report",
+			"whatsapp",
+			"interoperability",
+			"fhir",
+			"examya",
+			"digital-health",
+			"medical",
+			"healthcare",
+		],
+	},
+	{
 		id: "ai-agents-production",
 		slug: { es: "agentes-ia-produccion", en: "ai-agents-production" },
 		eyebrow: { es: "Guía técnica", en: "Technical Guide" },

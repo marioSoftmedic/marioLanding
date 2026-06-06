@@ -1,0 +1,56 @@
+---
+import Base from '../../layouts/Base.astro';
+import NewsletterSignup from '../../components/NewsletterSignup.astro';
+
+const title = 'Guía para modernizar resultados clínicos sin reemplazar el LIS';
+const description = 'Una pauta práctica para laboratorios que quieren mejorar entrega de resultados, WhatsApp e interoperabilidad sin romper sistemas legacy.';
+const steps = [
+  'Separar el problema comercial del problema técnico: entrega, trazabilidad, soporte y experiencia del paciente.',
+  'Identificar qué dato vive en el LIS, qué dato vive en PDF y qué dato debe volverse estructurado.',
+  'Definir un primer caso de uso: resultado final, notificación, descarga segura o integración FHIR.',
+  'Usar una capa adaptadora antes de reemplazar sistemas centrales.',
+  'Mantener evidencia: quién validó, cuándo se emitió, cómo se notificó y qué recibió el paciente.',
+  'Probar con datos sintéticos o casos controlados antes de conectar producción.',
+  'Medir reducción de llamadas, tiempos de entrega, errores de canal y satisfacción operacional.',
+];
+---
+
+<Base title={`${title} — Mario Inostroza`} description={description}>
+  <section class="py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+      <a href="/blog" class="inline-flex items-center gap-2 text-sm mb-10 transition-colors duration-200" style="color: var(--text-faint);">
+        ← Volver al blog
+      </a>
+
+      <header class="mb-10">
+        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">Recurso gratuito</p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">{title}</h1>
+        <p class="text-lg leading-relaxed" style="color: var(--text-muted);">{description}</p>
+      </header>
+
+      <div class="glass-card p-6 mb-10">
+        <h2 class="text-2xl font-bold tracking-tight mb-4">Ruta mínima</h2>
+        <ol class="grid gap-3 list-decimal pl-5">
+          {steps.map((item) => (
+            <li style="color: var(--text-secondary);">{item}</li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="prose-resource">
+        <h2>La idea central</h2>
+        <p>Modernizar no significa reemplazar el LIS como primer paso. En muchos laboratorios, el primer valor aparece creando una capa de entrega, evidencia e interoperabilidad alrededor del sistema existente.</p>
+        <p>Eso permite partir chico: un flujo, un tipo de resultado, una integración o un canal de entrega. Si funciona, recién ahí se justifica ampliar alcance.</p>
+      </div>
+
+      <div class="mt-12">
+        <NewsletterSignup lang="es" leadMagnet="lis-whatsapp-guide" newsletterTopic="clinical-labs-as-api" source="resource-lis-whatsapp-guide" />
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .prose-resource h2 { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; }
+  .prose-resource p { color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.25rem; font-size: 1.05rem; }
+</style>
