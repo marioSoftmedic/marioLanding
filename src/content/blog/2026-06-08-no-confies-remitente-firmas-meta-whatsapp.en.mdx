@@ -1,0 +1,78 @@
+---
+title: "Don't trust the sender: why we verify Meta signatures on every message"
+description: "If your medical bot receives an ID or a lab result, how do you know it comes from WhatsApp? How we implemented x-hub-signature-256 verification."
+date: 2026-06-08
+lang: "en"
+image: "/img/blog/no-confies-remitente-firmas-meta-whatsapp.png"
+tags: [backend, whatsapp, examya, compliance, infrastructure]
+draft: false
+canonicalSlug: "2026-06-08-no-confies-remitente-firmas-meta-whatsapp"
+series: "examya"
+seriesOrder: 10
+---
+
+## 1. The Patient, the Bot, and the Impostor (Hook)
+
+Imagine this scenario: a patient writes to **Examya** to ask for the price of their blood test. Our Shuri agent asks for their ID, processes the order, and delivers a quotation in seconds. Great, right? The problem is that for this to work, our API must be listening on a public WhatsApp endpoint.
+
+If someone discovers that URL, it’s a disaster: they could start sending us thousands of fake messages that look like "patients," but are actually data injections trying to break the database or, worse, impersonate someone to steal sensitive information. In healthcare, blind trust is not an option. The sender isn't just a number; it’s a digital signature we must validate in milliseconds.
+
+## 2. The Vulnerability Nobody Tells You About (Lo que nadie cuenta)
+
+Most bot tutorials tell you: "Create a POST endpoint, receive the JSON, and you're done." That's a recipe for disaster. That endpoint is public by definition. If you don't verify where the request comes from, you're leaving the clinic door wide open.
+
+What nobody tells you is that an attacker doesn't need to hack WhatsApp; they only need to "spoof" (fake) a JSON payload that looks exactly like Meta's. If your server doesn't have a way to certify that this package actually passed through Mark Zuckerberg’s servers, you're processing radioactive waste.
+
+## 3. Cryptography in the First Millisecond (Datos reales)
+
+To sleep peacefully, in Examya's **PR #1002**, we implemented `x-hub-signature-256` header validation. We don't use a simple API Key. We use an **HMAC (Hash-based Message Authentication Code)** with SHA256.
+
+Here’s the move: Meta takes the message body, signs it with a secret key known only to them and us (`APP_SECRET`), and sends that hash in the header. If an attacker changes even a comma of the message, the hash no longer matches, and the request dies before Shuri even sees it.
+
+## 4. The Gatekeeper (Lo que construiste)
+
+We built a validator that acts as the first security filter. The technical part here is that we cannot validate the already parsed JSON object. We must validate the **original buffer**.
+
+Here is an idea of how we capture that `rawBody` in NestJS so that data integrity is not lost:
+
+```typescript
+// In bootstrap.ts (Simplified)
+const app = await NestFactory.create(AppModule, {
+  bodyParser: true,
+  // We need the original buffer to validate the HMAC signature
+  rawBody: true, 
+});
+
+// In the Validation Middleware
+const signature = req.headers['x-hub-signature-256'];
+const hmac = createHmac('sha256', process.env.WHATSAPP_APP_SECRET);
+const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
+
+if (signature !== digest) {
+  throw new UnauthorizedException('Invalid Meta signature');
+}
+```
+
+## 5. The Gotcha: Why NestJS Can Work Against You (El gotcha)
+
+This is where many builders throw in the towel. NestJS, by default, uses a parser that consumes the request stream to convert it to JSON. Once that stream is consumed, you can no longer read it again to validate the signature!
+
+We had to configure a global `rawBody` and ensure the parser doesn't "clean" the buffer before our security logic compares it. If you don't do this, your validation will always fail or your server will hang waiting for data that no longer exists. Those details are what separate a toy from a production system.
+
+## 6. More Than Code: It's Operational Compliance (Zoom out)
+
+Why do we go through this technical trouble? Because with Chile's **Ley 21.719**, "paper compliance" is over. It’s no longer enough to have a Privacy Policy PDF. You must demonstrate **technical evidence**.
+
+If the authority asks us: "How do you know this patient accepted the consent?", we show the audit log with Meta's cryptographic signature associated with that message. That is **Operational Compliance**: technology defending the legality of the process.
+
+## 7. What's Next: Context is King (Lo que viene)
+
+We didn't stop there. In **PR #1003**, we launched `ChannelContext`. Now Shuri not only knows who is talking to her, but also which technical "pipe" the message is coming through.
+
+This allows us to perfectly separate the flow of someone writing to us via the web from someone writing to us via WhatsApp, eliminating any risk of session collisions. Security is not about a single wall, but about layers that reinforce each other.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

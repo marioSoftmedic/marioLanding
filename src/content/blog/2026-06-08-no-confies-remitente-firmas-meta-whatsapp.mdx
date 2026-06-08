@@ -1,0 +1,77 @@
+---
+title: "No confíes en el remitente: por qué verificamos firmas de Meta en cada mensaje"
+description: "Si tu bot médico recibe un RUT o un examen, ¿cómo sabes que viene de WhatsApp y no de un atacante? Cómo implementamos la verificación x-hub-signature-256."
+date: 2026-06-08
+lang: "es"
+image: "/img/blog/no-confies-remitente-firmas-meta-whatsapp.png"
+tags: [backend, whatsapp, examya, compliance, infrastructure]
+draft: false
+series: "examya"
+seriesOrder: 10
+---
+
+## 1. El paciente, el bot y el impostor (Hook)
+
+Imagínate este escenario: un paciente escribe a **Examya** para pedir el precio de su examen de sangre. Nuestro agente Shuri le pide el RUT, procesa la orden y le entrega una cotización FONASA en segundos. Bacán, ¿cierto? El problema es que, para que eso funcione, nuestra API tiene que estar escuchando en un endpoint público de WhatsApp. 
+
+Si alguien descubre esa URL, la cagó: podría empezar a mandarnos miles de mensajes falsos que parecen "pacientes", pero que en realidad son inyecciones de datos para tratar de romper la base de datos o, peor, suplantar la identidad de alguien para robar información sensible. En salud, la confianza ciega no es una opción. El remitente no es solo un número; es una firma digital que debemos validar en milisegundos.
+
+## 2. La vulnerabilidad que nadie te cuenta (Lo que nadie cuenta)
+
+La mayoría de los tutoriales de bots te dicen: "Crea un endpoint POST, recibe el JSON y listo". Esa es la receta para el desastre. Ese endpoint es público por definición. Si no verificas de dónde viene el request, estás dejando la puerta de la clínica abierta de par en par. 
+
+Lo que nadie te dice es que un atacante no necesita hackear WhatsApp; solo necesita "spoofear" (falsificar) un paquete JSON que se vea igual al de Meta. Si tu servidor no tiene una forma de certificar que ese paquete realmente pasó por los servidores de Mark Zuckerberg, estás procesando basura radioactiva.
+
+## 3. Criptografía en el primer milisegundo (Datos reales)
+
+Para dormir tranquilos, en el **PR #1002** de Examya implementamos la validación del encabezado `x-hub-signature-256`. No usamos una simple API Key. Usamos un **HMAC (Hash-based Message Authentication Code)** con SHA256. 
+
+La movida es esta: Meta toma el cuerpo del mensaje, lo firma con una clave secreta que solo ellos y nosotros conocemos (`APP_SECRET`) y nos manda ese hash en el header. Si un atacante cambia aunque sea una coma del mensaje, el hash ya no coincide y el request muere antes de que Shuri siquiera lo vea.
+
+## 4. El guardián de la puerta (Lo que construiste)
+
+Construimos un validador que actúa como el primer filtro de seguridad. Lo técnico acá es que no podemos validar el objeto JSON ya parseado. Tenemos que validar el **buffer original**.
+
+Aquí tienes una idea de cómo capturamos ese `rawBody` en NestJS para que no se pierda la integridad del dato:
+
+```typescript
+// En bootstrap.ts (Simplificado)
+const app = await NestFactory.create(AppModule, {
+  bodyParser: true,
+  // Necesitamos el buffer original para validar la firma HMAC
+  rawBody: true, 
+});
+
+// En el Middleware de Validación
+const signature = req.headers['x-hub-signature-256'];
+const hmac = createHmac('sha256', process.env.WHATSAPP_APP_SECRET);
+const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
+
+if (signature !== digest) {
+  throw new UnauthorizedException('Firma de Meta inválida');
+}
+```
+
+## 5. El "Gotcha": Por qué NestJS te puede jugar en contra (El gotcha)
+
+Aquí es donde muchos builders tiran la toalla. NestJS, por defecto, usa un parser que consume el "stream" del request para convertirlo en JSON. Una vez que ese stream se consume, ¡ya no puedes leerlo de nuevo para validar la firma! 
+
+Tuvimos que configurar un `rawBody` global y asegurar que el parser no "limpie" el buffer antes de que nuestra lógica de seguridad lo compare. Si no haces esto, tu validación siempre va a fallar o tu servidor se va a quedar colgado esperando datos que ya no existen. Esos detalles son los que separan un juguete de un sistema de producción.
+
+## 6. Más que código: es Cumplimiento Operativo (Zoom out)
+
+¿Por qué nos damos esta paja técnica? Porque con la **Ley 21.719** en Chile, el "cumplimiento en papel" se acabó. Ya no basta tener un PDF de políticas de privacidad. Tienes que demostrar **evidencia técnica**.
+
+Si la autoridad nos pregunta: "¿Cómo saben que este paciente aceptó el consentimiento?", nosotros mostramos el log de auditoría con la firma criptográfica de Meta asociada a ese mensaje. Eso es **Cumplimiento Operativo**: la tecnología defendiendo la legalidad del proceso.
+
+## 7. Lo que viene: El contexto es rey (Lo que viene)
+
+No nos quedamos ahí. En el **PR #1003** lanzamos el `ChannelContext`. Ahora Shuri no solo sabe quién le habla, sino por qué "cañería" técnica viene el mensaje. 
+
+Esto nos permite separar perfectamente el flujo de alguien que nos escribe por la web de alguien que nos escribe por WhatsApp, eliminando cualquier riesgo de colisión de sesiones. La seguridad no se trata de una sola muralla, sino de capas que se refuerzan entre sí.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
