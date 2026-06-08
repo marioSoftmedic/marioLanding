@@ -1,0 +1,29 @@
+---
+title: "Por qué la salud digital no se destraba con IA (sino con datos reutilizables)"
+description: "Meter un PDF en un LLM no es interoperabilidad. Por qué los portales y documentos estáticos frenan los proyectos clínicos en Chile, y cómo estructurar los datos."
+date: 2026-06-08
+lang: "es"
+image: "/img/blog/datos-reutilizables-pdf-salud-digital.png"
+tags: [Salud Digital, IA, Examya, FHIR, Interoperabilidad]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 14
+---
+
+Llegas a una clínica a implementar un "asistente clínico con IA" o a automatizar la entrega de exámenes médicos. En la reunión comercial, todos hablan de LLMs, agentes y transformación digital. Pero a los cinco minutos de la primera reunión técnica con el equipo de TI, chocas con el problema real: su LIS (Laboratory Information System) solo sabe escupir resultados médicos como un archivo PDF estático. Mientras tanto, el paciente sigue llamando por teléfono porque olvidó su clave del portal web.
+
+La verdad incómoda es que la salud digital no se destraba agregando más Inteligencia Artificial. Se destraba con datos clínicos reutilizables. Un PDF adjunto en un correo electrónico es, a nivel operativo, un callejón sin salida. Tratar de meter ese PDF a la fuerza en el prompt de un agente no es interoperabilidad, es solo lectura de imágenes glorificada. La fricción real de las clínicas ocurre porque sus datos nacen atrapados en formatos diseñados para imprimirse en papel.
+
+Cuando implementamos agentes en Examya para gestionar órdenes y entregar resultados vía WhatsApp, vimos este patrón repetirse. Descubrimos que no necesitábamos migrar toda la historia clínica para generar impacto. Solo necesitábamos rescatar cinco campos mínimos de ese "documento muerto": identificación del paciente, tipo de prestación (examen), resultado, fecha, y responsable de validación.
+
+Para resolver esto sin tocar el core de la clínica, montamos a Examya y Fhirex como una capa técnica lateral. En vez de esperar un sistema perfecto, nuestro `FhirTraceabilityBundleService` toma el flujo cerrado, extrae la información vital y la envuelve en un estándar clínico (`FHIR Bundle`). Lo que antes era un correo que nadie abría, ahora es un paquete de datos estructurados que viaja directo al canal donde el paciente sí responde.
+
+El mayor gotcha acá es la parálisis por análisis. Intentar migrar un LIS completo para que sea "FHIR-native" puede tomar dos años y agotar el presupuesto. El error es creer que modernizar significa reemplazar todo de una vez. Nuestro diseño no apaga el LIS antiguo: extrae el dato al vuelo, dispara webhooks si detecta anomalías (`compliance.violation.detected`) y deja trazabilidad limpia. Fricción cero para la clínica, alto valor para el paciente.
+
+Si miramos el panorama completo, esto va mucho más allá de mandar mensajes rápidos. Con la inminente entrada en vigencia plena de la Ley 21.719 de Protección de Datos Personales en Chile, el "cumplimiento en papel" se acabó. Ya no basta tener un PDF con una Política de Privacidad de veinte páginas guardado en un cajón. Necesitas "Cumplimiento Operativo": evidencia técnica auditable (`AuditEvent`) que demuestre quién accedió a qué ficha clínica, cuándo, y si hubo consentimiento trazable. Un documento muerto no puede auditar accesos; un dato estructurado sí.
+
+El próximo paso en el backlog de Fhirex es expandir esta cobertura técnica. Ya logramos la exportación de exámenes vía `Bundle`. Ahora estamos inyectando `FhirexPartnerAuditService` en más endpoints clínicos, para que ejercer el derecho a la portabilidad de datos no dependa nunca más de un administrativo buscando archivos en carpetas compartidas.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

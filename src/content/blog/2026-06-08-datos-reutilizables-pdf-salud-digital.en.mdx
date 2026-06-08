@@ -1,0 +1,30 @@
+---
+title: "Why digital health isn't unlocked by AI (but by reusable clinical data)"
+description: "Stuffing a PDF into an LLM isn't interoperability. Why static portals and dead documents stall clinical projects, and how to structure data instead."
+date: 2026-06-08
+lang: "en"
+image: "/img/blog/datos-reutilizables-pdf-salud-digital.png"
+tags: [Digital Health, AI, Examya, FHIR, Interoperability]
+draft: false
+canonicalSlug: "2026-06-08-datos-reutilizables-pdf-salud-digital"
+series: "interoperabilidad-chile"
+seriesOrder: 14
+---
+
+You walk into a clinic to deploy an "AI clinical assistant" or automate medical test deliveries. In the sales meeting, everyone talks about LLMs, agents, and digital transformation. But five minutes into the first technical meeting with the IT team, you hit the real wall: their LIS (Laboratory Information System) only knows how to spit out medical results as static PDF files. Meanwhile, the patient keeps calling the front desk because they forgot their web portal password.
+
+The uncomfortable truth is that digital health isn't unlocked by sprinkling more Artificial Intelligence on top. It gets unlocked by reusable clinical data. A PDF attached to an email is, operationally speaking, a dead end. Trying to force-feed that PDF into an agent's prompt isn't interoperability; it's just glorified image parsing. The real friction in clinics happens because their data is born trapped in formats designed to be printed on paper.
+
+When we deployed agents in Examya to manage medical orders and deliver results via WhatsApp, we saw this exact pattern. We discovered that we didn't need to migrate the entire electronic health record to make an impact. We only needed to rescue five minimum viable fields from that "dead document": patient ID, test type, result, date, and validating physician.
+
+To solve this without touching the clinic's core systems, we set up Examya and Fhirex as a lateral technical layer. Instead of waiting for a perfect modern system, our `FhirTraceabilityBundleService` intercepts the closed flow, extracts the vital information, and wraps it into a clinical standard (`FHIR Bundle`). What used to be an unread email is now a structured data package traveling straight to the channel the patient actually checks.
+
+The biggest gotcha here is analysis paralysis. Trying to migrate a whole LIS to be "FHIR-native" can take two years and burn through your budget. The mistake is believing that modernizing means replacing everything at once. Our design doesn't kill the old LIS: it extracts data on the fly, fires webhooks if it detects anomalies (`compliance.violation.detected`), and leaves a clean audit trail. Zero friction for the clinic, high value for the patient.
+
+Zooming out, this goes way beyond sending quick messages. With Chile's new Data Protection Law (Ley 21.719) coming into full effect, "paper compliance" is over. It's no longer enough to have a 20-page Privacy Policy PDF stored in a drawer. You need "Operational Compliance": auditable technical evidence (`AuditEvent`) that proves who accessed which clinical record, when, and if there was traceable consent. A dead document can't audit access logs; structured data can.
+
+The next step in Fhirex's backlog is expanding this technical coverage. We've already achieved test exports via `Bundle`. Now we are injecting `FhirexPartnerAuditService` into more clinical endpoints, ensuring that exercising the right to data portability never again depends on an admin clerk manually searching for files in shared folders.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
