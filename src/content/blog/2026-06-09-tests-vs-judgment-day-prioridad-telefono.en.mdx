@@ -1,0 +1,75 @@
+---
+title: "Why my tests beat Judgment Day: The mystery of the phone number"
+description: "When AI suggests a logical change but your 2024 tests say no. How the priority patient_phone > phone > from saved our data integrity."
+date: 2026-06-09
+lang: "en"
+image: "/img/blog/tests-vs-judgment-day-prioridad-telefono.png"
+tags: [testing, examya, backend, quality, architecture]
+draft: false
+series: "examya"
+seriesOrder: 11
+canonicalSlug: "2026-06-09-tests-vs-judgment-day-prioridad-telefono"
+---
+
+## 1. The Ghost in the Machine (Hook)
+
+Yesterday we were running our adversarial review protocol, the famous **Judgment Day**, through Examya's `PurchaseHandler`. Everything was going well until one of the reviewer sub-agents, in a very confident tone, suggested: *"Hey, the 'from' field is the canonical origin of WhatsApp, it should have absolute priority over any other phone number."*
+
+It sounded logical. If someone writes to you via WhatsApp, their number is the `from`, right? Well, no. We were about to approve the change when a unit test written months ago jumped at the throat: `PHONE-01: should prioritize registered patient phone over message source`. The "advanced" AI was wrong and the codebase was right.
+
+## 2. The Vulnerability Nobody Tells You About (Lo que nadie cuenta)
+
+In health bot development, the phone number is not just for chatting; it's an identity key. What nobody tells you is that the number from which a patient writes to you is not always the number they have registered in their clinical file or the one they want to use to receive their results.
+
+If we prioritize the `from` (the WhatsApp account number) over the `patient_phone` (the explicit clinical data), we break traceability. A patient could be writing from their son's phone but needs the medical order to be associated with *their* official number. Blindly trusting the channel's metadata is the fastest way to dirty your database.
+
+## 3. Cryptography in the First Millisecond (Datos reales)
+
+To solve this in Examya, we established an immutable priority contract. It's not a suggestion; it's a law in our data model. The **PHONE-01**, **PHONE-02**, and **PHONE-03** tests document that the hierarchy must always be:
+
+1.  **patient_phone**: The number the patient confirmed or that comes in the medical order.
+2.  **phone**: The previously registered number in the profile.
+3.  **from**: The physical number detected by the Meta webhook (the last resort).
+
+## 4. The Gatekeeper (Lo que construiste)
+
+We implemented this logic using a nullish coalescing chain that seems simple but is the anchor of our integrity. The technical part here is how we protect the `orderPayload` before it touches the database:
+
+```typescript
+// apps/agents/src/agents/shuri/handlers/purchase.handler.ts
+
+async function handlePayment(context: ShuriContext, orderPayload: Partial<Order>) {
+  // The sacred hierarchy that Judgment Day wanted to invert
+  const finalPatientPhone = 
+    orderPayload.patientPhone ?? // 1. Explicit order data
+    context.patient?.phone ??    // 2. Registered profile data
+    context.message.from;        // 3. WhatsApp channel fallback
+
+  return await this.medicalSummaryService.generate({
+    ...orderPayload,
+    patientPhone: finalPatientPhone,
+  });
+}
+```
+
+## 5. The Gotcha: Why NestJS Can Work Against You (El gotcha)
+
+Here is the real learning: AIs (even the best like Claude or Gemini) have a bias towards "cleanliness" and industry standards. Since WhatsApp says `from` is the origin, the AI assumes it's the source of truth.
+
+But in complex systems with legacy business rules, the truth is not in the channel standard, but in the **test contract**. If we had followed the Judgment Day suggestion, we would have broken the flow for thousands of patients who use third-party numbers to manage their tests. The lesson: the AI proposes, but the test disposes.
+
+## 6. More Than Code: It's Operational Compliance (Zoom out)
+
+Why does this matter beyond a phone number? Because it proves that a robust test suite is not just for finding bugs; it is the **technical memory** of the project.
+
+Without those PHONE-XX tests, we would have committed a subtle architectural error that we would have only detected weeks later in production, with patient complaints and crossed data. The "technical chore" of writing tests saved the afternoon yesterday.
+
+## 7. What's Next: Context is King (Lo que viene)
+
+This incident forced us to re-evaluate other metadata fields in PR #1004. We are applying the same "Documented Priority Hierarchy" logic to organization and medical center IDs. We are not going to let a "clean" suggestion from an AI erase months of field-tested business logic.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,74 @@
+---
+title: "Por qué mis tests le ganaron al Judgment Day: El misterio del número de teléfono"
+description: "Cuando la IA sugiere un cambio lógico pero tus tests de 2024 dicen que no. Cómo la prioridad patient_phone > phone > from salvó nuestra integridad de datos."
+date: 2026-06-09
+lang: "es"
+image: "/img/blog/tests-vs-judgment-day-prioridad-telefono.png"
+tags: [testing, examya, backend, quality, architecture]
+draft: false
+series: "examya"
+seriesOrder: 11
+---
+
+## 1. El fantasma en la máquina (Hook)
+
+Ayer estábamos pasando nuestro protocolo de revisión adversarial, el famoso **Judgment Day**, por el `PurchaseHandler` de Examya. Todo iba bien hasta que uno de los sub-agentes revisores, con un tono muy seguro, sugirió: *"Oye, el campo 'from' es el origen canónico de WhatsApp, debería tener prioridad absoluta sobre cualquier otro número de teléfono"*. 
+
+Sonaba lógico. Si alguien te escribe por WhatsApp, su número es el `from`, ¿cierto? Pues no po. Estábamos a punto de aprobar el cambio cuando un test unitario escrito hace meses saltó a la yugular: `PHONE-01: should prioritize registered patient phone over message source`. La IA "avanzada" estaba equivocada y el código base tenía la razón.
+
+## 2. La vulnerabilidad que nadie te cuenta (Lo que nadie cuenta)
+
+En el desarrollo de bots para salud, el número de teléfono no es solo para chatear; es una llave de identidad. Lo que nadie te cuenta es que el número desde el cual un paciente te escribe no siempre es el número que tiene registrado en su ficha clínica o el que quiere usar para recibir sus resultados. 
+
+Si priorizamos el `from` (el número de la cuenta de WhatsApp) por sobre el `patient_phone` (el dato clínico explícito), rompemos la trazabilidad. Un paciente podría estar escribiendo desde el celular de su hijo, pero necesita que la orden médica se asocie a *su* número oficial. Confiar ciegamente en el metadato del canal es la forma más rápida de ensuciar tu base de datos.
+
+## 3. Criptografía en el primer milisegundo (Datos reales)
+
+Para resolver esto en Examya, establecimos un contrato inmutable de prioridad. No es una sugerencia, es una ley en nuestro modelo de datos. Los tests **PHONE-01**, **PHONE-02** y **PHONE-03** documentan que la jerarquía debe ser siempre:
+
+1.  **patient_phone**: El número que el paciente confirmó o que viene en la orden médica.
+2.  **phone**: El número registrado previamente en el perfil.
+3.  **from**: El número físico detectado por el webhook de Meta (el último recurso).
+
+## 4. El guardián de la puerta (Lo que construiste)
+
+Implementamos esta lógica usando una cadena de *nullish coalescing* que parece simple, pero es el ancla de nuestra integridad. Lo técnico acá es cómo protegemos el `orderPayload` antes de que toque la base de datos:
+
+```typescript
+// apps/agents/src/agents/shuri/handlers/purchase.handler.ts
+
+async function handlePayment(context: ShuriContext, orderPayload: Partial<Order>) {
+  // La jerarquía sagrada que el Judgment Day quería invertir
+  const finalPatientPhone = 
+    orderPayload.patientPhone ?? // 1. Dato explícito de la orden
+    context.patient?.phone ??    // 2. Dato del perfil registrado
+    context.message.from;        // 3. Fallback del canal WhatsApp
+
+  return await this.medicalSummaryService.generate({
+    ...orderPayload,
+    patientPhone: finalPatientPhone,
+  });
+}
+```
+
+## 5. El "Gotcha": Por qué NestJS te puede jugar en contra (El gotcha)
+
+Aquí está el aprendizaje real: las IAs (incluso las mejores como Claude o Gemini) tienen un sesgo hacia la "limpieza" y los estándares de la industria. Como WhatsApp dice que `from` es el origen, la IA asume que es la fuente de verdad. 
+
+Pero en sistemas complejos con reglas de negocio heredadas (legacy), la verdad no está en el estándar del canal, sino en el **contrato de los tests**. Si hubiéramos seguido la sugerencia del Judgment Day, habríamos roto el flujo de miles de pacientes que usan números de terceros para gestionar sus exámenes. La lección: la IA propone, pero el test dispone.
+
+## 6. Más que código: es Cumplimiento Operativo (Zoom out)
+
+¿Por qué esto importa más allá de un número de teléfono? Porque demuestra que una suite de tests robusta no es solo para encontrar bugs; es la **memoria técnica** del proyecto. 
+
+Sin esos tests PHONE-XX, habríamos cometido un error de arquitectura sutil que solo habríamos detectado semanas después en producción, con reclamos de pacientes y datos cruzados. La "paja técnica" de escribir tests salvó la tarde de ayer.
+
+## 7. Lo que viene: El contexto es rey (Lo que viene)
+
+Este incidente nos obligó a re-evaluar otros campos de metadatos en el PR #1004. Estamos aplicando la misma lógica de "Jerarquía de Prioridad Documentada" a los IDs de organizaciones y centros médicos. No vamos a dejar que una sugerencia "limpia" de una IA borre meses de lógica de negocio probada en el campo.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

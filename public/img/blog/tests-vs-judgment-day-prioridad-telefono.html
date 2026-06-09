@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tests vs Judgment Day - Examya</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; display: flex; align-items: center; justify-content: center; }
+    .container { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+    .header { margin-bottom: 2rem; text-align: center; }
+    .title-row { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .dot { width: 12px; height: 12px; background: #a78bfa; border-radius: 50%; box-shadow: 0 0 10px rgba(167, 139, 250, 0.5); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(167, 139, 250, 0); } 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); } }
+    h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; }
+    .diagram-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; width: 100%; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-row">
+        <div class="dot"></div>
+        <h1>Prioridad de Datos: Test vs IA</h1>
+      </div>
+      <div class="subtitle">Jerarquía patient_phone > phone > from (Examya)</div>
+    </div>
+    
+    <div class="diagram-card">
+      <svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+        </defs>
+        
+        <rect width="100%" height="100%" fill="url(#grid)" />
+        
+        <!-- Input Sources -->
+        <rect x="50" y="100" width="200" height="60" rx="6" fill="#0f172a"/>
+        <rect x="50" y="100" width="200" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="150" y="135" fill="white" font-size="11" font-weight="600" text-anchor="middle">WhatsApp Source</text>
+        <text x="150" y="150" fill="#94a3b8" font-size="9" text-anchor="middle">(context.message.from)</text>
+
+        <rect x="50" y="220" width="200" height="60" rx="6" fill="#0f172a"/>
+        <rect x="50" y="220" width="200" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="150" y="255" fill="white" font-size="11" font-weight="600" text-anchor="middle">Clinical Order</text>
+        <text x="150" y="270" fill="#94a3b8" font-size="9" text-anchor="middle">(payload.patientPhone)</text>
+        
+        <!-- Arrows to Decision -->
+        <path d="M 250 130 L 400 180" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)" />
+        <path d="M 250 250 L 400 200" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <!-- Decision Box -->
+        <rect x="410" y="140" width="180" height="100" rx="6" fill="#0f172a"/>
+        <rect x="410" y="140" width="180" height="100" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="500" y="170" fill="white" font-size="12" font-weight="600" text-anchor="middle">Prioridad ??</text>
+        
+        <!-- Adversarial Opinions -->
+        <rect x="410" y="50" width="180" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="500" y="75" fill="#fb923c" font-size="9" text-anchor="middle">IA: "Usa WhatsApp Source"</text>
+        <path d="M 500 90 L 500 130" fill="none" stroke="#fb923c" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrowhead)" />
+
+        <rect x="410" y="290" width="180" height="40" rx="6" fill="rgba(52, 211, 153, 0.3)" stroke="#34d399" stroke-width="1"/>
+        <text x="500" y="315" fill="#34d399" font-size="9" text-anchor="middle">Test: "Usa Clinical Order"</text>
+        <path d="M 500 290 L 500 250" fill="none" stroke="#34d399" stroke-width="1" marker-end="url(#arrowhead)" />
+
+        <!-- Final Flow -->
+        <path d="M 590 190 L 730 190" fill="none" stroke="#34d399" stroke-width="3" marker-end="url(#arrowhead)" />
+        <text x="660" y="180" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">WINNER: TEST</text>
+
+        <!-- Result -->
+        <rect x="740" y="160" width="200" height="60" rx="6" fill="#0f172a"/>
+        <rect x="740" y="160" width="200" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="840" y="185" fill="white" font-size="11" font-weight="600" text-anchor="middle">Data Integrity</text>
+        <text x="840" y="205" fill="#94a3b8" font-size="9" text-anchor="middle">Correct Patient Identity</text>
+
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
