@@ -598,6 +598,11 @@ export const TAG_TAXONOMY: TagDef[] = [
 		label: { es: "Clínicas", en: "Clinics" },
 		aliases: ["clinics", "clínicas", "clinicas"],
 	},
+	{
+		slug: "cens",
+		label: { es: "CENS", en: "CENS" },
+		aliases: ["cens", "sello cens"],
+	},
 ];
 
 // ── Lookups built once at module load ────────────────────────────────

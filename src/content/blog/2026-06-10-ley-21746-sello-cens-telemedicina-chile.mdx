@@ -1,0 +1,57 @@
+---
+title: "La Ley 21.746 y el Sello CENS: El peaje obligatorio para recetar en Chile"
+description: "Descubre por qué la Ley 21.746 convirtió al Sello CENS en el firewall que bloquea la telemedicina en Chile si no hablas FHIR nativo."
+date: 2026-06-10
+lang: "es"
+image: "/img/blog/ley-21746-sello-cens.png"
+tags: [digital-health, interoperability, compliance, telemedicine, cens, examya]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 15
+related: [2026-04-18-fhir-ley-21-668-interoperabilidad-chile, 2026-05-19-acreditacion-minsal-100-cumplimiento-telemedicina-examya, 2026-06-08-datos-reutilizables-pdf-salud-digital]
+sources: [obs-58fa55e5bb5bf2a5, "Proyectos/01_Examya/Investigacion/CENS-Interoperabilidad-Telemedicina.md"]
+---
+
+Llegó el mensaje que nadie quiere recibir en un lab o en una startup de salud: "Oye, no podemos procesar esta receta porque la plataforma no tiene sello". 
+
+Al principio, uno piensa que es la típica burocracia, un trámite más que se pierde en los pasillos del MINSAL. Pero cuando te pones a picar código y a leer el Diario Oficial desde Puerto Natales, te das cuenta de que la movida es mucho más seria. La **Ley 21.746** no vino a proponer, vino a exigir. Y si te pillan mal parado, te mata el flujo de caja al tiro.
+
+### El muro de cristal de la telemedicina
+
+En Chile estábamos mal acostumbrados. "Hacer telemedicina" era básicamente prender una cámara y mandar un PDF por WhatsApp o correo. Esa era nuestra "interoperabilidad". Pero eso se acabó. Con la entrada en vigencia total de la ley en mayo de 2025, el **Sello CENS** pasó de ser una medalla de honor a ser el peaje obligatorio. 
+
+¿Cachai? Si tu plataforma no está certificada por el CENS, técnicamente no puedes emitir licencias médicas ni recetas que FONASA reconozca para bonos de telemedicina. Lo que antes era un "nice to have", hoy es el firewall que te deja fuera del mercado.
+
+### Los datos que nadie te cuenta
+
+Investigando para el agente Shuri en **Examya**, me encontré con que los gaps no son estéticos, son de arquitectura pura. No basta con poner un logo de HL7 FHIR en tu web. Los números y requisitos reales que pide el CENS son estos:
+
+1. **Trazabilidad del Consentimiento:** Ya no sirve el checkbox simple. La ley exige que el consentimiento informado tenga un registro inmutable. Si no tienes auditoría de quién, cuándo y bajo qué versión legal se aceptó, estás fuera.
+2. **Validación Estructural Core-CL:** El CENS no perdona. Si intentas mandar un recurso `Patient` o `ServiceRequest` que no cumpla con los perfiles nacionales (Core-CL), el validador te rebota la certificación completa.
+3. **Norma Técnica N.237:** Es el manual de supervivencia. Define cómo se deben resguardar los datos. Pocos builders la han leído, pero es la biblia para pasar el examen del regulador.
+
+### Lo que construimos: Infraestructura FHIR nativa
+
+En Examya tomamos una decisión difícil: dejar de parchar el legacy. En vez de mapear nuestra DB a FHIR "en el aire", estamos moviendo el agente Shuri hacia un modelo de datos **FHIR nativo** desde la base. 
+
+Esto significa que cuando Shuri interpreta una orden médica, el resultado no es un JSON inventado por nosotros, sino un recurso `DiagnosticReport` listo para ser consumido por cualquier nodo del ecosistema chileno. Es más lento de desarrollar, la cagó, pero es lo único que garantiza que no tendremos que re-escribir todo el próximo año.
+
+### El gotcha del builder: La trampa del PDF
+
+Aquí es donde muchos caen. Como mencioné en un [post anterior](/blog/2026-06-08-datos-reutilizables-pdf-salud-digital), el PDF es el enemigo silencioso. Para la certificación CENS, el PDF no cuenta como dato interoperable. 
+
+Si tu sistema "lee" el PDF pero lo guarda como texto plano sin estructura SNOMED o LOINC, no vas a pasar la auditoría de semántica clínica. Tuvimos que rediseñar el pipeline de OCR para que inyecte los códigos directamente en los perfiles de cumplimiento.
+
+### El trade-off real
+
+¿Vale la pena el esfuerzo? Al principio es fome. Te pasas semanas peleando con la estructura de un recurso `Organization` o `Practitioner`. Pero el beneficio es que, una vez que hablas el lenguaje oficial, te conectas con FONASA vía API MLE casi sin fricción. La interoperabilidad deja de ser un problema de ingeniería y pasa a ser una ventaja competitiva brutal.
+
+### Lo que viene
+
+La salud digital en Chile maduró. El 2026 va a ser el año de la limpieza: los sistemas que no interoperen van a quedar como juguetes caros pero inútiles. El próximo paso para nosotros es la certificación formal de interoperabilidad para habilitar telemedicina legal 100% integrada en Examya.
+
+Si estás construyendo en este espacio, deja de mirar solo el frontend. Empieza a leer los perfiles del Core-CL. Es denso, pero es lo único que va a sobrevivir.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

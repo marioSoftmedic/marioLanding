@@ -1,0 +1,58 @@
+---
+title: "Law 21.746 and the CENS Seal: The Mandatory Toll for Digital Prescriptions in Chile"
+description: "Discover why Law 21.746 turned the CENS Seal into the firewall blocking telemedicine in Chile if you don't speak native FHIR."
+date: 2026-06-10
+lang: "en"
+image: "/img/blog/ley-21746-sello-cens.png"
+tags: [digital-health, interoperability, compliance, telemedicine, cens, examya]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 15
+related: [2026-04-18-fhir-ley-21-668-interoperabilidad-chile, 2026-05-19-acreditacion-minsal-100-cumplimiento-telemedicina-examya, 2026-06-08-datos-reutilizables-pdf-salud-digital]
+sources: [obs-58fa55e5bb5bf2a5, "Proyectos/01_Examya/Investigacion/CENS-Interoperabilidad-Telemedicina.md"]
+canonicalSlug: "2026-06-10-ley-21746-sello-cens-telemedicina-chile"
+---
+
+The message no lab or health startup owner wants to receive arrived: "Hey, we can't process this prescription because the platform doesn't have the seal."
+
+At first, you think it's just standard bureaucracy—another hurdle lost in the hallways of the Ministry of Health. But when you start digging into the code and reading the Official Gazette from Puerto Natales, you realize it's much more serious. **Law 21.746** didn't come to suggest; it came to demand. And if it catches you off guard, it will kill your cash flow instantly.
+
+### Telemedicine's Glass Wall
+
+In Chile, we were used to bad habits. "Doing telemedicine" was basically turning on a camera and sending a PDF over WhatsApp or email. That was our "interoperability." But that's over. With the full implementation of the law in May 2025, the **CENS Seal** went from a badge of honor to the mandatory toll.
+
+Do you get me? If your platform isn't certified by CENS, you technically cannot issue medical leave or prescriptions that FONASA recognizes for telemedicine reimbursements. What used to be a badge of honor is now the firewall keeping you out of the market.
+
+### The Data Nobody Tells You
+
+While researching for the Shuri agent at **Examya**, I found that the gaps aren't aesthetic; they're pure architecture. It's not enough to put an HL7 FHIR logo on your website. The real numbers and requirements that CENS asks for are these:
+
+1. **Consent Traceability:** A simple checkbox is no longer enough. The law requires that informed consent has an immutable record. If you don't have an audit trail of who, when, and under which legal version it was accepted, you're out.
+2. **Core-CL Structural Validation:** CENS doesn't forgive. If you try to send a `Patient` or `ServiceRequest` resource that doesn't comply with national profiles (Core-CL), the validator will bounce the entire certification.
+3. **Technical Standard N.237:** The survival manual. It defines how data must be protected. Few builders have read it in full, but it's the bible for passing the regulator's test.
+
+### What We Built: Native FHIR Infrastructure
+
+At Examya, we made a tough decision: stop patching the legacy. Instead of mapping our DB to FHIR "on the fly," we are moving the Shuri agent toward a **native FHIR** data model from the ground up.
+
+This means that when Shuri interprets a medical order, the result isn't a JSON invented by us, but a `DiagnosticReport` resource ready to be consumed by any node in the Chilean ecosystem. It's slower to develop, for sure, but it's the only thing that guarantees we won't have to rewrite everything next year.
+
+### The Builder's Gotcha: The PDF Trap
+
+This is where many fall. As I mentioned in a [previous post](/blog/2026-06-08-datos-reutilizables-pdf-salud-digital), the PDF is the silent enemy. For CENS certification, a PDF doesn't count as interoperable data.
+
+If your system "reads" the PDF but saves it as plain text without SNOMED or LOINC structure, you won't pass the clinical semantic audit. We had to redesign the OCR pipeline to inject codes directly into the compliance profiles.
+
+### The Real Trade-off
+
+Is it worth the effort? At first, it's tedious. You spend weeks fighting with the structure of an `Organization` or `Practitioner` resource. But the benefit is that once you speak the official language, connecting with FONASA via the MLE API becomes almost frictionless. Interoperability stops being an engineering problem and becomes a brutal competitive advantage.
+
+### What's Next
+
+Digital health in Chile has matured. 2026 will be the year of the cleanup: systems that don't interoperate will remain as expensive but useless toys. Our next step is formal interoperability certification to enable 100% legally integrated telemedicine in Examya.
+
+If you're building in this space, stop looking only at the frontend. Start reading the Core-CL profiles. It's dense, it's the only thing that will survive.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
