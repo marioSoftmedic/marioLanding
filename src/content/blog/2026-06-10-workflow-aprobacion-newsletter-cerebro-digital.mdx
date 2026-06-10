@@ -1,0 +1,55 @@
+---
+title: "El workflow de aprobación: Por qué mi newsletter no se manda sola"
+description: "Aprender a meter un 'humano en el loop' en mi sistema de automatización con Brevo y Obsidian para evitar el spam accidental."
+date: 2026-06-10
+lang: "es"
+image: "/img/blog/workflow-aprobacion-newsletter-cerebro-digital.png"
+tags: [cerebro-digital, automation, obsidian, infrastructure]
+draft: false
+series: "cerebro-digital"
+seriesOrder: 9
+related: [2026-06-05-automatizacion-no-es-magia-backend-blog, 2026-06-02-stack-ventas-b2b-notebooklm-obsidian]
+sources: ["03_OpenClaw/Wiki/decision/created-healthbits-brief-workflow.md"]
+---
+
+"¿Y si el bot alucina y le manda basura a 2.000 personas a las 3 AM?"
+
+Esa es la pesadilla recurrente de cualquiera que automatiza contenido. La tentación de dejar que la IA genere el digest semanal, lo pegue en el template y le dé a "Enviar" en Brevo es gigante. Pero cuando construyes un **Cerebro Digital**, aprendes que la automatización total es el camino más rápido al desastre de marca.
+
+### El slot de hoy: Human-in-the-loop
+
+Hoy, Miércoles de **Cerebro Digital**, toca hablar de cómo formalicé el flujo del **Healthbits Brief**. No es magia, es un "approval gate" diseñado para proteger la entregabilidad y, sobre todo, la confianza de quienes leen.
+
+### La arquitectura del freno
+
+En vez de un flujo lineal, construí un sistema de tres capas que vive entre mi Mac y el VPS:
+
+1.  **Generación (Obsidian):** El script `generate-newsletter-digest.mjs` mina mis memorias de Engram y crea un draft de 700-1000 palabras directamente en mi bóveda de Obsidian.
+2.  **Validación Técnica:** Creé un validador (`validate-newsletter-draft.mjs`) que falla por defecto si el draft está marcado como `pending`. No hay forma de que el sistema mande algo que yo no haya movido a `approved`.
+3.  **Orquestación (n8n + Brevo):** n8n solo se encarga de la tubería. Si el validador da luz verde, empuja el HTML a Brevo. Si no, se queda en silencio.
+
+### El dato propio: Por qué fallamos por defecto
+
+Un aprendizaje técnico clave de esta semana: **El validador debe ser pesimista**. 
+
+Al principio, el sistema asumía que si el archivo existía, estaba listo. Gran error. Ahora, el frontmatter del draft incluye un estado explícito. Si intento correr el despliegue sin pasar el chequeo de aprobación, el proceso aborta al tiro:
+
+```bash
+# Ejemplo del comando de seguridad que implementé
+pnpm run validate-newsletter --strict
+# ❌ Error: Draft is in 'pending' status. Approval required in Obsidian.
+```
+
+### El gotcha del builder
+
+Aquí está la sorpresa: **Los PDFs son el enemigo de la bandeja de entrada**. 
+
+Descubrí que adjuntar recursos pesados directamente en el envío masivo destruye tu reputación de dominio. La decisión arquitectónica fue clara: todo recurso se linkea desde el blog o un bucket de S3. La automatización debe ser ligera para ser efectiva.
+
+### Por qué importa
+
+Tener un sistema que "nunca duerme" no significa que deba operar sin supervisión. En el 2026, la IA es el copiloto que pica la piedra, pero el humano es el que decide si esa piedra es una joya o solo escombro. Mi workflow de aprobación en Obsidian es el firewall que mantiene el blog y el newsletter con estándar de calidad Patagonia.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

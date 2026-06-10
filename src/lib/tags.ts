@@ -285,7 +285,7 @@ export const TAG_TAXONOMY: TagDef[] = [
 	{
 		slug: "pkm",
 		label: { es: "PKM", en: "PKM" },
-		aliases: ["pkm", "personal knowledge management"],
+		aliases: ["pkm", "personal knowledge management", "cerebro digital", "cerebro-digital"],
 	},
 	{
 		slug: "obsidian",

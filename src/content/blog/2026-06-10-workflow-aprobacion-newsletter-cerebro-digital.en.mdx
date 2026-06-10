@@ -1,0 +1,55 @@
+---
+title: "The Approval Workflow: Why My Newsletter Doesn't Send Itself"
+description: "Learning to put a 'human in the loop' in my automation system with Brevo and Obsidian to avoid accidental spam."
+date: 2026-06-10
+lang: "en"
+image: "/img/blog/workflow-aprobacion-newsletter-cerebro-digital.png"
+tags: [cerebro-digital, automation, obsidian, infrastructure]
+draft: false
+series: "cerebro-digital"
+seriesOrder: 9
+related: [2026-06-05-automatizacion-no-es-magia-backend-blog, 2026-06-02-stack-ventas-b2b-notebooklm-obsidian]
+canonicalSlug: "2026-06-10-workflow-aprobacion-newsletter-cerebro-digital"
+---
+
+"What if the bot hallucinates and sends garbage to 2,000 people at 3 AM?"
+
+That's the recurring nightmare for anyone who automates content. The temptation to let AI generate the weekly digest, paste it into the template, and hit "Send" in Brevo is huge. But when you build a **Digital Brain**, you learn that total automation is the fastest path to brand disaster.
+
+### Today's Slot: Human-in-the-loop
+
+Today, for **Digital Brain** Wednesday, it's time to talk about how I formalized the **Healthbits Brief** workflow. It's not magic; it's an "approval gate" designed to protect deliverability and, above all, the trust of my readers.
+
+### The Brake's Architecture
+
+Instead of a linear flow, I built a three-layer system that lives between my Mac and the VPS:
+
+1.  **Generation (Obsidian):** The `generate-newsletter-digest.mjs` script mines my Engram memories and creates a 700-1000 word draft directly in my Obsidian vault.
+2.  **Technical Validation:** I created a validator (`validate-newsletter-draft.mjs`) that fails by default if the draft is marked as `pending`. There's no way for the system to send anything I haven't moved to `approved`.
+3.  **Orchestration (n8n + Brevo):** n8n only handles the plumbing. If the validator gives the green light, it pushes the HTML to Brevo. If not, it stays silent.
+
+### Field Data: Why We Fail by Default
+
+A key technical learning from this week: **The validator must be pessimistic**.
+
+At first, the system assumed that if the file existed, it was ready. Huge mistake. Now, the draft's frontmatter includes an explicit status. If I try to run the deployment without passing the approval check, the process aborts immediately:
+
+```bash
+# Safety command example I implemented
+pnpm run validate-newsletter --strict
+# ❌ Error: Draft is in 'pending' status. Approval required in Obsidian.
+```
+
+### The Builder's Gotcha
+
+Here's the surprise: **PDFs are the enemy of the inbox**.
+
+I discovered that attaching heavy resources directly to bulk emails destroys your domain reputation. The architectural decision was clear: every resource is linked from the blog or an S3 bucket. Automation must be lightweight to be effective.
+
+### Why It Matters
+
+Having a system that "never sleeps" doesn't mean it should operate without supervision. In 2026, AI is the co-pilot that chisels the stone, but the human is the one who decides if that stone is a gem or just rubble. My approval workflow in Obsidian is the firewall that keeps the blog and newsletter at Patagonia quality standards.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
