@@ -17,32 +17,12 @@ type Milestone = {
 const milestones: Record<string, Milestone[]> = {
   es: [
     {
-      year: '2011',
-      title: 'Tecnólogo Médico',
-      org: 'Hospital de Puerto Natales',
-      desc: 'Inicio en el sistema de salud público de la Patagonia. Diagnóstico clínico, urgencias y medicina de laboratorio en una de las ciudades más australes del mundo.',
-      color: 'var(--accent-cyan)',
-    },
-    {
-      year: '2015',
-      title: 'Fundador',
-      org: 'Laboratorio Biohealth',
-      desc: 'Creé el primer laboratorio clínico privado de alta tecnología en Puerto Natales. Incluimos un laboratorio de biología molecular, siendo referentes en diagnóstico de COVID en la Patagonia.',
-      color: 'var(--accent-green)',
-    },
-    {
-      year: '2017',
-      title: 'Co-fundador',
-      org: 'Softmedic',
-      desc: 'Junto a un equipo de developers, construimos software médico para el sistema de salud chileno. La pandemia de 2020 cerró el proyecto.',
+      year: 'Actual',
+      title: 'AI Builder',
+      org: 'Independiente',
+      desc: 'Agentes de IA, bots conversacionales y sistemas autónomos. Construyo tecnología que trabaja mientras duermo, desde el fin del mundo.',
       color: 'var(--accent-orange)',
-    },
-    {
-      year: '2022',
-      title: 'Administrador Municipal',
-      org: 'Municipalidad de Natales',
-      desc: 'Lideré la gestión administrativa del municipio más austral del mundo. Transformación digital, modernización de procesos y gestión de equipos.',
-      color: 'var(--accent-cyan)',
+      current: true,
     },
     {
       year: '2024',
@@ -52,42 +32,42 @@ const milestones: Record<string, Milestone[]> = {
       color: 'var(--accent-green)',
     },
     {
-      year: '2024',
-      title: 'AI Builder',
-      org: 'Independiente',
-      desc: 'Agentes de IA, bots conversacionales y sistemas autónomos. Construyo tecnología que trabaja mientras duermo, desde el fin del mundo.',
+      year: '2022',
+      title: 'Administrador Municipal',
+      org: 'Municipalidad de Natales',
+      desc: 'Lideré la gestión administrativa del municipio más austral del mundo. Transformación digital, modernización de procesos y gestión de equipos.',
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2017',
+      title: 'Co-fundador',
+      org: 'Softmedic',
+      desc: 'Junto a un equipo de developers, construimos software médico para el sistema de salud chileno. La pandemia de 2020 cerró el proyecto.',
       color: 'var(--accent-orange)',
-      current: true,
+    },
+    {
+      year: '2015',
+      title: 'Fundador',
+      org: 'Laboratorio Biohealth',
+      desc: 'Creé el primer laboratorio clínico privado de alta tecnología en Puerto Natales. Incluimos un laboratorio de biología molecular, siendo referentes en diagnóstico de COVID en la Patagonia.',
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2011',
+      title: 'Tecnólogo Médico',
+      org: 'Hospital de Puerto Natales',
+      desc: 'Inicio en el sistema de salud público de la Patagonia. Diagnóstico clínico, urgencias y medicina de laboratorio en una de las ciudades más australes del mundo.',
+      color: 'var(--accent-cyan)',
     },
   ],
   en: [
     {
-      year: '2011',
-      title: 'Medical Technologist',
-      org: 'Puerto Natales Hospital',
-      desc: "Started in Patagonia's public healthcare system. Clinical diagnostics, emergency care and laboratory medicine in one of the world's southernmost cities.",
-      color: 'var(--accent-cyan)',
-    },
-    {
-      year: '2015',
-      title: 'Founder',
-      org: 'Laboratorio Biohealth',
-      desc: "Built Puerto Natales' first high-tech private clinical lab. We created a molecular biology unit that became a COVID diagnostics reference in Patagonia.",
-      color: 'var(--accent-green)',
-    },
-    {
-      year: '2017',
-      title: 'Co-founder',
-      org: 'Softmedic',
-      desc: 'Built medical software for the Chilean healthcare system with a developer team. The COVID-19 pandemic shut the project down in 2020.',
+      year: 'Now',
+      title: 'AI Builder',
+      org: 'Independent',
+      desc: 'AI agents, conversational bots and autonomous systems. Building technology that works while I sleep, from the end of the world.',
       color: 'var(--accent-orange)',
-    },
-    {
-      year: '2022',
-      title: 'Municipal Administrator',
-      org: 'Municipalidad de Natales',
-      desc: "Led the administrative management of one of the world's southernmost municipalities. Digital transformation and process modernization in Patagonia.",
-      color: 'var(--accent-cyan)',
+      current: true,
     },
     {
       year: '2024',
@@ -97,12 +77,32 @@ const milestones: Record<string, Milestone[]> = {
       color: 'var(--accent-green)',
     },
     {
-      year: '2024',
-      title: 'AI Builder',
-      org: 'Independent',
-      desc: 'AI agents, conversational bots and autonomous systems. Building technology that works while I sleep, from the end of the world.',
+      year: '2022',
+      title: 'Municipal Administrator',
+      org: 'Municipalidad de Natales',
+      desc: "Led the administrative management of one of the world's southernmost municipalities. Digital transformation and process modernization in Patagonia.",
+      color: 'var(--accent-cyan)',
+    },
+    {
+      year: '2017',
+      title: 'Co-founder',
+      org: 'Softmedic',
+      desc: 'Built medical software for the Chilean healthcare system with a developer team. The COVID-19 pandemic shut the project down in 2020.',
       color: 'var(--accent-orange)',
-      current: true,
+    },
+    {
+      year: '2015',
+      title: 'Founder',
+      org: 'Laboratorio Biohealth',
+      desc: "Built Puerto Natales' first high-tech private clinical lab. We created a molecular biology unit that became a COVID diagnostics reference in Patagonia.",
+      color: 'var(--accent-green)',
+    },
+    {
+      year: '2011',
+      title: 'Medical Technologist',
+      org: 'Puerto Natales Hospital',
+      desc: "Started in Patagonia's public healthcare system. Clinical diagnostics, emergency care and laboratory medicine in one of the world's southernmost cities.",
+      color: 'var(--accent-cyan)',
     },
   ],
 };
@@ -113,7 +113,7 @@ const items = milestones[lang];
 <div class="relative">
   <div
     class="absolute top-4 bottom-10 w-px"
-    style="left: 1.125rem; background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-orange)); opacity: 0.35;"
+    style="left: 1.125rem; background: linear-gradient(to bottom, var(--accent-orange), var(--accent-cyan)); opacity: 0.35;"
   ></div>
 
   <div class="space-y-8">
