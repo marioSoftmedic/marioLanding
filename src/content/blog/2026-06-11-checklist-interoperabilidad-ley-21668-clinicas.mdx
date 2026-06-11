@@ -1,0 +1,236 @@
+---
+title: "Checklist para saber si tu clínica está lista para FHIR"
+description: "Cinco preguntas prácticas para evaluar si una clínica puede interoperar con FHIR sin tocar producción ni romper su operación actual."
+date: 2026-06-11
+lang: "es"
+image: "/img/blog/checklist-interoperabilidad-ley-21668-clinicas.png"
+tags: [digital-health, interoperability, fhir, ley-21668, compliance, examya]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 16
+related: [2026-05-28-interoperabilidad-no-empieza-conectando-todo, 2026-06-02-costo-oculto-ignorar-interoperabilidad-salud]
+audience: "healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 4
+---
+
+# Checklist para saber si tu clínica está lista para FHIR
+
+Una clínica puede tener agenda online, portal de pacientes, WhatsApp, sistema de laboratorio y software contable.
+
+Y aun así no estar lista para interoperar.
+
+Esa es la trampa que veo cada vez que hablamos de salud digital: confundimos tener sistemas con tener sistemas que se entienden entre sí.
+
+La Ley 21.668 va a empujar a los prestadores a interoperar. Pero el problema no se resuelve comprando una plataforma nueva ni prometiendo “conectarlo todo”. Eso suena bien en una reunión, pero en producción puede romper flujos que llevan años sosteniendo la operación.
+
+En salud, partir mal sale caro.
+
+Por eso en Fhirex, dentro de Examya, estamos usando una pregunta más chica y mucho más útil:
+
+> ¿Podemos representar un flujo clínico concreto en FHIR sin tocar producción?
+
+No toda la ficha.
+
+No todo el LIS.
+
+No toda la red.
+
+Un flujo.
+
+Una orden.
+
+Una muestra.
+
+Un resultado.
+
+Un evento auditable.
+
+## Lo que nadie cuenta de FHIR
+
+FHIR no es magia.
+
+FHIR no arregla procesos desordenados.
+
+FHIR no convierte automáticamente un PDF en dato clínico reutilizable.
+
+FHIR es un contrato.
+
+Y como todo contrato, premia a los equipos que entienden bien qué dato existe, quién lo genera, cuándo se valida y quién necesita consumirlo después.
+
+La parte difícil no es generar un JSON con forma de recurso.
+
+La parte difícil es responder preguntas operativas que muchas veces nadie tiene documentadas:
+
+- ¿Quién valida el resultado?
+- ¿Dónde queda la orden original?
+- ¿El identificador del paciente es confiable?
+- ¿Qué sistema manda la verdad final?
+- ¿Qué evidencia queda para una auditoría?
+
+Si esas respuestas no existen, FHIR solo deja el desorden más bonito.
+
+## Un checklist simple para partir
+
+Antes de comprar, migrar o construir un servidor FHIR desde cero, yo revisaría estas cinco preguntas.
+
+### 1. ¿Tienes un flujo clínico acotado para probar?
+
+“Interoperar la clínica” es demasiado grande.
+
+“Representar una orden de laboratorio y su resultado” es abordable.
+
+Un buen piloto parte con un caso chico:
+
+```text
+ServiceRequest → Specimen → Observation[] → DiagnosticReport
+```
+
+Ese flujo permite conversar con el equipo clínico, TI y operaciones sobre algo concreto.
+
+No sobre una arquitectura abstracta.
+
+Sobre un paciente, una muestra y un resultado.
+
+### 2. ¿Puedes probar con datos sintéticos?
+
+Si el primer paso exige tocar producción, el proyecto parte mal.
+
+El piloto inicial debería permitir usar pacientes ficticios, exámenes simulados y resultados controlados.
+
+Eso baja el riesgo para TI, evita exposición innecesaria de datos sensibles y permite probar el contrato antes de mover información real.
+
+En Fhirex ese es un principio de diseño: primero evidencia técnica, después integración real.
+
+### 3. ¿Sabes qué sistema es la fuente de verdad?
+
+En muchas clínicas hay más de una “verdad”.
+
+El LIS tiene un dato.
+
+El portal tiene otro.
+
+El Excel operativo tiene otro.
+
+Y WhatsApp tiene el dato que el paciente realmente usa.
+
+Si no sabes qué sistema manda en cada parte del flujo, la interoperabilidad se vuelve frágil.
+
+FHIR necesita claridad de ownership.
+
+No basta con mover información. Hay que saber qué dato se puede confiar.
+
+### 4. ¿Tu dato tiene trazabilidad mínima?
+
+Un resultado clínico sin contexto es ambiguo.
+
+Para interoperar con criterio, el dato debería poder responder:
+
+- quién lo generó;
+- cuándo se generó;
+- cuándo fue validado;
+- bajo qué orden clínica;
+- qué sistema lo transformó;
+- qué evidencia quedó registrada.
+
+En FHIR, recursos como `AuditEvent` y `Provenance` no son decoración técnica.
+
+Son la diferencia entre “tenemos un dato” y “podemos defender este dato ante una auditoría”.
+
+### 5. ¿El equipo clínico entiende el beneficio?
+
+Este punto parece blando, pero no lo es.
+
+Si interoperabilidad se comunica como “un proyecto de TI”, va a morir en reuniones.
+
+El equipo clínico necesita entender el beneficio en su idioma:
+
+- menos llamadas por resultados;
+- menos pacientes acarreando PDFs;
+- menos duplicación de exámenes;
+- menos transcripción manual;
+- más continuidad de atención.
+
+FHIR es técnico.
+
+Pero el dolor que resuelve es profundamente operativo.
+
+## El gotcha: no empieces por el servidor
+
+El error típico es partir preguntando:
+
+> ¿Qué servidor FHIR instalamos?
+
+Yo partiría por otra pregunta:
+
+> ¿Qué flujo clínico podemos representar de forma segura, auditable y sin tocar producción?
+
+La herramienta viene después.
+
+Primero hay que definir el contrato.
+
+Qué entra.
+
+Qué sale.
+
+Qué se valida.
+
+Qué queda trazado.
+
+Quién lo revisa.
+
+Ese es el trabajo fome, pero es el que evita que un piloto termine siendo una demo bonita que nadie puede llevar a producción.
+
+## Lo que estamos construyendo con Fhirex
+
+Fhirex no nace para reemplazar el software clínico actual.
+
+Nace para crear una capa lateral que permita representar flujos existentes en FHIR/Core-CL de forma progresiva.
+
+La idea es simple:
+
+- no migrar todo;
+- no romper el LIS;
+- no exponer producción al inicio;
+- usar datos sintéticos;
+- dejar evidencia técnica revisable;
+- avanzar desde un flujo chico hacia integraciones reales.
+
+En B2B salud, bajar el riesgo de adopción vale más que mostrar una pantalla espectacular.
+
+## El zoom out
+
+La interoperabilidad en Chile no se va a resolver solo por decreto.
+
+La ley empuja.
+
+El estándar ayuda.
+
+Pero la adopción ocurre cuando una clínica puede decir:
+
+> “Puedo probar esto sin arriesgar mi operación”.
+
+Ese es el punto de partida.
+
+No conectar todo.
+
+No migrar todo.
+
+No comprar por miedo.
+
+Probar un flujo pequeño, seguro y auditable.
+
+Después escalar.
+
+## Lo que viene
+
+Estoy convirtiendo este checklist en un carrusel/guía práctica para equipos clínicos y TI que están mirando la Ley 21.668 sin saber por dónde partir.
+
+Si estás en una clínica, laboratorio o equipo TI de salud y quieres evaluar un primer piloto FHIR sin tocar producción, conversemos.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

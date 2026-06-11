@@ -1,0 +1,237 @@
+---
+title: "A checklist to know if your clinic is ready for FHIR"
+description: "Five practical questions to assess whether a clinic can start with FHIR without touching production or breaking current operations."
+date: 2026-06-11
+lang: "en"
+image: "/img/blog/checklist-interoperabilidad-ley-21668-clinicas.png"
+tags: [digital-health, interoperability, fhir, ley-21668, compliance, examya]
+draft: false
+canonicalSlug: "2026-06-11-checklist-interoperabilidad-ley-21668-clinicas"
+series: "interoperabilidad-chile"
+seriesOrder: 16
+related: [2026-05-28-interoperabilidad-no-empieza-conectando-todo, 2026-06-02-costo-oculto-ignorar-interoperabilidad-salud]
+audience: "healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 4
+---
+
+# A checklist to know if your clinic is ready for FHIR
+
+A clinic can have online scheduling, a patient portal, WhatsApp, a laboratory system, and accounting software.
+
+And still not be ready to interoperate.
+
+That is the trap I keep seeing when we talk about digital health: we confuse having systems with having systems that understand each other.
+
+Chile's Law 21.668 will push healthcare providers toward interoperability. But this problem is not solved by buying a new platform or promising to “connect everything”. That sounds good in a meeting, but in production it can break workflows that have kept the operation alive for years.
+
+In healthcare, starting badly is expensive.
+
+That is why in Fhirex, inside Examya, we are using a smaller and much more useful question:
+
+> Can we represent one concrete clinical workflow in FHIR without touching production?
+
+Not the whole medical record.
+
+Not the whole LIS.
+
+Not the whole network.
+
+One workflow.
+
+One order.
+
+One specimen.
+
+One result.
+
+One auditable event.
+
+## What nobody tells you about FHIR
+
+FHIR is not magic.
+
+FHIR does not fix broken processes.
+
+FHIR does not automatically turn a PDF into reusable clinical data.
+
+FHIR is a contract.
+
+And like any contract, it rewards teams that understand what data exists, who creates it, when it is validated, and who needs to consume it later.
+
+The hard part is not generating JSON shaped like a resource.
+
+The hard part is answering operational questions that are often undocumented:
+
+- Who validates the result?
+- Where does the original order live?
+- Is the patient identifier reliable?
+- Which system owns the final truth?
+- What evidence remains for an audit?
+
+If those answers do not exist, FHIR only makes the mess look nicer.
+
+## A simple checklist to start
+
+Before buying, migrating, or building a FHIR server from scratch, I would review these five questions.
+
+### 1. Do you have a bounded clinical workflow to test?
+
+“Interoperate the clinic” is too big.
+
+“Represent a lab order and its result” is manageable.
+
+A good pilot starts with a small case:
+
+```text
+ServiceRequest → Specimen → Observation[] → DiagnosticReport
+```
+
+That workflow lets clinical, IT, and operations teams discuss something concrete.
+
+Not an abstract architecture.
+
+A patient, a specimen, and a result.
+
+### 2. Can you test with synthetic data?
+
+If the first step requires touching production, the project is already starting wrong.
+
+The initial pilot should allow fake patients, simulated exams, and controlled results.
+
+That lowers risk for IT, avoids unnecessary exposure of sensitive data, and lets the team test the contract before moving real information.
+
+In Fhirex, that is a design principle: technical evidence first, real integration later.
+
+### 3. Do you know which system is the source of truth?
+
+In many clinics there is more than one “truth”.
+
+The LIS has one piece of data.
+
+The portal has another.
+
+The operational spreadsheet has another.
+
+And WhatsApp has the data the patient actually uses.
+
+If you do not know which system owns each part of the workflow, interoperability becomes fragile.
+
+FHIR needs ownership clarity.
+
+Moving information is not enough. You need to know which data can be trusted.
+
+### 4. Does your data have minimum traceability?
+
+A clinical result without context is ambiguous.
+
+To interoperate responsibly, the data should answer:
+
+- who generated it;
+- when it was generated;
+- when it was validated;
+- under which clinical order;
+- which system transformed it;
+- what evidence was recorded.
+
+In FHIR, resources like `AuditEvent` and `Provenance` are not technical decoration.
+
+They are the difference between “we have data” and “we can defend this data during an audit”.
+
+### 5. Does the clinical team understand the benefit?
+
+This point sounds soft, but it is not.
+
+If interoperability is framed as “an IT project”, it will die in meetings.
+
+The clinical team needs to understand the benefit in its own language:
+
+- fewer calls about results;
+- fewer patients carrying PDFs;
+- fewer duplicate exams;
+- less manual transcription;
+- better continuity of care.
+
+FHIR is technical.
+
+But the pain it solves is deeply operational.
+
+## The gotcha: do not start with the server
+
+The typical mistake is starting with:
+
+> Which FHIR server should we install?
+
+I would start with a different question:
+
+> Which clinical workflow can we represent safely, audibly, and without touching production?
+
+The tool comes later.
+
+First, define the contract.
+
+What comes in.
+
+What goes out.
+
+What gets validated.
+
+What gets traced.
+
+Who reviews it.
+
+That is the boring work, but it is what prevents a pilot from becoming a nice demo nobody can move to production.
+
+## What we are building with Fhirex
+
+Fhirex is not meant to replace existing clinical software.
+
+It is meant to create a lateral layer that can represent current workflows in FHIR/Core-CL progressively.
+
+The idea is simple:
+
+- do not migrate everything;
+- do not break the LIS;
+- do not expose production at the beginning;
+- use synthetic data;
+- leave technical evidence that IT can review;
+- move from one small workflow to real integrations.
+
+In B2B healthcare, lowering adoption risk is more valuable than showing a spectacular screen.
+
+## The zoom out
+
+Interoperability in Chile will not be solved only by regulation.
+
+The law pushes.
+
+The standard helps.
+
+But adoption happens when a clinic can say:
+
+> “I can test this without risking my operation.”
+
+That is the starting point.
+
+Not connecting everything.
+
+Not migrating everything.
+
+Not buying out of fear.
+
+Test a small, safe, auditable workflow.
+
+Then scale.
+
+## What comes next
+
+I am turning this checklist into a practical carousel/guide for clinical and IT teams looking at Law 21.668 without knowing where to start.
+
+If you work in a clinic, lab, or health IT team and want to evaluate a first FHIR pilot without touching production, let's talk.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
