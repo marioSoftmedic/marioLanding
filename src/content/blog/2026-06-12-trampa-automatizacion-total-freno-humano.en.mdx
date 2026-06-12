@@ -1,0 +1,63 @@
+---
+title: "The trap of total automation: Why my AI agent has no 'Publish' button"
+description: "Building autonomous agents is easy. The hard part is building agents that know when to stop and ask for permission."
+date: 2026-06-12
+lang: "en"
+image: "/img/blog/trampa-automatizacion-total-freno-humano.png"
+tags: [agents, automation, architecture, obsidian, builder]
+draft: false
+canonicalSlug: "2026-06-12-trampa-automatizacion-total-freno-humano"
+series: "agentes"
+seriesOrder: 13
+related: [2026-05-26-new-review-duplicate-guard-agente-contenido, 2026-06-05-automatizacion-no-es-magia-backend-blog]
+audience: "builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+# The trap of total automation: Why my AI agent has no "Publish" button
+
+When you discover AI automation, the first temptation is to let go of the steering wheel entirely.
+
+You give it access to the repository, set up a cron job on the VPS, and tell it: "Generate two weekly articles and push them to production."
+
+It feels like magic, until you realize that artificial intelligence is brilliant at proposing, but terrible at judging the risk of its own actions.
+
+Today I modified the pipeline of Cotocha, the orchestrator agent that helps me maintain this blog, to explicitly remove its permission to publish.
+
+## The problem is not the LLM, it's the system design
+
+In digital health—when we built the triage layer at Examya—we learned the hard way that a WhatsApp bot cannot give diagnoses or close a workflow without supervision. We needed a "human in the loop".
+
+The problem is that at the infrastructure level, we usually think that this human should intervene at the very end, reviewing the production output. That is too late.
+
+For my content ecosystem, I adapted the exact same architectural pattern from clinical health: **Strict separation between the generator, the review interface, and the compilation engine.**
+
+## The Draft-First Pipeline
+
+Instead of having one script do the entire cycle, I divided it into three isolated responsibilities:
+
+**1. The Agent (The Scout):** Reads the context, reviews metrics, analyzes repositories, and generates the text. Its output is not a *commit*. Its output is writing a strict `.md` file in the `borradores/` (drafts) folder of my local Obsidian, along with social distribution suggestions.
+
+**2. Obsidian (The Human Firewall):** The draft has no internet access. It is just a text file on my computer. There I read, edit, adjust the tone, and decide if the post adds value or is just algorithmic noise.
+
+**3. The Executor (The local CI/CD):** Only after my visual approval in Obsidian, I run a second script (`blog-publish`). This is a deterministic process (no AI involved). It takes the approved `.md`, compiles it to `.mdx`, generates PDFs with Puppeteer for LinkedIn, verifies the frontmatter, and only then pushes to Vercel.
+
+## The Zoom Out
+
+Building truly useful agents is not about making them 100% autonomous. It's about designing the right "brakes".
+
+In complex systems, intentional friction is a feature, not a bug. Forcing the system to stop at Obsidian and wait for my approval is what separates a professional publishing pipeline from an automated spam bot.
+
+Total autonomy is for Twitter demos. In production, the agent proposes, but the human disposes.
+
+## What comes next
+
+Next week I will release the code on how we route local scripts so the agent reads the Obsidian index before even proposing a topic. If you are wrestling with agent orchestration in LATAM, I'd love to connect.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

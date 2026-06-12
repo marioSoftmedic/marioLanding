@@ -1,0 +1,62 @@
+---
+title: "La trampa de la automatización total: Por qué mi agente de IA no tiene botón de 'Publicar'"
+description: "Construir agentes autónomos es fácil. Lo difícil es construir agentes que sepan cuándo detenerse para pedir permiso."
+date: 2026-06-12
+lang: "es"
+image: "/img/blog/trampa-automatizacion-total-freno-humano.png"
+tags: [agents, automation, architecture, obsidian, builder]
+draft: false
+series: "agentes"
+seriesOrder: 13
+related: [2026-05-26-new-review-duplicate-guard-agente-contenido, 2026-06-05-automatizacion-no-es-magia-backend-blog]
+audience: "builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+# La trampa de la automatización total: Por qué mi agente de IA no tiene botón de "Publicar"
+
+Cuando descubres la automatización con IA, la primera tentación es soltarle el manubrio por completo.
+
+Le das acceso al repositorio, configuras un cron job en el VPS y le dices: "Genera dos artículos semanales y hazles push a producción".
+
+Parece magia, hasta que te das cuenta de que la inteligencia artificial es brillante proponiendo, pero pésima juzgando el riesgo de sus propias acciones.
+
+Hoy modifiqué el pipeline de Cotocha, el agente orquestador que me ayuda a mantener este blog, para quitarle explícitamente el permiso de publicar. 
+
+## El problema no es el LLM, es el diseño del sistema
+
+En salud digital —cuando construimos la capa de triaje en Examya— aprendimos a golpes que un bot de WhatsApp no puede dar diagnósticos ni cerrar un flujo sin supervisión. Necesitábamos un "human in the loop".
+
+El problema es que a nivel de infraestructura, solemos pensar que ese humano debe intervenir al final, revisando el output de producción. Eso es tarde.
+
+Para mi ecosistema de contenido, adapté el mismo patrón arquitectónico de salud clínica: **Separación estricta entre el generador, la interfaz de revisión y el motor de compilación.**
+
+## El pipeline Draft-First
+
+En lugar de que un script haga el ciclo completo, lo dividí en tres responsabilidades aisladas:
+
+**1. El Agente (El explorador):** Lee el contexto, revisa métricas, analiza los repositorios y genera el texto. Su output no es un *commit*. Su output es escribir un archivo `.md` estricto en la carpeta `borradores/` de mi Obsidian local, junto con sugerencias de distribución social.
+
+**2. Obsidian (El Firewall Humano):** El borrador no tiene acceso a internet. Es solo un archivo de texto en mi computadora. Ahí leo, edito, ajusto el tono y decido si el post aporta valor o es puro ruido algorítmico.
+
+**3. El Ejecutor (El CI/CD local):** Solo después de mi aprobación visual en Obsidian, ejecuto un segundo script (`blog-publish`). Este es un proceso determinístico (no usa IA). Toma el `.md` aprobado, lo compila a `.mdx`, genera los PDFs con Puppeteer para LinkedIn, verifica el frontmatter y recién ahí hace el push a Vercel.
+
+## El Zoom Out
+
+Construir agentes verdaderamente útiles no se trata de hacerlos 100% autónomos. Se trata de diseñar los "frenos" correctos.
+
+En sistemas complejos, la fricción intencional es una característica, no un bug. Obligar al sistema a detenerse en Obsidian para esperar mi aprobación es lo que separa a un sistema de publicación profesional de un bot de spam automatizado.
+
+La autonomía total es para los demos de Twitter. En producción, el agente propone, pero el humano dispone.
+
+## Lo que viene
+
+La próxima semana voy a liberar el código de cómo enrutamos los scripts locales para que el agente lea el índice de Obsidian antes de siquiera proponer un tema. Si estás peleando con orquestación de agentes en LATAM, me encantaría conectar.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
