@@ -1,0 +1,80 @@
+---
+title: 'The patient as a "human thumb drive": The biggest failure of digital health'
+description: "Forcing the patient to carry PDFs between the clinic and the lab is not digital health. How FHIR eliminates the friction of the human API."
+date: 2026-06-12
+lang: "en"
+image: "/img/blog/paciente-pendrive-humano-falla-interoperabilidad.png"
+tags: [digital-health, interoperability, fhir, healthcare, examya]
+draft: false
+canonicalSlug: "2026-06-12-paciente-pendrive-humano-falla-interoperabilidad"
+series: "interoperabilidad-chile"
+seriesOrder: 18
+related: [2026-06-01-portales-resultados-legacy-vs-whatsapp-examya, 2026-06-08-datos-reutilizables-pdf-salud-digital]
+audience: "healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 4
+---
+
+# The patient as a "human thumb drive": The biggest failure of digital health
+
+You go to the doctor. They give you a paper order for lab tests.
+
+You walk to the lab. You hand over the paper. They draw your blood.
+
+Three days later, you receive an email. You have to log into a portal, enter your ID and a temporary password, and download a PDF.
+
+You go back to the specialist. You show them the PDF from your cracked phone screen or hand them a printed copy.
+
+Congratulations. You are the healthcare system's API.
+
+You have just become a "human thumb drive".
+
+## What nobody tells you about the lack of integration
+
+Millions of patients experience this scenario every day in LATAM.
+
+And the underlying problem is that we believe that because the lab sends an email and has a web portal, we are doing "digital health".
+
+It is not digital health. It is digitizing the mess.
+
+Forcing the patient to be the physical or manual bridge between two systems (the clinic and the laboratory) is the rawest evidence that our clinical infrastructure has failed.
+
+Legacy LIS and EHRs were designed to store data, not to share it.
+
+The cost of this friction is brutal: duplicated exams, transcription errors, wasted clinical time, and a terrible patient experience.
+
+## How we shut down the human API
+
+At Examya and Fhirex, our thesis is that the data should move, not the patient.
+
+A lab result should not be a "final document" handed to the patient to figure out what to do next. It should be a structured event in the healthcare network.
+
+When we implement the interoperable layer with FHIR, the workflow changes:
+
+1. The lab validates the exam.
+2. Fhirex captures that validation, maps it against SNOMED CT / LOINC, and issues a `DiagnosticReport`.
+3. That report travels directly via API (FHIR Subscription) to the treating physician's EHR.
+4. The patient receives an automated WhatsApp message from Shuri saying: "Your results are ready and have already been sent to your doctor."
+
+The patient goes from being the carrier of their own data to being the true beneficiary of the system.
+
+## The Zoom Out
+
+Law 21.668 in Chile is coming to force this.
+
+It will no longer be optional for systems to talk to each other. Interoperating the clinical record will be mandatory.
+
+But beyond the regulatory decree, clinics and labs must understand that keeping data in silos is no longer a competitive advantage. It is a commercial disadvantage.
+
+Patients will prefer the network where their history flows on its own, without having to act as human thumb drives.
+
+## What comes next
+
+We are mapping the main technical obstacles local labs face to issue native `DiagnosticReport` resources. If you think your current LIS is a barrier to interoperate, let's talk.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
