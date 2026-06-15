@@ -1,0 +1,81 @@
+---
+title: "Why the price of a medical exam is a data problem (not a customer service one)"
+description: "Quoting exams via WhatsApp in Chilean labs is slow and error-prone. How Examya structured medical intent to solve it."
+date: 2026-06-15
+lang: "en"
+image: "/img/blog/precio-examen-medico-problema-datos.png"
+tags: [digital-health, examya, whatsapp, fonasa, clinical-labs]
+draft: false
+canonicalSlug: "2026-06-15-precio-examen-medico-problema-datos"
+series: "examya"
+seriesOrder: 13
+related: [2026-05-23-laboratorio-clinico-como-api-salud-digital, 2026-06-04-objecion-ventas-b2b-migrar-lis]
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 4
+---
+
+# Why the price of a medical exam is a data problem (not a customer service one)
+
+A patient messages the lab via WhatsApp.
+
+They send a blurry photo of a handwritten medical order. They ask: "How much is this with Fonasa tier C?".
+
+On the other side, a customer service executive has to zoom into the photo, decipher the doctor's handwriting, open three different tabs in their LIS (Laboratory Information System), search for the codes, cross-reference the values with the institutional tariff, and add them up with a calculator.
+
+Seven minutes later, they reply to the patient.
+
+The patient had already messaged two other labs and booked an appointment with the one that answered first.
+
+In most B2B meetings I have with lab directors, they tell me their problem is "customer service" or "staff taking too long".
+
+They are attacking the symptom. The real problem is a data problem.
+
+## The medical order as unstructured intent
+
+We believe a medical order is a legal document. To the healthcare system, yes. To the patient, it is just unstructured purchasing intent.
+
+The mistake labs make is forcing humans to act as text "parsers" and business rule engines at the same time.
+
+When we launched Shuri (Examya's clinical agent for WhatsApp), the bet wasn't "putting a bot to chat with the patient". The bet was taking that unstructured intent (the photo) and converting it into a deterministic transaction in milliseconds.
+
+## Decoupling the process
+
+For the patient to get a fast and error-free quote, we built the workflow based on data architecture, not "chat" architecture:
+
+**1. Specialized Medical OCR:** Extracting text from the image is not enough. The agent must normalize Chilean medical *slang* (knowing that "lipid prof." is a Lipid Profile and not something else).
+
+**2. Semantic Matching (pgvector):** Instead of exact text searches in the LIS, we use embeddings. The agent searches the extracted medical concept against our FONASA tariff database and the lab's own pricing list.
+
+**3. Deterministic Pricing Engine:** An LLM cannot do math or make up prices. If the model hallucinates a price, the legal risk is huge. That's why the agent only extracts codes (e.g. `0302047`). The final price is calculated by a hardcoded engine (TypeScript) that applies the exact rules per health insurance and patient tier.
+
+## The "Total Automation" gotcha
+
+Here is the trap in B2B: if you go to a lab and tell them "the bot will quote and schedule everything on its own", you scare them.
+
+In healthcare, precision matters more than absolute speed.
+
+That is why in Examya, the `ShuriStateMachine` architecture incorporates the `WAITING_HUMAN_APPROVAL` state.
+
+The agent does 90% of the heavy lifting (OCR, FONASA code matching, price calculation) in less than 2 seconds and prepares the budget draft. The human executive just looks at the screen, confirms the exams match the photo, and clicks "Approve".
+
+The patient receives their quote in 10 seconds, without errors, and the human never loses control.
+
+## The Zoom Out
+
+In digital health, the patient experience doesn't improve by putting more executives to answer messages or installing generic chatbots that don't understand medicine.
+
+It improves when we treat daily interactions as what they are: data capture, structuring, and flow problems.
+
+When a lab understands that WhatsApp is not "a customer service channel" but their patient's "main clinical data capture interface", the conversation changes entirely.
+
+## What comes next
+
+If you are directing a lab and feel that WhatsApp is an unmanageable headache instead of your best sales and loyalty channel, let's talk. We are bringing this architecture to the first safe pilots.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

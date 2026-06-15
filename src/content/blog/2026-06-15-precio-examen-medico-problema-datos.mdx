@@ -1,0 +1,80 @@
+---
+title: "Por qué el precio de un examen médico es un problema de datos (no de atención al cliente)"
+description: "Cotizar exámenes por WhatsApp en laboratorios chilenos es lento y propenso a errores. Cómo Examya estructuró la intención médica para resolverlo."
+date: 2026-06-15
+lang: "es"
+image: "/img/blog/precio-examen-medico-problema-datos.png"
+tags: [digital-health, examya, whatsapp, fonasa, clinical-labs]
+draft: false
+series: "examya"
+seriesOrder: 13
+related: [2026-05-23-laboratorio-clinico-como-api-salud-digital, 2026-06-04-objecion-ventas-b2b-migrar-lis]
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 4
+---
+
+# Por qué el precio de un examen médico es un problema de datos (no de atención al cliente)
+
+Paciente escribe por WhatsApp al laboratorio.
+
+Envía una foto borrosa de una orden médica escrita a mano. Pregunta: "¿Cuánto sale esto por Fonasa tramo C?".
+
+Al otro lado, un ejecutivo de atención al cliente tiene que hacer zoom a la foto, descifrar la letra del médico, abrir tres pestañas distintas en su LIS (Sistema de Información de Laboratorio), buscar los códigos, cruzar los valores con el arancel institucional y sumarlos con una calculadora.
+
+Siete minutos después, le responde al paciente. 
+
+El paciente ya le había escrito a otros dos laboratorios y se agendó con el que respondió primero.
+
+En la mayoría de las reuniones B2B que tengo con directores de laboratorios, me dicen que su problema es "la atención al cliente" o "el personal que se demora". 
+
+Están atacando el síntoma. El problema real es un problema de datos.
+
+## La orden médica como intención no estructurada
+
+Creemos que una orden médica es un documento legal. Para el sistema de salud, sí. Para el paciente, es solo una intención de compra no estructurada.
+
+El error de los laboratorios es forzar a humanos a actuar como "parsers" de texto libre y motores de reglas de negocio al mismo tiempo.
+
+Cuando lanzamos Shuri (el agente clínico de Examya por WhatsApp), la apuesta no era "poner a un bot a chatear con el paciente". La apuesta era tomar esa intención no estructurada (la foto) y convertirla en una transacción determinística en milisegundos.
+
+## Desacoplando el proceso
+
+Para que el paciente obtenga una cotización rápida y sin errores, construimos el flujo en base a arquitectura de datos, no de "chat":
+
+**1. OCR Médico Especializado:** Extraer el texto de la imagen no es suficiente. El agente debe normalizar el *slang* médico chileno (saber que "perfil lip." es un Perfil Lipídico y no otra cosa).
+
+**2. Cruce Semántico (pgvector):** En vez de búsquedas de texto exactas en el LIS, usamos embeddings. El agente busca el concepto médico extraído contra nuestra base de datos de aranceles FONASA y del propio laboratorio. 
+
+**3. Motor de Precios Determinístico:** Un LLM no puede hacer matemáticas ni inventar precios. Si el modelo alucina un precio, el riesgo legal es enorme. Por eso, el agente solo extrae los códigos (ej. `0302047`). El precio final lo calcula un motor de código duro (TypeScript) que aplica las reglas exactas por previsión y tramo del paciente.
+
+## El gotcha de la "Automatización Total"
+
+Aquí está la trampa en B2B: si vas a un laboratorio y le dices "el bot cotizará y agendará todo solo", los asustas. 
+
+En salud, la precisión importa más que la velocidad absoluta.
+
+Por eso en Examya, la arquitectura de `ShuriStateMachine` incorpora el estado `WAITING_HUMAN_APPROVAL`. 
+
+El agente hace el 90% del trabajo pesado (OCR, cruce de códigos FONASA, cálculo de precios) en menos de 2 segundos y prepara el borrador del presupuesto. El ejecutivo humano solo mira la pantalla, confirma que los exámenes coinciden con la foto y aprieta "Aprobar".
+
+El paciente recibe su cotización en 10 segundos, sin errores, y el humano no pierde el control.
+
+## El Zoom Out
+
+En salud digital, la experiencia del paciente no mejora poniendo más ejecutivos a responder mensajes ni instalando chatbots genéricos que no entienden medicina.
+
+Mejora cuando tratamos las interacciones cotidianas como lo que son: problemas de captura, estructuración y flujo de datos. 
+
+Cuando el laboratorio entiende que WhatsApp no es "un canal de atención", sino "la principal interfaz de captura de datos clínicos" de su paciente, la conversación cambia de nivel.
+
+## Lo que viene
+
+Si estás dirigiendo un laboratorio y sientes que WhatsApp es un dolor de cabeza inmanejable en lugar de tu mejor canal de ventas y fidelización, conversemos. Estamos llevando esta arquitectura a los primeros pilotos seguros.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
