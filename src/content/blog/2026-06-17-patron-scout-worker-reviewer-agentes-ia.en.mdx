@@ -1,0 +1,88 @@
+---
+title: "The Scout-Worker-Reviewer Pattern: How to scale AI agents without hallucinations"
+description: "Putting a single agent to solve everything is a recipe for disaster. How we divide responsibilities in Examya to achieve safe autonomy."
+date: 2026-06-17
+lang: "en"
+image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
+tags: [agents, architecture, automation, ai, engineering]
+draft: false
+canonicalSlug: "2026-06-17-patron-scout-worker-reviewer-agentes-ia"
+series: "agentes"
+seriesOrder: 14
+related: [2026-06-03-subagentes-revisores-vs-escritores-paralelos, 2026-06-12-trampa-automatizacion-total-freno-humano]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+# The Scout-Worker-Reviewer Pattern: How to scale AI agents without hallucinations
+
+You give your star AI agent a two-page prompt.
+
+You ask it to investigate the codebase, plan the architecture, write the new feature, run the tests, and make the commit.
+
+Five minutes later, the agent enters an infinite loop trying to fix a syntax error it invented itself, deleted half of the configurations, and the tests are burning red.
+
+The error is not the model. The error is architectural: we are trying to build magical "Full-Stack Devs" instead of designing predictable assembly lines.
+
+After months of hitting the wall at Examya, we abandoned the monolithic agent and adopted the **Scout-Worker-Reviewer** pattern.
+
+## The trap of the "know-it-all" agent
+
+When a single LLM has to read context, make product decisions, write code, and judge its own quality, the context window gets contaminated.
+
+The model suffers from "confirmation bias": if it wrote the function itself, it is highly unlikely to be able to audit it critically. It will try to justify its mistake instead of deleting it.
+
+To avoid this, we divided the workflow into three strictly isolated roles.
+
+## 1. The Scout
+
+The Scout is the low-cost, high-speed agent.
+
+Its only job is to look at the environment and gather context.
+It doesn't write code. It doesn't modify the database. It doesn't publish anything.
+
+In our content pipeline, for example, the Scout enters the Obsidian vault, reads the `_INDEX.md` file, checks the editorial calendar, and collects which topics have already been covered. Its output is a JSON file or a structured `Brief`.
+
+If the Scout fails, the process stops before wasting a single generation token.
+
+## 2. The Worker
+
+The Worker is the heavy-lifter (usually the most capable model, like Claude 3.5 Sonnet).
+
+It doesn't have to guess what to do because it receives the perfect `Brief` from the Scout. Its only directive is to execute the task with laser focus.
+
+If it's code, it generates the PR. If it's content, it writes the draft (`.md`).
+
+The secret of the Worker is that **it does not have permission to approve its own work**. It writes, saves, and passes the ball.
+
+## 3. The Reviewer
+
+The Reviewer is the guardrail. It is an instance of the model injected with a completely different *system prompt*, designed to be pessimistic and adversarial (we adapted the *Judgment Day* protocol designed by **Alan Buscaglia**).
+
+It doesn't know how the code was generated, nor does it care. It just takes the Worker's output, runs a `draft-checker` or a battery of unit tests, and looks for inconsistencies.
+
+- Did it invent a tag that doesn't exist in `_TAXONOMY.md`? Rejected.
+- Did it break a FONASA billing test? Rejected.
+- Did it use a link in the body of a LinkedIn post? Rejected.
+
+Only if the Reviewer gives explicit approval does the flow advance to the human or to production.
+
+## The Zoom Out
+
+Intelligence in modern AI systems does not emerge from having one giant model do everything. It emerges from the choreography between smaller models, restricted to microscopic tasks.
+
+The Scout-Worker-Reviewer pattern costs a bit more in tokens and orchestration time, but the Return on Investment (ROI) in code stability and peace of mind is infinite.
+
+Treat your agents like Unix functions: let them do one thing, and do it excellently.
+
+## What comes next
+
+If you are trying to move your agents from "terminal toys" to stable production workflows for HealthTech or B2B SaaS in LATAM, let's talk. We are scaling this every day.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

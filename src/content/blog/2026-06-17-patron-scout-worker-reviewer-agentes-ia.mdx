@@ -1,0 +1,87 @@
+---
+title: "El patrón Scout-Worker-Reviewer: Cómo escalar agentes de IA sin que alucinen"
+description: "Poner a un solo agente a resolver todo es la receta para el desastre. Cómo dividimos responsabilidades en Examya para lograr autonomía segura."
+date: 2026-06-17
+lang: "es"
+image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
+tags: [agents, architecture, automation, ai, engineering]
+draft: false
+series: "agentes"
+seriesOrder: 14
+related: [2026-06-03-subagentes-revisores-vs-escritores-paralelos, 2026-06-12-trampa-automatizacion-total-freno-humano]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+# El patrón Scout-Worker-Reviewer: Cómo escalar agentes de IA sin que alucinen
+
+Le das un prompt de dos páginas a tu agente estrella. 
+
+Le pides que investigue el código, planifique la arquitectura, escriba la nueva feature, corra los tests y haga el commit.
+
+Cinco minutos después, el agente entra en un loop infinito tratando de arreglar un error de sintaxis que él mismo inventó, borró la mitad de las configuraciones y los tests están en rojo fuego.
+
+El error no es el modelo. El error es arquitectónico: estamos intentando construir "Devs Full-Stack" mágicos, en lugar de diseñar líneas de ensamblaje predecibles.
+
+Después de varios meses estrellándonos contra la pared en Examya, abandonamos el agente monolítico y adoptamos el patrón **Scout-Worker-Reviewer**.
+
+## La trampa del agente "sabelotodo"
+
+Cuando un solo LLM tiene que leer contexto, tomar decisiones de producto, escribir código y juzgar su propia calidad, el *context window* se contamina.
+
+El modelo sufre de "ceguera por confirmación": si él mismo escribió la función, es muy poco probable que sea capaz de auditarla de forma crítica. Intentará justificar su error en lugar de borrarlo.
+
+Para evitar esto, dividimos el flujo en tres roles estrictamente aislados.
+
+## 1. El Scout (Explorador)
+
+El Scout es el agente de bajo costo y alta velocidad. 
+
+Su único trabajo es mirar el entorno y recolectar contexto. 
+No escribe código. No modifica la base de datos. No publica nada.
+
+En nuestro pipeline de contenido, por ejemplo, el Scout entra al vault de Obsidian, lee el archivo `_INDEX.md`, revisa el calendario editorial y recolecta qué temas ya se hablaron. Su output es un archivo JSON o un `Brief` estructurado. 
+
+Si el Scout falla, el proceso se detiene antes de gastar un solo token de generación.
+
+## 2. El Worker (Operario)
+
+El Worker es el agente pesado (generalmente el modelo más capaz, como Claude 3.5 Sonnet).
+
+No tiene que adivinar qué hacer porque recibe el `Brief` perfecto del Scout. Su única directriz es ejecutar la tarea con un foco láser. 
+
+Si es código, genera el PR. Si es contenido, escribe el borrador (`.md`). 
+
+El secreto del Worker es que **no tiene permiso para aprobar su propio trabajo**. Escribe, guarda y pasa la pelota.
+
+## 3. El Reviewer (Juez)
+
+El Reviewer es el guardrail. Es una instancia del modelo a la que se le inyecta un *system prompt* completamente distinto, diseñado para ser pesimista y adversarial (nosotros adaptamos el protocolo *Judgment Day* diseñado por **Alan Buscaglia**).
+
+No sabe cómo se generó el código ni le importa. Solo toma el output del Worker, ejecuta un `cotocha-draft-checker` o una batería de tests unitarios, y busca inconsistencias. 
+
+- ¿Se inventó un tag que no existe en `_TAXONOMY.md`? Rechazado.
+- ¿Rompió un test de FONASA? Rechazado.
+- ¿Usó un link en el cuerpo de un post para LinkedIn? Rechazado.
+
+Solo si el Reviewer da el visto bueno explícito, el flujo avanza al humano o a producción.
+
+## El Zoom Out
+
+La inteligencia en los sistemas de IA modernos no emerge de tener un modelo gigante que haga todo. Emerge de la coreografía entre modelos más pequeños, restringidos a tareas microscópicas.
+
+El patrón Scout-Worker-Reviewer cuesta un poco más en tokens y en tiempo de orquestación, pero el Retorno de Inversión (ROI) en estabilidad de código y paz mental es infinito.
+
+Trata a tus agentes como funciones de Unix: que hagan una sola cosa, y que la hagan de manera excelente.
+
+## Lo que viene
+
+Si estás intentando pasar tus agentes de "juguetes de terminal" a flujos estables en producción para HealthTech o SaaS B2B en LATAM, conversemos. Estamos escalando esto todos los días.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
