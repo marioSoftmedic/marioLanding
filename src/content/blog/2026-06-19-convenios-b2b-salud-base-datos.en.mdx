@@ -1,0 +1,89 @@
+---
+title: "The database error killing your healthcare B2B agreements"
+description: "Signing agreements between clinics and clinical labs is easy. The problem is your software models them using flat roles, risking massive data leaks."
+date: 2026-06-19
+lang: "en"
+canonicalSlug: "2026-06-19-convenios-b2b-salud-base-datos"
+tags: [interoperability, compliance, b2b, architecture, databases]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 15
+related: [2026-05-28-ley-21719-software-clinico-consentimiento-arco-p, 2026-06-11-checklist-interoperabilidad-ley-21668-clinicas]
+audience: "healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "interoperability"
+newsletterPriority: 3
+---
+
+# The database error killing your healthcare B2B agreements
+
+When a mid-sized clinic signs an agreement with a reference lab or a healthcare network, the business deal is celebrated with high spirits. 
+
+Tariffs, SLAs, and referral workflows are defined. But almost nobody invites the software architect to that table.
+
+The result is predictable: the agreement is implemented in production using hotfixes on existing software. And that's where the compliance and data security nightmare begins.
+
+With mandatory interoperability laws rolling out across LATAM, delegating B2B authorization security to basic "logical filters" in your backend is corporate suicide.
+
+## The trap of flat global roles
+
+Most legacy clinical software (and many rushed startups) solve B2B authorization by simply adding a role to their user database table:
+
+```sql
+-- The incorrect and dangerous way
+ALTER TYPE "UserRole" ADD VALUE 'DPO';
+ALTER TYPE "UserRole" ADD VALUE 'CLINIC_ADMIN';
+```
+
+At first glance, it seems logical. You assign the `CLINIC_ADMIN` role to the partner clinic's supervisor so they can view their patients' results. Then, in your backend, you write something like:
+
+```typescript
+// Pseudocode causing data leaks (Tenant Leaks)
+if (user.role === 'CLINIC_ADMIN') {
+  return db.patients.findMany({ where: { originClinicId: user.clinicId } });
+}
+```
+
+What's the catch? You've turned a dynamic, contractual, and auditable business relationship (the agreement) into a static, global user attribute. 
+
+If the admin for Clinic A also works Saturdays at Clinic B, the model breaks. If Clinic A terminates the agreement, you must manually hunt down every user to revoke their role instead of simply suspending the business entity. Worst of all: you are one single poorly-filtered SQL query away from exposing records to a competing clinic.
+
+## The solution: Model agreements as infrastructure
+
+When we structured the B2B interoperability layer for Examya and Fhirex, we decided that institutional membership isn't a role. It is an explicit contract backed by Row-Level Security (RLS) policies right at the database layer.
+
+Instead of global roles, we built a structure based on institutional memberships (`InstitutionMembership`) tied to specific agreements (`ConvenioInstitucional`):
+
+```typescript
+// Conceptual schema in Drizzle ORM
+export const institutionMembership = pgTable("institution_memberships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  institutionId: uuid("institution_id").references(() => institutions.id).notNull(),
+  role: text("role", { enum: ["admin", "validator", "viewer"] }).notNull(),
+  status: text("status", { enum: ["active", "suspended", "revoked"] }).default("active"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+```
+
+This paradigm shift changes everything:
+
+1. **True Multi-Tenant Isolation:** API queries don't depend on whether the developer remembered to filter by `clinicId`. The database, using automated RLS policies based on the JWT session token, only returns records linked to the user's active membership.
+2. **Agreement Lifecycle Management:** If a business agreement is frozen due to non-payment or contract termination, you update the institution's status to `suspended`. Automatically, all linked memberships lose API access without touching individual accounts of doctors or staff.
+3. **Audit Trails for Compliance:** Every clinical data read/write event (such as signing off results) is not just logged under the user ID, but includes the specific institutional agreement ID that authorized that access. Full traceability.
+
+## Zoom Out
+
+If you are leading a healthcare network or a laboratory and are looking to interconnect your operation with third parties via APIs, don't just look at the dashboard UI or API speed.
+
+Open the database schema. Ask how multi-tenancy and data segmentation are handled when endpoints are exposed. If the answer is "we filter it in the controller code," take a step back. In the age of mandatory health data sharing, your database must be your first and strictest compliance firewall.
+
+## What's Next
+
+We are currently rolling out the MVP for `ConvenioInstitucional` and granular audit logs for reference labs. If you are designing your clinic's B2B strategy and want to avoid complex technical debt, let's talk.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

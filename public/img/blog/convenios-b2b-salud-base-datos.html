@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B2B Agreements DB Architecture</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 1200px;
+      height: 630px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, rgba(239, 68, 68, .2), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, .18), transparent 38%),
+        #020617;
+      color: #e5f7ff;
+      overflow: hidden;
+    }
+    .grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(148, 163, 184, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, .08) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(to bottom, black, transparent 92%);
+    }
+    .wrap {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 68px 76px;
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 16px;
+      border: 1px solid rgba(59, 130, 246, .4);
+      border-radius: 999px;
+      color: #60a5fa;
+      background: rgba(15, 23, 42, .72);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 64px;
+      line-height: .98;
+      letter-spacing: -0.055em;
+      margin: 0 0 26px;
+      color: #f8fafc;
+    }
+    .highlight { color: #ef4444; }
+    p {
+      font-size: 26px;
+      line-height: 1.32;
+      color: #bfd7e4;
+      margin: 0;
+      max-width: 610px;
+    }
+    .card {
+      border: 1px solid rgba(148, 163, 184, .28);
+      background: linear-gradient(180deg, rgba(15, 23, 42, .84), rgba(15, 23, 42, .58));
+      border-radius: 34px;
+      padding: 36px;
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .38);
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 16px;
+      align-items: start;
+      margin: 0 0 22px;
+      color: #e2e8f0;
+      font-size: 24px;
+      line-height: 1.18;
+      font-weight: 650;
+    }
+    .item:last-child { margin-bottom: 0; }
+    .num {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(59, 130, 246, .14);
+      border: 1px solid rgba(59, 130, 246, .45);
+      color: #93c5fd;
+      font-weight: 900;
+      font-size: 21px;
+    }
+    .footer {
+      position: absolute;
+      left: 76px;
+      bottom: 50px;
+      display: flex;
+      gap: 32px;
+      font-size: 20px;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .footer span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">
+        <span>🛡️</span> Fhirex RegTech
+      </div>
+      <h1>Convenios B2B:<br/>El peligro de los<br/><span class="highlight">Roles Planos</span></h1>
+      <p>Cómo modelar acuerdos comerciales entre clínicas y laboratorios en tu base de datos de forma segura, evitando fugas de información.</p>
+    </div>
+    <div class="card">
+      <div class="item">
+        <div class="num">1</div>
+        <div>No uses roles globales planos (tipo CLINIC_ADMIN)</div>
+      </div>
+      <div class="item">
+        <div class="num">2</div>
+        <div>Usa entidades explícitas de InstitutionMembership</div>
+      </div>
+      <div class="item">
+        <div class="num">3</div>
+        <div>Protege los queries a nivel de motor con RLS de Postgres</div>
+      </div>
+      <div class="item">
+        <div class="num">4</div>
+        <div>Registra cada acceso clínico bajo el ID del convenio activo</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">
+    <span>🐦 @mariohealthbits</span>
+    <span>🌐 mariohealthbits.dev</span>
+  </div>
+</body>
+</html>
