@@ -2,11 +2,16 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const htmlFile = process.argv[2];
+const pdfFile = process.argv[3];
 
-const htmlPath = path.resolve(__dirname, '../public/img/blog/convenios-b2b-salud-base-datos-carrusel.html');
-const pdfPath = path.resolve('/Users/marioinostroza/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/_raw/carruseles/2026-06-19-convenios-b2b-salud-base-datos.pdf');
+if (!htmlFile || !pdfFile) {
+  console.error("Uso: node export-pdf.mjs <ruta-html> <ruta-pdf>");
+  process.exit(1);
+}
+
+const htmlPath = path.resolve(htmlFile);
+const pdfPath = path.resolve(pdfFile);
 
 async function exportPDF() {
   console.log('Iniciando Puppeteer para exportar PDF limpio...');
@@ -20,17 +25,12 @@ async function exportPDF() {
     printBackground: true,
     width: '1080px',
     height: '1350px',
-    displayHeaderFooter: false, // EXPLICITAMENTE FALSE
-    margin: {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-    }
+    displayHeaderFooter: false,
+    margin: { top: 0, right: 0, bottom: 0, left: 0 }
   });
 
   await browser.close();
-  console.log('PDF generado exitosamente sin headers en:', pdfPath);
+  console.log('PDF generado exitosamente en:', pdfPath);
 }
 
 exportPDF().catch(console.error);
