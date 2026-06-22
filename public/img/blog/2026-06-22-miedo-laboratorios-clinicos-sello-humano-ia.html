@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Arquitectura de Copiloto Operativo - Examya</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #020617;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      width: 100%;
+      max-width: 1000px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 20px;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      background-color: #34d399;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #34d399;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 0;
+    }
+    .diagram-container {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 1000px;
+      overflow-x: auto;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 20px;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-frontend { background: #22d3ee; }
+    .dot-backend { background: #34d399; }
+    .dot-human { background: #a78bfa; }
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .card ul {
+      margin: 0;
+      padding-left: 16px;
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .footer {
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 20px;
+      text-align: right;
+      color: #64748b;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><div class="dot"></div>Examya: Flujo Copiloto Operativo</h1>
+    <p class="subtitle">Human-in-the-loop: IA estructurando datos, humanos dando la atención clínica</p>
+  </div>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 1000 400" width="100%" height="400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+        </pattern>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+        </marker>
+        <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+        </marker>
+      </defs>
+
+      <!-- Background -->
+      <rect width="100%" height="100%" fill="url(#grid)" />
+
+      <!-- Boundaries -->
+      <!-- Zona Paciente -->
+      <rect x="20" y="20" width="180" height="360" rx="12" fill="none" stroke="#fbbf24" stroke-dasharray="8,4" stroke-width="1.5"/>
+      <text x="110" y="40" fill="#fbbf24" font-size="12" font-weight="600" text-anchor="middle">ZONA PACIENTE</text>
+
+      <!-- Zona IA -->
+      <rect x="220" y="20" width="480" height="360" rx="12" fill="none" stroke="#34d399" stroke-dasharray="8,4" stroke-width="1.5"/>
+      <text x="460" y="40" fill="#34d399" font-size="12" font-weight="600" text-anchor="middle">EXAMYA AI ENGINE</text>
+
+      <!-- Zona LIS / Staff -->
+      <rect x="720" y="20" width="260" height="360" rx="12" fill="none" stroke="#a78bfa" stroke-dasharray="8,4" stroke-width="1.5"/>
+      <text x="850" y="40" fill="#a78bfa" font-size="12" font-weight="600" text-anchor="middle">LABORATORIO CLÍNICO</text>
+
+
+      <!-- Arrows (drawn first to be behind components) -->
+      <path d="M 170 120 L 250 120" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 410 120 L 470 120" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+      
+      <!-- Handoff to human -->
+      <path d="M 630 120 L 770 120" fill="none" stroke="#fb7185" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrowhead-red)"/>
+      <text x="700" y="110" fill="#fb7185" font-size="9" text-anchor="middle">Triage & Handoff</text>
+
+      <!-- Low confidence fallback -->
+      <path d="M 550 150 L 550 250 L 770 250" fill="none" stroke="#fb7185" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrowhead-red)"/>
+      <text x="660" y="240" fill="#fb7185" font-size="9" text-anchor="middle">Low Confidence (<95%)</text>
+
+      <!-- LIS integration -->
+      <path d="M 850 150 L 850 210" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 850 290 L 850 330" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+
+      <!-- Components -->
+      
+      <!-- Patient Phone -->
+      <rect x="50" y="90" width="120" height="60" rx="6" fill="#0f172a"/>
+      <rect x="50" y="90" width="120" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="110" y="115" fill="white" font-size="11" font-weight="600" text-anchor="middle">WhatsApp</text>
+      <text x="110" y="130" fill="#94a3b8" font-size="9" text-anchor="middle">Paciente envía foto</text>
+
+      <!-- Examya Intent -->
+      <rect x="250" y="90" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="250" y="90" width="160" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="330" y="115" fill="white" font-size="11" font-weight="600" text-anchor="middle">MedicalOrderIntent</text>
+      <text x="330" y="130" fill="#94a3b8" font-size="9" text-anchor="middle">Clasifica y extrae imagen</text>
+
+      <!-- Examya OCR & Pricing -->
+      <rect x="470" y="90" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="470" y="90" width="160" height="60" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+      <text x="550" y="115" fill="white" font-size="11" font-weight="600" text-anchor="middle">Medical OCR & Pricing</text>
+      <text x="550" y="130" fill="#94a3b8" font-size="9" text-anchor="middle">Estructura datos + FONASA</text>
+
+      <!-- Recepcionista Humana -->
+      <rect x="770" y="90" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="770" y="90" width="160" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="850" y="115" fill="white" font-size="11" font-weight="600" text-anchor="middle">Recepcionista Humana</text>
+      <text x="850" y="130" fill="#94a3b8" font-size="9" text-anchor="middle">Toque personal + envío</text>
+
+      <!-- Recepcionista Humana (Revisión manual) -->
+      <rect x="770" y="230" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="770" y="230" width="160" height="60" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+      <text x="850" y="255" fill="white" font-size="11" font-weight="600" text-anchor="middle">Revisión Manual</text>
+      <text x="850" y="270" fill="#94a3b8" font-size="9" text-anchor="middle">Letra ilegible o especial</text>
+
+      <!-- Sistema LIS -->
+      <rect x="770" y="330" width="160" height="40" rx="6" fill="#0f172a"/>
+      <rect x="770" y="330" width="160" height="40" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="850" y="355" fill="white" font-size="11" font-weight="600" text-anchor="middle">LIS (Fhirex)</text>
+
+    </svg>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot dot-frontend"></div>
+        <h3>Extracción Invisible</h3>
+      </div>
+      <ul>
+        <li>• Paciente no interactúa con un bot</li>
+        <li>• OCR médico especializado en órdenes</li>
+        <li>• Extracción silenciosa en milisegundos</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot dot-backend"></div>
+        <h3>Triage & Handoff</h3>
+      </div>
+      <ul>
+        <li>• Autoevaluación de confidenceScore</li>
+        <li>• Cotización FONASA pre-calculada</li>
+        <li>• IA no cierra el flujo, pasa la pelota</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot dot-human"></div>
+        <h3>Empatía Clínica</h3>
+      </div>
+      <ul>
+        <li>• Recepcionista aporta contención</li>
+        <li>• Revisión final antes de enviar</li>
+        <li>• Pre-ingreso al LIS elimina tipeo manual</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    mariohealthbits.dev — Examya Architecture View
+  </div>
+</body>
+</html>
