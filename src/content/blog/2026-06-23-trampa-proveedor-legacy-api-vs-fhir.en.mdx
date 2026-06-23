@@ -1,0 +1,90 @@
+---
+title: "Your Legacy Provider Doesn't Have FHIR (They Just Have an Insecure API)"
+description: "Why 'having an API' is no longer enough for healthcare laws 21.668 and 21.719, and how legacy vendors expose hospitals to massive fines."
+date: 2026-06-23
+lang: "en"
+image: "/img/blog/trampa-proveedor-legacy-api-vs-fhir.png"
+tags: [Interoperability, FHIR, Ley 21.668, Digital Health, Compliance]
+draft: false
+canonicalSlug: "2026-06-23-trampa-proveedor-legacy-api-vs-fhir"
+series: "interoperabilidad-chile"
+seriesOrder: 17
+related: [2026-06-11-checklist-interoperabilidad-ley-21668-clinicas, 2026-06-19-convenios-b2b-salud-base-datos]
+audience: "healthcare-executives | healthtech-founders | clinical-lab-directors | builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 0
+---
+
+A couple of weeks ago, we were advising a local public hospital on integrating their blood bank data. The management software vendor (a legacy system installed decades ago) gave us the usual line: *"Don't worry, we do integrate. We have an API."*
+
+Since Fhirex operates under the strict requirements of Chile's Interoperability Law (21.668) and the new Data Protection Law (21.719), we handed them our basic technical checklist.
+
+The result was a disaster. Their famous API was just a REST endpoint sending plain text strings. No clinical semantics, no role-based access control, and absolutely no trace of the Demonstrable Accountability principle required by law.
+
+### What nobody tells you about B2B technical debt
+
+The healthcare software market is plagued with vendors disguising their technical debt.
+
+For years, "integration" in hospitals meant one vendor punching a hole in another's database to cross-reference information, or setting up a WebService that dumped an unstandardized XML. That worked when digital health was the wild west.
+
+Today, as the new Data Protection Law (21.719) takes effect, a data breach can cost a clinic up to 1.5 billion pesos in fines. It's no longer enough to just move data from point A to point B. It matters **how** it moves, **who** authorized the movement, and **what** clinical standard defines it.
+
+### The difference between "any API" and FHIR
+
+When a legacy vendor tells you they have an API, they are usually just handing you their internal database model converted to JSON.
+
+```json
+// The typical legacy "integration"
+{
+  "patient_id": "12345678-9",
+  "exam": "Blood",
+  "result": "OK"
+}
+```
+
+That data is not interoperable. It lacks clinical semantics. If tomorrow you want to cross-reference this with the Ministry of Health, you'll have to write manual transformation rules.
+
+Conversely, when we use HL7 FHIR (the official standard for the new interoperability law), the data is born with universal meaning. The `Patient` is a resource, the medical order is a `ServiceRequest`, and the result is a `DiagnosticReport` anchored to a LOINC or SNOMED CT code.
+
+```typescript
+// A true FHIR R4 resource
+const diagnosticReport = {
+  resourceType: "DiagnosticReport",
+  status: "final",
+  code: {
+    coding: [{
+      system: "http://loinc.org",
+      code: "15045-8",
+      display: "Fasting glucose [Moles/volume] in Blood"
+    }]
+  },
+  subject: { reference: "Patient/12345" }
+};
+```
+
+<iframe src="/img/blog/2026-06-23-trampa-proveedor-legacy-api-vs-fhir.html" width="100%" height="850px" style="border:none; border-radius: 8px;"></iframe>
+
+### The Accountability Gotcha (Law 21.719)
+
+The biggest risk isn't technical, it's legal. The new Chilean data law strictly requires a **Record of Processing Activities (RAT)**.
+
+If your legacy vendor extracts information from the hospital through an opaque API, and there's an audit, who proves under what consent that data was moved? Where is the auditable log (an `AuditEvent` in FHIR) demonstrating the purpose of the treatment?
+
+Fhirex's architecture forces vendors to map their output to a traceable standard. A legacy API is not enough; it needs a middleware layer that validates, standardizes, and logs clinical data movement before it ever touches the cloud or the hospital's central system.
+
+### Zoom out: The regulatory tollbooth
+
+Interoperability is no longer a "nice to have" feature for IT departments. It is a legal shield for the clinic's board of directors.
+
+If your software provider answers "we have an API" but doesn't know what a FHIR resource is, or hasn't implemented a Record of Processing Activities, they are selling you a regulatory liability. Starting in 2026, those vendors will be phased out of the ecosystem.
+
+### What's next
+
+We are deploying a series of validators in the Fhirex layer that intercept requests from these older systems, reject payloads that fail to meet the privacy minimums of law 21.719, and alert the clinic's Data Protection Officer in real time.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

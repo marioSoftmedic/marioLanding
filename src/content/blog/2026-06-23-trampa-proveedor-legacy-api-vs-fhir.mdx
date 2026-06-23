@@ -1,0 +1,89 @@
+---
+title: "Tu proveedor legacy no tiene FHIR (solo tiene una API insegura)"
+description: "Por qué 'tener API' ya no es suficiente para la Ley 21.668 y 21.719, y cómo los proveedores tradicionales están exponiendo a los hospitales a multas millonarias."
+date: 2026-06-23
+lang: "es"
+image: "/img/blog/trampa-proveedor-legacy-api-vs-fhir.png"
+tags: [Interoperabilidad, FHIR, Ley 21.668, Salud Digital, Compliance]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 17
+related: [2026-06-11-checklist-interoperabilidad-ley-21668-clinicas, 2026-06-19-convenios-b2b-salud-base-datos]
+audience: "healthcare-executives | healthtech-founders | clinical-lab-directors | builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 0
+---
+
+Hace un par de semanas estábamos asesorando la integración de datos de un banco de sangre en un hospital público local. El proveedor del software de gestión (un sistema legacy que lleva décadas instalado) nos dijo lo que dicen todos: *"Tranquilos, sí nos integramos. Tenemos una API".*
+
+Como Fhirex opera bajo la exigencia de la Ley 21.668 (Interoperabilidad) y la nueva Ley 21.719 (Protección de Datos), les pasamos nuestro checklist técnico básico.
+
+El resultado fue un desastre. Su famosa API era un endpoint REST que enviaba un string de texto plano. Sin semántica clínica, sin control de acceso por roles, y sin el más mínimo rastro del principio de Responsabilidad Demostrable (Accountability) que exige la ley.
+
+### Lo que nadie cuenta de la deuda técnica B2B
+
+El mercado chileno de software en salud está plagado de proveedores que disfrazan su deuda técnica.
+
+Durante años, la "integración" en los hospitales consistió en que un proveedor le abría un agujero en la base de datos a otro para cruzar información, o habilitaban un WebService que tiraba un XML sin ningún estándar. Eso funcionaba cuando la salud digital era tierra de nadie. 
+
+Hoy, con la Ley 21.719 entrando en vigencia, una fuga de datos te puede costar hasta 1.500 millones de pesos. Ya no basta con mover el dato del punto A al punto B. Importa **cómo** se mueve, **quién** autorizó que se moviera y **qué** estándar clínico lo define.
+
+### La diferencia entre una "API cualquiera" y FHIR
+
+Cuando un proveedor legacy te dice que tiene una API, generalmente te está pasando su modelo de base de datos convertido a JSON.
+
+```json
+// La "integración" legacy típica
+{
+  "id_paciente": "12345678-9",
+  "examen": "Sangre",
+  "resultado": "OK"
+}
+```
+
+Ese dato no es interoperable. No tiene semántica clínica. Si el día de mañana quieres cruzar eso con el MINSAL, vas a tener que escribir reglas de transformación manuales.
+
+En cambio, cuando usamos HL7 FHIR (el estándar oficial del MINSAL para la Ley 21.668), el dato nace con significado universal. El `Paciente` es un recurso, la orden médica es un `ServiceRequest` y el resultado es un `DiagnosticReport` anclado a un código LOINC o SNOMED CT.
+
+```typescript
+// Un verdadero recurso FHIR R4
+const diagnosticReport = {
+  resourceType: "DiagnosticReport",
+  status: "final",
+  code: {
+    coding: [{
+      system: "http://loinc.org",
+      code: "15045-8",
+      display: "Fasting glucose [Moles/volume] in Blood"
+    }]
+  },
+  subject: { reference: "Patient/12345" }
+};
+```
+
+<iframe src="/img/blog/2026-06-23-trampa-proveedor-legacy-api-vs-fhir.html" width="100%" height="850px" style="border:none; border-radius: 8px;"></iframe>
+
+### El gotcha del Accountability (Ley 21.719)
+
+El mayor riesgo no es técnico, es legal. La nueva ley de datos chilena exige el **RAT (Registro de Actividades de Tratamiento)**. 
+
+Si tu proveedor legacy extrae información del hospital por una API opaca, y hay una auditoría, ¿quién prueba bajo qué consentimiento se movió ese dato? ¿Dónde está el registro auditable (AuditEvent en FHIR) que demuestre el propósito del tratamiento?
+
+La arquitectura de Fhirex obliga a los proveedores a mapear su salida hacia un estándar trazable. La API legacy no es suficiente; necesita una capa intermedia que valide, estandarice y registre el movimiento del dato clínico antes de que toque la nube o el sistema central del hospital.
+
+### Zoom out: El peaje regulatorio
+
+La interoperabilidad ya no es un "nice to have" para los departamentos de TI. Es un escudo legal para el directorio de la clínica.
+
+Si tu proveedor de software te responde "tenemos API" pero no sabe qué es un recurso FHIR, ni tiene implementado el Registro de Actividades de Tratamiento, te está vendiendo un pasivo regulatorio. A partir de 2026, esos proveedores quedarán fuera del ecosistema.
+
+### Lo que viene
+
+Estamos desplegando una serie de validadores en la capa de Fhirex que interceptan los requests de estos sistemas antiguos, rechazan las cargas que no cumplen con los mínimos de privacidad de la 21.719, y alertan al Delegado de Protección de Datos de la clínica en tiempo real. 
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

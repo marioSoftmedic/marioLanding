@@ -18,6 +18,7 @@ async function exportPDF() {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   
+  await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
   await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
   
   await page.pdf({
