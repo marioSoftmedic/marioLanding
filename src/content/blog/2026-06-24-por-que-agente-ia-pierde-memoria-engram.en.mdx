@@ -1,0 +1,79 @@
+---
+title: "Why Your AI Agent Wakes Up with Amnesia (And How We Fixed Its Memory)"
+description: "The 'memory bucket bug': why AI agents lose context from one day to the next, and the deterministic architecture we use in Engram to solve it."
+date: 2026-06-24
+lang: "en"
+image: "/img/blog/por-que-agente-ia-pierde-memoria-engram.png"
+tags: [Agents, AI, Engram, Architecture, Automation]
+draft: false
+canonicalSlug: "2026-06-24-por-que-agente-ia-pierde-memoria-engram"
+series: "agentes"
+seriesOrder: 15
+related: [2026-06-06-agente-ia-memoria-operativa-vs-contexto, 2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo]
+audience: "builders | healthtech-founders | healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 0
+---
+
+Building AI agents that work in a demo is easy. Building agents that work alongside you every day, for months, and remember what you decided last Tuesday, is an architectural nightmare.
+
+Recently, we noticed a weird behavior in our internal orchestrator. The agent was making correct decisions and saving its learnings into our long-term memory system (Engram). But the next day, it would wake up completely blind. It would ask me things we had already defined.
+
+When I checked the database, I found the root cause: the agent didn't have amnesia. It had a "bucket" problem.
+
+### The memory bucket bug
+
+Operational memory in agents isn't magic; it's just Tool Use (MCP). When the agent learned something new, it fired a `mem_save(content: "...")`.
+
+The problem? Because the tool didn't explicitly demand a `session_id`, the database simply dumped the memory into the "last opened session" for that project.
+
+We ended up with a three-week-old zombie session accumulating hundreds of disconnected observations. The actual daily sessions remained empty. When the agent booted up in the morning and ran its `mem_context` (which retrieves recent memory), it found nothing useful because everything had fallen into the wrong bucket.
+
+### How to inject determinism into memory
+
+Generative AI hates ambiguity in database operations. For an agent to maintain a coherent narrative thread over time (crucial if it processes clinical data or handles recurring patients), the session lifecycle must be strict and deterministic.
+
+We implemented a hard protocol (`engram-session`) that the agent is forced to follow before writing a single line of code:
+
+```typescript
+// The unbreakable startup protocol
+1. Generate a deterministic ID: `${project}-${YYYYMMDD}-${HHMM}`
+2. Declare startup: mem_session_start(id: session_id)
+3. Force ID usage: All mem_save() calls MUST include the session_id
+```
+
+With this, we took away the LLM's responsibility of guessing "where" to store things.
+
+<iframe src="/img/blog/2026-06-24-por-que-agente-ia-pierde-memoria-engram.html" width="100%" height="850px" style="border:none; border-radius: 8px;"></iframe>
+
+### The session close as a contract
+
+The second gotcha was the end of the day. An agent doesn't "clock out"; it just stops receiving prompts. If the session is left open, the memory remains loose.
+
+We had to teach the agent to pull down the shutters. Today, when I say "done for today" or "close the session," the agent is forbidden from saying goodbye without first executing `mem_session_summary`.
+
+This method forces it to synthesize:
+- What problem were we trying to solve today?
+- What weird bug did we discover?
+- What is pending for tomorrow?
+
+### Zoom out: Why this matters in B2B healthcare
+
+If you build agents for clinical labs or hospitals, context loss isn't a UX problem—it's a clinical and compliance risk.
+
+If a patient follow-up agent forgets that it already quoted an exam yesterday and asks for the medical order again because it saved the data in the wrong thread, you destroy the patient's trust.
+
+AI in production requires traditional software rules. Memory cannot be a giant text field injected into a prompt. It must be a relational architecture, indexed, and above all, strictly bounded to a real session.
+
+### What's next
+
+The next step in our infrastructure is to implement a context garbage collector. It will periodically evaluate which memories are obsolete or contradict new decisions, asking the human to "judge" which one to keep.
+
+*(Special shoutout to Alan Buscaglia, creator of Engram, for building the persistent memory infrastructure and protocols that make this level of modeling possible).*
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

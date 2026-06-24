@@ -1,0 +1,78 @@
+---
+title: "Por qué tu agente de IA amanece con amnesia (y cómo arreglamos su memoria)"
+description: "El 'bug de la cubeta': por qué los agentes pierden el contexto de un día para otro y la arquitectura determinística que usamos en Engram para solucionarlo."
+date: 2026-06-24
+lang: "es"
+image: "/img/blog/por-que-agente-ia-pierde-memoria-engram.png"
+tags: [Agentes, IA, Engram, Arquitectura, Automatización]
+draft: false
+series: "agentes"
+seriesOrder: 15
+related: [2026-06-06-agente-ia-memoria-operativa-vs-contexto, 2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo]
+audience: "builders | healthtech-founders | healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 0
+---
+
+Construir agentes de IA que funcionan en un demo es fácil. Construir agentes que trabajen contigo todos los días, durante meses, y recuerden lo que decidiste el martes pasado, es un infierno arquitectónico.
+
+Hace poco nos dimos cuenta de un comportamiento extraño en nuestro orquestador interno. El agente estaba tomando decisiones correctas, guardando sus aprendizajes en la memoria a largo plazo (Engram), pero al día siguiente, amanecía ciego. Me volvía a preguntar cosas que ya habíamos definido.
+
+Cuando miré la base de datos, descubrí el problema: el agente no tenía amnesia. Tenía un problema de "cubetas".
+
+### El bug de la cubeta de memoria
+
+La memoria operativa en agentes no es magia, son llamadas a herramientas (Tool Use / MCP). Cuando el agente aprendía algo nuevo, disparaba un `mem_save(content: "...")`. 
+
+¿El problema? Como la herramienta no exigía un `session_id` explícito, la base de datos simplemente le tiraba la memoria a la "última sesión abierta" de ese proyecto. 
+
+Terminamos con una sesión zombie de hace tres semanas acumulando cientos de observaciones inconexas. Las sesiones reales del día quedaban en cero. Cuando el agente arrancaba en la mañana y hacía su `mem_context` (que recupera la memoria reciente), no encontraba nada útil, porque todo había caído en la cubeta equivocada.
+
+### Cómo inyectar determinismo en la memoria
+
+La IA generativa odia la ambigüedad en operaciones de base de datos. Para que un agente mantenga un hilo narrativo coherente en el tiempo (vital si procesa datos clínicos o atiende clientes recurrentes), el ciclo de vida de la sesión debe ser estricto y determinístico.
+
+Implementamos un protocolo duro (`engram-session`) que el agente está obligado a seguir antes de escribir una sola línea de código:
+
+```typescript
+// El protocolo inquebrantable de inicio
+1. Generar un ID determinístico: `${project}-${YYYYMMDD}-${HHMM}`
+2. Declarar el inicio: mem_session_start(id: session_id)
+3. Forzar el uso del ID: Todos los mem_save() DEBEN incluir el session_id
+```
+
+Con esto, le quitamos al LLM la responsabilidad de adivinar "dónde" guardar las cosas.
+
+<iframe src="/img/blog/2026-06-24-por-que-agente-ia-pierde-memoria-engram.html" width="100%" height="850px" style="border:none; border-radius: 8px;"></iframe>
+
+### El cierre de sesión como contrato
+
+El segundo gotcha fue el fin del día. Un agente no "sale del trabajo", simplemente deja de recibir prompts. Si la sesión queda abierta, la memoria queda suelta.
+
+Tuvimos que enseñarle al agente a cerrar la cortina. Hoy, cuando le digo "listo por hoy" o "cierra la sesión", el agente tiene prohibido despedirse sin antes ejecutar `mem_session_summary`. 
+
+Este método lo obliga a sintetizar:
+- ¿Qué problema intentábamos resolver hoy?
+- ¿Qué bug raro descubrimos?
+- ¿Qué quedó pendiente para mañana?
+
+### Zoom out: Por qué esto importa en salud B2B
+
+Si construyes agentes para laboratorios o clínicas, la pérdida de contexto no es un problema de UX, es un riesgo clínico y de compliance. 
+
+Si un agente de seguimiento de pacientes olvida que ayer ya cotizó el examen y vuelve a pedir la receta médica porque guardó el dato en el hilo equivocado, destruyes la confianza del paciente.
+
+La IA en producción requiere reglas de software tradicional. La memoria no puede ser un campo de texto gigante que le inyectas al prompt. Debe ser una arquitectura relacional, indexada y, sobre todo, estrictamente acotada a una sesión real.
+
+### Lo que viene
+
+El próximo paso en nuestra infraestructura es implementar un recolector de basura (garbage collector) de contexto, que evalúe periódicamente qué memorias ya están obsoletas o contradicen nuevas decisiones, pidiéndole al humano que "juzgue" con cuál quedarse. 
+
+*(Shoutout especial a Alan Buscaglia, creador de Engram, por construir el protocolo y la infraestructura base de memoria persistente que nos permite modelar esto).*
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
