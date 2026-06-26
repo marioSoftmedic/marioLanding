@@ -1,0 +1,57 @@
+---
+title: "Why your server logs won't save you under Law 21.719 (and how we fixed it)"
+description: "We migrated Examya to an append-only model for ARCO-P rights. Why a mutable JSON is not forensic evidence for a clinical audit."
+date: 2026-06-26
+lang: "en"
+image: "/img/blog/log-servidor-no-sirve-ley-21719-auditoria-examya.png"
+tags: [Examya, Ley 21.668, Arquitectura, Backend, Cumplimiento]
+draft: false
+canonicalSlug: "2026-06-26-log-servidor-no-sirve-ley-21719-auditoria-examya"
+series: "examya"
+seriesOrder: 15
+related: [2026-05-28-ley-21719-software-clinico-consentimiento-arco-p, 2026-06-11-checklist-interoperabilidad-ley-21668-clinicas]
+audience: "clinical-lab-directors | healthtech-founders | builders | healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "examya"
+newsletterPriority: 0
+---
+
+## The real problem with clinical evidence
+
+You get an ARCO-P request from a patient: "I want my clinical data deleted". The DPO (Data Protection Officer) approves it, the deletion is executed, and a month later an audit arrives asking when, who, and why that information was deleted. You go look at the database... and the request record was also deleted. Or worse: the evidence is sitting in a rotated text log file in AWS that no one knows how to read.
+
+## What nobody tells you about compliance
+
+Law 21.719 doesn't just demand that you comply with ARCO-P rights (Access, Rectification, Cancellation, Opposition, Portability). It demands that you **prove** you complied on time and properly. A server log gets lost. A mutable JSON in the database has no validity because anyone with DB access can rewrite history. Compliance is not a visual feature; it's immutable forensic evidence.
+
+## The hard data
+
+During our technical analysis of the compliance regulations for Law 21.719 at Examya, we reached a design crossroads. Most web systems handle this kind of tracking by saving the history inside an `auditTrail` JSON field, nested within the request itself. But we realized there was a structural flaw: if an admin manually edits the JSON, or if the main ticket is accidentally deleted from the database by a cascading error, all the regulatory proof disappears with it.
+
+## What we built: Append-Only Audit
+
+We migrated to a purely *append-only* model in PostgreSQL. We built the `DsrAuditEventService` and a dedicated Prisma table where every state change, DPO approval, or SLA expiration is a new, immutable row. Zero `UPDATE`s, only `INSERT`s. 
+
+And most importantly: we minimized the payload. The event stores the "what" and "who", but intentionally purges RUTs, clinical data, and raw bodies so the audit log itself doesn't become a sensitive data leak.
+
+## The technical gotcha: ON DELETE RESTRICT
+
+The most counterintuitive technical decision was the Foreign Key behavior. Typically, you'd use `ON DELETE CASCADE` so that if you delete a request, its history is deleted and your database stays clean. Here, we had to explicitly use `RESTRICT`. We **forbid** deleting the evidence from the database. 
+
+Furthermore, we learned about failure tolerance: writing the audit event must fail "closed" (if I can't save the evidence, I abort the state change), but alert notifications must fail "open" (if I can't send the expired SLA email, the ticket must still be marked as expired).
+
+## Zoom out: The impact on digital health
+
+Healthcare software in Chile is facing a forced maturation. Legacy vendors are used to a simple console log being a sufficient excuse. When real audits start, systems that don't have their compliance modeled from the data layer are going to be a massive legal liability for the clinics and labs that hired them.
+
+## What's next
+
+Now that the evidence is immutable, the next step in Examya is the reporting engine. A dashboard where the institution's DPO can download the "Data Governance Report" with a single click and hand it to the auditor, featuring verifiable SLAs and immutable timestamps on every row.
+
+## Let's talk
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

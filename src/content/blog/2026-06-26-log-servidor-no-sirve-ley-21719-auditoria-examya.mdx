@@ -1,0 +1,56 @@
+---
+title: "Por qué tu log de servidor no sirve para la Ley 21.719 (y cómo lo resolvimos)"
+description: "Migramos Examya a un modelo append-only para derechos ARCO-P. Por qué un JSON mutable no es evidencia forense ante una auditoría clínica."
+date: 2026-06-26
+lang: "es"
+image: "/img/blog/log-servidor-no-sirve-ley-21719-auditoria-examya.png"
+tags: [Examya, Ley 21.668, Arquitectura, Backend, Cumplimiento]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: [2026-05-28-ley-21719-software-clinico-consentimiento-arco-p, 2026-06-11-checklist-interoperabilidad-ley-21668-clinicas]
+audience: "clinical-lab-directors | healthtech-founders | builders | healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "examya"
+newsletterPriority: 0
+---
+
+## El problema real con la evidencia clínica
+
+Te llega un requerimiento ARCO-P de un paciente: "Quiero que borren mis datos clínicos". El DPO (Delegado de Protección de Datos) lo aprueba, se ejecuta el borrado, y un mes después llega una fiscalización preguntando cuándo, quién y por qué se borró esa información. Vas a mirar la base de datos... y el registro del requerimiento también se borró. O peor: la evidencia está en un archivo de texto de logs rotados en AWS que nadie sabe leer.
+
+## Lo que nadie cuenta sobre el compliance
+
+La Ley 21.719 no solo exige que cumplas los derechos ARCO-P (Acceso, Rectificación, Cancelación, Oposición, Portabilidad). Exige que **demuestres** que los cumpliste en tiempo y forma. Un log de servidor se pierde. Un JSON mutable en la base de datos no tiene validez porque cualquiera con acceso a la DB puede editar la historia. El cumplimiento no es una feature visual; es evidencia forense inmutable.
+
+## Los datos reales
+
+Durante el análisis de la normativa técnica para la Ley 21.719 en Examya, llegamos a una encrucijada de diseño. La mayoría de los sistemas web manejan este tipo de registros guardando el historial dentro de un campo `auditTrail` en formato JSON, anidado en el mismo requerimiento. Pero nos dimos cuenta de una falla estructural: si un administrador edita el JSON a mano, o si el ticket principal se elimina en la base de datos por un error en cascada, toda la prueba regulatoria desaparece con él. 
+
+## Lo que construimos: Auditoría Append-Only
+
+Migramos a un modelo puramente *append-only* en PostgreSQL. Creamos el servicio `DsrAuditEventService` y una tabla dedicada en Prisma donde cada cambio de estado, aprobación de DPO o expiración de SLA es una fila nueva e inmutable. Cero `UPDATE`s, solo `INSERT`s. 
+
+Y lo más importante: minimizamos el payload. El evento guarda el "qué" y el "quién", pero intencionalmente purga RUTs, datos clínicos y cuerpos crudos (raw bodies) para que el propio log de auditoría no se convierta en una fuga de datos sensibles.
+
+## El gotcha técnico: ON DELETE RESTRICT
+
+La decisión técnica más contraintuitiva fue el comportamiento de las Foreign Keys. Típicamente usarías `ON DELETE CASCADE` para que si borras un requerimiento, se borre su historial y mantengas la base de datos limpia. Acá tuvimos que usar explícitamente `RESTRICT`. **Prohibimos** borrar la evidencia desde la base de datos. 
+
+Además, aprendimos sobre la tolerancia a fallos: la escritura del evento de auditoría debe fallar "cerrada" (si no puedo guardar la evidencia, aborto el cambio de estado), pero las notificaciones de alerta deben fallar "abiertas" (si no puedo enviar el email de SLA vencido, el ticket igual debe marcarse como vencido).
+
+## Zoom out: El impacto en la salud digital
+
+El software de salud en Chile se está enfrentando a una maduración forzada. Los proveedores legacy están acostumbrados a que un simple log de consola sea suficiente excusa. Cuando empiece la fiscalización real, los sistemas que no tengan su compliance modelado desde la capa de datos van a ser una responsabilidad legal enorme para las clínicas y laboratorios que los contrataron.
+
+## Lo que viene
+
+Ahora que la evidencia es inmutable, el próximo paso en Examya es el motor de reportabilidad. Un dashboard donde el DPO de la institución pueda descargar el "Data Governance Report" con un clic y entregarlo al fiscalizador, con SLAs comprobables y firmas de tiempo inmutables en cada fila.
+
+## Conversemos
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
