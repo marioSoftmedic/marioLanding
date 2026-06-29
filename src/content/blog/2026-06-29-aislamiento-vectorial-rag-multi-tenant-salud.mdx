@@ -1,0 +1,66 @@
+---
+title: "Aislamiento de datos en agentes clínicos: un filtro no basta"
+description: "Por qué los agentes clínicos necesitan aislamiento de datos desde la base de datos y no solo filtros aplicados desde la capa de software."
+date: 2026-06-29
+lang: "es"
+image: "/img/blog/aislamiento-vectorial-rag-multi-tenant-salud.png"
+tags: [agents, pgvector, compliance, architecture, databases]
+draft: false
+series: "agentes"
+seriesOrder: 15
+related: [2026-06-24-por-que-agente-ia-pierde-memoria-engram, 2026-06-06-agente-ia-memoria-operativa-vs-contexto]
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+Imagina que un médico consulta las pautas de dosificación de un fármaco usando un agente clínico. Si el sistema sufre un cruce de datos, el agente podría mostrar las guías internas de una clínica diferente con normas distintas. En salud, este escenario no es un simple problema de interfaz, es una brecha de seguridad grave que expone datos sensibles de pacientes y propiedad intelectual de los laboratorios.
+
+### Lo que nadie cuenta
+
+El error más común al planificar agentes clínicos con inteligencia artificial es delegar el aislamiento de los datos exclusivamente a la capa de aplicación. Muchos equipos configuran una colección vectorial compartida e inyectan un filtro simple en la consulta del tipo `where tenant_id = 'XYZ'`.
+
+Esta aproximación funciona bien en entornos de prueba, pero es riesgosa en producción. Si la consulta tiene una falla de escape, si el ORM genera mal el query estructurado, o si la capa intermedia de software tiene una fuga de memoria, los vectores de un cliente se mezclarán con el contexto del LLM de otro cliente. En medicina, un error de aislamiento invalida la confianza en toda la plataforma.
+
+### Los datos reales
+
+En Examya, una primera versión de RAG local se diseñó para cargar un archivo de texto plano con protocolos médicos generales y precios referenciales. Para validar la hipótesis inicial sirvió, pero al pensar en laboratorios y clínicas con sus propios convenios, la falta de partición real se convirtió en un cuello de botella arquitectónico.
+
+La lección fue simple: no podemos permitir que consultas de instituciones distintas compitan en el mismo espacio lógico sin garantías robustas de separación del dato.
+
+### Lo que estamos diseñando
+
+El diseño propuesto mueve la ingesta documental hacia PostgreSQL usando `pgvector` sobre Supabase, con Row Level Security (RLS) de manera nativa. Con este enfoque, el aislamiento del dato no depende de que el programador recuerde agregar el filtro en la llamada de código. La base de datos rechaza cualquier acceso que no coincida con el contexto seguro de la sesión.
+
+El esquema lógico planificado fuerza el uso del identificador de la institución directamente en las políticas de seguridad:
+
+```sql
+ALTER TABLE document_sections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON document_sections
+    FOR ALL
+    USING (institution_id = current_setting('app.current_institution_id', true));
+```
+
+En la capa del servidor de base de datos, se define una variable de sesión con el ID validado de la institución antes de lanzar la búsqueda semántica. Si por algún motivo la variable no se define o contiene un valor erróneo, la base de datos devuelve un conjunto vacío en lugar de exponer datos ajenos.
+
+### El gotcha
+
+El gran desafío al habilitar RLS sobre tablas vectoriales es el riesgo de degradación del rendimiento en las búsquedas de vecinos cercanos. Si aplicas RLS tradicional, PostgreSQL puede filtrar las filas permitidas antes o durante el escaneo vectorial, lo que puede afectar el uso del índice HNSW (Hierarchical Navigable Small World) y elevar la latencia de respuesta.
+
+Para mitigar esto, el diseño debe incluir el identificador institucional de forma explícitamente estructurada en la estrategia de indexación, permitiendo que pgvector mantenga una búsqueda eficiente sin romper el aislamiento del dato.
+
+### Zoom out
+
+Con la entrada en vigencia de las nuevas normativas de protección de datos clínicos, el cumplimiento regulatorio se ha transformado en un requerimiento de arquitectura de software. Ya no basta con declarar en los términos de servicio que los datos están separados. Las auditorías clínicas exigen demostrar cómo tu infraestructura garantiza el aislamiento físico del dato de salud.
+
+### Lo que viene
+
+El siguiente paso es hacer visible la trazabilidad: que cada respuesta del agente pueda mostrar de qué fuente salió el dato, sin exponer información de otros clientes ni convertir la auditoría clínica en una caja negra.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

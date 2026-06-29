@@ -1,0 +1,67 @@
+---
+title: "Data Isolation in Clinical Agents: Why a Filter Is Not Enough"
+description: "Why clinical agents need database-level data isolation instead of relying only on filters applied from the application layer."
+date: 2026-06-29
+lang: "en"
+image: "/img/blog/aislamiento-vectorial-rag-multi-tenant-salud.png"
+tags: [agents, pgvector, compliance, architecture, databases]
+draft: false
+canonicalSlug: "2026-06-29-aislamiento-vectorial-rag-multi-tenant-salud"
+series: "agentes"
+seriesOrder: 15
+related: [2026-06-24-por-que-agente-ia-pierde-memoria-engram, 2026-06-06-agente-ia-memoria-operativa-vs-contexto]
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+Imagine a physician querying a clinical assistant for drug dosing guidelines. If the system suffers a data isolation leak, the assistant could fetch internal protocols from a completely different clinic. In healthcare, this scenario is not just a minor UI bug, it is a severe security breach that exposes private patient records and proprietary clinical workflows.
+
+### The Catch
+
+The most common mistake when planning clinical AI agents is delegating data isolation to the application layer. Many teams store embeddings in a shared vector collection and rely on a query-time metadata filter like `where tenant_id = 'XYZ'`.
+
+While this works for prototypes, it is a production risk. If a developer forgets to apply the filter, if the ORM experiences a query translation bug, or if there is a memory leak, vectors from one clinic will bleed into the LLM context of another. In medicine, a single data leak destroys clinical trust.
+
+### The Real Data
+
+At Examya, an early local RAG service was designed to load a plain-text file containing general medical guidelines and reference prices. It was sufficient for initial validation, but when thinking about laboratories and clinics with their own agreements, the lack of real partitioning became a critical architectural bottleneck.
+
+The lesson was simple: queries from different institutions cannot compete within the same logical space without robust data boundary guarantees.
+
+### What We Are Designing
+
+The proposed architecture moves document ingestion to PostgreSQL using `pgvector` on Supabase, enforcing native Row Level Security (RLS). With this design, isolation is not dependent on the developer remembering to add a filter in the code. The database itself rejects any read operation that does not match the active secure session context.
+
+The planned schema policies enforce this tenant boundary natively:
+
+```sql
+ALTER TABLE document_sections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON document_sections
+    FOR ALL
+    USING (institution_id = current_setting('app.current_institution_id', true));
+```
+
+On the backend, the server sets a session variable containing the validated institution ID before executing the vector search. If the session variable is missing or malformed, PostgreSQL returns an empty dataset, preventing accidental data exposure.
+
+### The Gotcha
+
+The primary challenge when running RLS on top of vector indexes is the risk of performance degradation. PostgreSQL can apply security filters before or during vector scanning, which may affect the HNSW (Hierarchical Navigable Small World) index and increase response latency.
+
+To mitigate this, the indexing strategy needs to include the institutional boundary explicitly, allowing pgvector to keep search efficient without breaking data isolation.
+
+### Zoom Out
+
+With the introduction of strict data protection regulations for clinical software, compliance has transitioned into a core architectural requirement. Self-certifying compliance is no longer enough. Healthcare organizations demand verifiable proof of data isolation at the infrastructure level.
+
+### What Lies Ahead
+
+The next step is making traceability visible: every agent response should be able to show which source it used, without exposing another client's information or turning clinical auditability into a black box.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
