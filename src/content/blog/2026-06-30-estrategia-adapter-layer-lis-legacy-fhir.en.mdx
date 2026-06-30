@@ -1,0 +1,103 @@
+---
+title: "Adapter Layer: Connect LIS to FHIR Without Breaking Production"
+description: "How to build a translation layer for HL7 FHIR interoperability in clinical laboratories without database migrations or operational downtime."
+date: 2026-06-30
+lang: "en"
+image: "/img/blog/estrategia-adapter-layer-lis-legacy-fhir.png"
+tags: [interoperability, fhir, clinical-labs, architecture, b2b, digital-health]
+draft: false
+canonicalSlug: "2026-06-30-estrategia-adapter-layer-lis-legacy-fhir"
+series: "interoperabilidad-chile"
+seriesOrder: 17
+related: [2026-06-11-checklist-interoperabilidad-ley-21668-clinicas, 2026-05-28-interoperabilidad-no-empieza-conectando-todo]
+audience: "healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "demo"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 5
+---
+
+# Adapter Layer: Connect Your LIS to FHIR Without Breaking Production
+
+When a clinical lab or clinic faces interoperability regulations, the IT team's first reaction is usually panic.
+
+They assume that to interoperate under the HL7 FHIR standard they must migrate their old LIS (Laboratory Information System), change databases, or rewrite the core software that manages daily operations.
+
+That is the fastest way to freeze your budget and put operational continuity at risk.
+
+In digital health, there is a much safer and cheaper alternative: building an Adapter Layer.
+
+---
+
+## The Danger of Direct Coupling
+
+Many vendors try to solve interoperability by directly modifying the legacy LIS database to make it FHIR-aware.
+
+This approach creates three major issues:
+
+1. **Operational Risk:** Any change to the LIS schema can break billing, sample intake, or analyzer communication.
+2. **Lack of Flexibility:** If local health ministry or authority requirements change, you have to modify the production core software all over again.
+3. **Vendor Lock-in:** You depend entirely on the LIS vendor to update their system, which usually takes months and costs thousands of dollars.
+
+Interoperability does not require changing your databases. It requires translating their language through a controlled, auditable layer.
+
+---
+
+## The Adapter Layer Architecture
+
+An Adapter Layer is an independent software layer that acts as a translator between the legacy world (SQL, flat files, proprietary APIs) and the FHIR world.
+
+It operates in three simple steps:
+
+### 1. Asynchronous Ingestion
+The LIS notifies events using database triggers, message queues, or log tailing. The adapter receives this data without blocking the laboratory's main workflow.
+
+### 2. Mapping and Translation
+The adapter translates relational tables into FHIR resources. For instance, it transforms a row in the `Patients` table into a `Patient` resource, and result records into a set of `Observation` resources linked to a `DiagnosticReport`.
+
+### 3. Validation and Dispatch
+The adapter validates that the JSON matches local profiles (such as Core-CL in Chile) and delivers it to the central FHIR repository or the receiver.
+
+---
+
+## How to Design Your First Pilot in 4 Steps
+
+Do not try to map your entire database model on day one. Start with a focused workflow.
+
+### Step 1: Isolate the Orders and Results Flow
+Focus exclusively on the lifecycle of a common test, such as a blood count or blood glucose test.
+
+### Step 2: Define the Synthetic Data Contract
+Test the translation using fictitious data. This allows you to validate FHIR resources without worrying about patient privacy or security in the initial phases.
+
+### Step 3: Implement Schema Translation
+Map the LIS relational database structure to the corresponding FHIR resources:
+
+```text
+LIS: Orders_Table -> FHIR: ServiceRequest
+LIS: Samples_Table -> FHIR: Specimen
+LIS: Results_Table -> FHIR: Observation
+LIS: Reports_Table -> FHIR: DiagnosticReport
+```
+
+### Step 4: Automate Conformity Testing
+Use official FHIR validators to ensure the adapter output complies with local interoperability rules.
+
+---
+
+## What We Learned With Fhirex
+
+When designing Fhirex at Examya, we decided to use this adapter approach.
+
+We found that isolating translation from the LIS reduces integration risk, because it allows the workflow to be tested with synthetic data before touching real data or critical processes.
+
+Furthermore, if the LIS database structure changes, we only need to update the mapper in the adapter, leaving the main clinical workflow completely untouched.
+
+The true value of digital health interoperability is not in the complexity of the architecture, but in the ability to connect systems without disrupting the daily routine of healthcare professionals.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

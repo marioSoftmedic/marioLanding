@@ -1,0 +1,102 @@
+---
+title: "Adapter Layer: conectar tu LIS a FHIR sin romper producción"
+description: "Cómo construir una capa de traducción para interoperar con HL7 FHIR en laboratorios clínicos sin migrar bases de datos ni detener la operación."
+date: 2026-06-30
+lang: "es"
+image: "/img/blog/estrategia-adapter-layer-lis-legacy-fhir.png"
+tags: [interoperability, fhir, clinical-labs, architecture, b2b, digital-health]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 17
+related: [2026-06-11-checklist-interoperabilidad-ley-21668-clinicas, 2026-05-28-interoperabilidad-no-empieza-conectando-todo]
+audience: "healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "demo"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 5
+---
+
+# Adapter Layer: conectar tu LIS a FHIR sin romper producción
+
+Cuando un laboratorio clínico o una clínica se enfrenta a la Ley 21.668, la primera reacción del equipo de TI suele ser de pánico. 
+
+Asumen que para interoperar bajo el estándar HL7 FHIR deben migrar su LIS antiguo, cambiar de base de datos o reescribir el software que gestiona la operación diaria.
+
+Ese es el camino más rápido para congelar el presupuesto y arriesgar la continuidad operativa.
+
+En salud digital existe una alternativa mucho más segura y económica: construir un Adapter Layer.
+
+---
+
+## El problema del acoplamiento directo
+
+Muchos proveedores intentan resolver la interoperabilidad modificando la base de datos relacional del LIS directamente para que entienda FHIR. 
+
+Esto genera tres problemas graves:
+
+1. **Riesgo operativo:** Cualquier cambio en el esquema del LIS puede romper la facturación, el ingreso de muestras o la comunicación con los analizadores.
+2. **Falta de flexibilidad:** Si el estándar del Ministerio de Salud o el CENS cambia, tienes que volver a modificar el núcleo de tu software de producción.
+3. **Bloqueo del proveedor:** Dependes de que el desarrollador del LIS actualice su sistema, lo que suele tomar meses y costar miles de dólares.
+
+La interoperabilidad no exige cambiar tus bases de datos. Exige traducir su lenguaje en una capa controlada y auditable.
+
+---
+
+## La arquitectura del Adapter Layer
+
+Un Adapter Layer es una capa de software independiente que actúa como traductor entre el mundo legacy (SQL, archivos planos, APIs propietarias) y el mundo FHIR.
+
+Su funcionamiento se divide en tres pasos sencillos:
+
+### 1. Ingesta asíncrona
+El LIS notifica eventos mediante triggers de base de datos, colas de mensajería o lectura de logs. El adaptador recibe estos datos sin bloquear el flujo principal del laboratorio.
+
+### 2. Mapeo y traducción
+El adaptador traduce las tablas relacionales a recursos FHIR. Por ejemplo, transforma una fila de la tabla `Pacientes` en un recurso `Patient`, y un registro de resultados en un conjunto de `Observation` vinculados a un `DiagnosticReport`.
+
+### 3. Validación y despacho
+El adaptador valida que el JSON cumpla con los perfiles locales (como Core-CL en Chile) y lo entrega al repositorio FHIR central o al receptor correspondiente.
+
+---
+
+## Cómo diseñar tu primer piloto en 4 pasos
+
+No intentes mapear todo tu modelo de datos el primer día. Comienza con un flujo acotado.
+
+### Paso 1: Aísla el flujo de órdenes y resultados
+Enfócate exclusivamente en el ciclo de vida de un examen común, como un hemograma o una glicemia.
+
+### Paso 2: Define el contrato de datos sintéticos
+Prueba la traducción usando datos ficticios. Esto te permite validar los recursos FHIR sin preocuparte por la privacidad del paciente ni la seguridad en las primeras etapas.
+
+### Paso 3: Implementa la traducción de esquemas
+Mapea la estructura de base de datos relacional del LIS a los recursos FHIR correspondientes:
+
+```text
+LIS: Tabla_Ordenes -> FHIR: ServiceRequest
+LIS: Tabla_Muestras -> FHIR: Specimen
+LIS: Tabla_Resultados -> FHIR: Observation
+LIS: Tabla_Informes -> FHIR: DiagnosticReport
+```
+
+### Paso 4: Automatiza las pruebas de conformidad
+Usa validadores FHIR oficiales para asegurar que la salida del adaptador cumpla con las reglas de interoperabilidad chilenas.
+
+---
+
+## Lo que aprendimos con Fhirex
+
+Cuando diseñamos Fhirex en Examya, decidimos usar este enfoque de adaptador. 
+
+Descubrimos que aislar la traducción del LIS reduce el riesgo de integración, porque permite probar el flujo con datos sintéticos antes de tocar datos reales o procesos críticos. 
+
+Además, si el LIS sufre cambios en su base de datos, solo actualizamos el mapeador del adaptador, manteniendo el flujo clínico principal intacto y sin interrupciones.
+
+El verdadero valor de la interoperabilidad en salud no está en la complejidad de la arquitectura, sino en la capacidad de conectar sistemas sin alterar la rutina de los profesionales médicos.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
