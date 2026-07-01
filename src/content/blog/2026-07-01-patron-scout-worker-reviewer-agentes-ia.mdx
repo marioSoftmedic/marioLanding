@@ -1,0 +1,63 @@
+---
+title: "El patrón Scout-Worker-Reviewer: Cómo orquesto sub-agentes sin que rompan todo"
+description: "Poner a 5 agentes de IA a escribir código en paralelo es una receta para el desastre. Así es como el patrón scout-worker-reviewer aísla responsabilidades."
+date: 2026-07-01
+lang: "es"
+image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
+tags: [IA, Agentes, Arquitectura, OpenCode, Cotocha]
+draft: false
+series: "agentes"
+seriesOrder: 16
+related: [2026-06-03-subagentes-revisores-vs-escritores-paralelos, 2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo]
+audience: "builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## El espejismo de la fuerza bruta
+
+El instinto natural cuando descubres la orquestación multi-agente es la fuerza bruta. Tienes un problema grande, así que lanzas cinco agentes en paralelo a escribir código o generar contenido, pensando que terminarán en una quinta parte del tiempo.
+
+Yo también lo hice. El resultado siempre fue el mismo: condiciones de carrera, archivos sobrescritos, alucinaciones cruzadas y un _git diff_ que daba terror mirar.
+
+## Lo que nadie cuenta de la generación paralela
+
+Lo que nadie cuenta de la orquestación de LLMs es que la generación paralela es extremadamente frágil. Los agentes no tienen contexto implícito de lo que está haciendo el agente de al lado. Si dos _workers_ intentan refactorizar el mismo servicio a la vez, se van a destruir mutuamente.
+
+## El patrón Scout-Worker-Reviewer (por Alan Buscaglia)
+
+En Examya y con mi orquestador Cotocha, dejé de intentar paralelizar la escritura. En su lugar, decidí adoptar el brillante patrón diseñado por el ingeniero argentino **Alan Buscaglia**: el **Scout-Worker-Reviewer**.
+
+Así es como lo adaptamos a nuestra operación diaria: cuando hay una tarea compleja, el orquestador nunca delega la "ejecución" directamente. Primero, lanza un sub-agente **Scout** (`sdd-explore`). Su única regla es que tiene prohibido editar archivos. Su trabajo es leer el codebase, mapear el impacto y proponer un plan técnico (un _spec_). 
+
+Una vez que el plan existe, entra un único **Worker** (`sdd-apply`). Él es el único con permisos de escritura, pero su contexto está limitado estrictamente a ejecutar el plan que hizo el Scout. No inventa, no improvisa.
+
+## El gotcha: Leer es barato, escribir es frágil
+
+Y aquí viene el secreto: cuando el Worker termina, entran los **Reviewers**. Acá sí uso paralelismo masivo. Lanzo revisores adversarios independientes (`review-risk`, `review-readability` y un protocolo ciego _Judgment Day_). A diferencia de la escritura, la lectura paralela es barata, rápida y no colisiona.
+
+```bash
+# El flujo real en OpenClaw
+1. Orchestrator -> lanza Scout (solo lectura)
+2. Scout -> retorna Spec + Tareas
+3. Orchestrator -> lanza 1 Worker (escritura)
+4. Worker -> retorna Diff
+5. Orchestrator -> lanza N Reviewers en paralelo
+6. Reviewers -> fuerzan refactor o aprueban
+```
+
+El costo en tokens sube ligeramente, pero la tasa de éxito (código que compila a la primera y no rompe tests) se dispara. 
+
+La automatización no se trata de lanzar modelos a teclear rápido a ciegas. Se trata de aislar responsabilidades. Si quieres que tus agentes de IA dejen de romper producción, quítales el teclado al 80% de ellos y ponlos a leer. 
+
+## El siguiente paso
+
+El próximo paso en mi backlog es integrar un _guard_ predictivo que evalúe si la tarea es tan pequeña que puede saltarse al Scout y pasar directo al Worker, ahorrando latencia.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
+

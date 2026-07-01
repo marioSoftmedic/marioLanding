@@ -1,0 +1,64 @@
+---
+title: "The Scout-Worker-Reviewer Pattern: Orchestrating Sub-agents Without Breaking Everything"
+description: "Throwing 5 AI agents to write code in parallel is a recipe for disaster. Here is how the scout-worker-reviewer pattern isolates responsibilities."
+date: 2026-07-01
+lang: "en"
+image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
+tags: [AI, Agents, Architecture, OpenCode, Cotocha]
+draft: false
+series: "agentes"
+seriesOrder: 16
+related: [2026-06-03-subagentes-revisores-vs-escritores-paralelos, 2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo]
+canonicalSlug: "2026-07-01-patron-scout-worker-reviewer-agentes-ia"
+audience: "builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## The mirage of brute force
+
+The natural instinct when you first discover multi-agent orchestration is brute force. You have a massive problem, so you launch five parallel agents to write code or generate content, thinking they'll finish in a fifth of the time.
+
+I did that too. The result was always the same: race conditions, overwritten files, cross-hallucinations, and a _git diff_ that was terrifying to look at.
+
+## What nobody tells you about parallel generation
+
+What nobody tells you about LLM orchestration is that parallel generation is extremely fragile. Agents lack implicit context of what the agent next door is doing. If two _workers_ try to refactor the same service at once, they will destroy each other's work.
+
+## The Scout-Worker-Reviewer pattern (by Alan Buscaglia)
+
+At Examya and within my Cotocha orchestrator, I stopped trying to parallelize writing entirely. Instead, I decided to adopt the brilliant pattern designed by **Alan Buscaglia**: the **Scout-Worker-Reviewer**.
+
+Here is how we adapted it to our daily workflow: when there's a complex task, the orchestrator never delegates "execution" directly. First, it launches a **Scout** sub-agent (`sdd-explore`). Its only rule is that it is strictly forbidden from editing files. Its job is to read the codebase, map the blast radius, and propose a technical plan (a _spec_).
+
+Once the plan exists, a single **Worker** enters (`sdd-apply`). This is the only agent with write permissions, but its context is strictly bounded to executing the plan the Scout made. It doesn't invent, it doesn't improvise.
+
+## The secret: Isolating responsibilities
+
+And here is the secret: when the Worker finishes, the **Reviewers** step in. *Here* is where I use massive parallelism. I launch independent, adversarial reviewers (`review-risk`, `review-readability`, and a blind _Judgment Day_ protocol). Unlike writing, parallel reading is cheap, fast, and collision-free.
+
+```bash
+# The real flow in OpenClaw
+1. Orchestrator -> launches Scout (read-only)
+2. Scout -> returns Spec + Tasks
+3. Orchestrator -> launches 1 Worker (write)
+4. Worker -> returns Diff
+5. Orchestrator -> launches N Reviewers in parallel
+6. Reviewers -> force refactor or approve
+```
+
+Token costs go up slightly, but the success rate (code that compiles on the first try and doesn't break tests) skyrockets.
+
+Automation isn't about throwing models to type blindly at speed. It's about isolating responsibilities. If you want your AI agents to stop breaking production, take the keyboard away from 80% of them and put them to read instead.
+
+## The next step
+
+The next step in my backlog is integrating a predictive _guard_ that evaluates if a task is small enough to skip the Scout entirely and go straight to the Worker, saving latency on mechanical edits.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
+
