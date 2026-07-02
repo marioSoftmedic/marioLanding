@@ -1,0 +1,66 @@
+---
+title: "How clinical labs reduce entry friction using WhatsApp"
+description: "We replaced the web portal with WhatsApp and Shuri OCR. The result: fewer drop-offs and medical orders processed without front-desk intervention."
+date: 2026-07-02
+lang: "en"
+image: "/img/blog/laboratorio-reduce-friccion-whatsapp.png"
+tags: [examya, b2b, whatsapp, ocr, clinical-labs, digital-health]
+draft: false
+series: "examya"
+seriesOrder: 11
+related: [2026-06-04-objecion-ventas-b2b-migrar-lis, 2026-06-01-portales-resultados-legacy-vs-whatsapp-examya]
+canonicalSlug: "2026-07-02-laboratorio-reduce-friccion-whatsapp"
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+The patient arrives at the lab's front desk at 7:30 AM, fasting. He pulls a wrinkled piece of paper from his wallet. The receptionist tries to decipher the doctor's handwriting, cross-references it with the legacy system to see if they perform the test, and then checks the healthcare coverage. Ten minutes go by. The line grows.
+
+This is the physical bottleneck. But the digital bottleneck is worse: the patient who tried to get a quote yesterday afternoon by sending a photo of that same order to the lab's WhatsApp, only to be told three hours later, "Please go to our web portal and fill out the form." That patient didn't show up to the 7:30 AM line. He simply went to the competition.
+
+## What nobody tells you about outpatient admission
+
+Forcing patients to download apps or navigate complex web portals adds deliberate friction at their most vulnerable moment. The patient only wants to know two things: "Do you do this test?" and "How much does it cost?". WhatsApp is the communication standard in LATAM. Fighting against it is losing direct sales.
+
+## What we built: ShuriStateMachine
+
+At Examya, we decided the clinical entry door had to be asynchronous, automatic, and exactly where the patient is already talking. We mapped the front-desk pain and moved it to an OCR and quoting flow.
+
+When a patient sends a photo of the medical order, there's no human typing. The flow goes straight into our Shuri agent:
+
+```typescript
+// Raw input comes through WhatsApp, Shuri extracts intent and order
+const labIntent = await ShuriAgent.process(whatsappMessage.mediaUrl);
+
+if (labIntent.type === 'MEDICAL_ORDER') {
+  const extractedExams = await OCREngine.extractExams(labIntent.mediaUrl);
+  const fonasaCoverage = await FonasaPricingDisplay.calculate(extractedExams);
+  
+  await WhatsAppSender.reply(
+    whatsappMessage.phone, 
+    `We detected ${extractedExams.length} exams. With your coverage, the copayment is $${fonasaCoverage.totalCopayment}. Shall we schedule for tomorrow?`
+  );
+}
+```
+
+## The technical gotcha: photo quality
+
+The hardest challenge here wasn't connecting Meta's API. It was the quality of the input data. People take photos backlit, with the paper folded, or with their phone's shadow covering the exam code. 
+
+If the OCR fails, the agent can't just say "I don't understand the handwriting." We had to implement a graceful fallback where the agent rescues what it can read and silently escalates the image to the lab team with a `CONFIDENCE_LOW` flag, keeping the patient in the loop without them feeling rejected by a bot.
+
+## Zoom out: the race for the asynchronous patient
+
+The problem for labs isn't a lack of patients. It's that the admission funnel filters out those without time or patience. A lab that resolves a quote in 30 seconds via WhatsApp is competing in a different league than the one forcing you to fill out a web form to get a PDF the next day.
+
+## What's next
+
+The next step is closing the commercial loop: connecting this automatic quote directly to the payment gateway, so the patient arrives at the lab just to draw blood, with the order and payment already verified.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

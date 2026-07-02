@@ -1,0 +1,65 @@
+---
+title: "Cómo reducimos la fricción de entrada del laboratorio usando WhatsApp"
+description: "Reemplazamos el portal web por WhatsApp y Shuri OCR. El resultado: menos abandonos y órdenes médicas procesadas sin intervención del counter."
+date: 2026-07-02
+lang: "es"
+image: "/img/blog/laboratorio-reduce-friccion-whatsapp.png"
+tags: [examya, b2b, whatsapp, ocr, clinical-labs, digital-health]
+draft: false
+series: "examya"
+seriesOrder: 11
+related: [2026-06-04-objecion-ventas-b2b-migrar-lis, 2026-06-01-portales-resultados-legacy-vs-whatsapp-examya]
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+El paciente llega al counter del laboratorio a las 7:30 AM en ayunas. Saca un papel arrugado de la billetera. La recepcionista trata de descifrar la letra del médico, cruza la información con el sistema legacy para ver si hacen el examen, y luego revisa el convenio de FONASA. Pasaron 10 minutos. La fila crece. 
+
+Este es el cuello de botella físico. Pero el cuello de botella digital es peor: el paciente que intentó cotizar ayer por la tarde enviando una foto de esa misma orden al WhatsApp del laboratorio, y le respondieron tres horas después con un "Por favor, ingrese a nuestro portal web y llene el formulario". Ese paciente no fue a la fila de las 7:30 AM. Simplemente fue a la competencia.
+
+## Lo que nadie cuenta de la admisión ambulatoria
+
+Obligar al paciente a descargar apps o navegar portales web complejos es agregar fricción deliberada en el momento de mayor vulnerabilidad. El paciente solo quiere saber dos cosas: "¿Hacen este examen?" y "¿Cuánto me sale?". WhatsApp es el estándar de comunicación en Chile. Pelear contra eso es perder ventas directas.
+
+## Lo que construimos: ShuriStateMachine
+
+En Examya decidimos que la puerta de entrada clínica tenía que ser asíncrona, automática y por donde el paciente ya está hablando. Mapeamos el dolor del counter y lo trasladamos a un flujo de OCR y cotización.
+
+Cuando un paciente manda la foto de la orden médica, no hay un humano tipeando. El flujo entra directo a nuestro agente Shuri:
+
+```typescript
+// El input crudo entra por WhatsApp, Shuri extrae la intención y la orden
+const labIntent = await ShuriAgent.process(whatsappMessage.mediaUrl);
+
+if (labIntent.type === 'MEDICAL_ORDER') {
+  const extractedExams = await OCREngine.extractExams(labIntent.mediaUrl);
+  const fonasaCoverage = await FonasaPricingDisplay.calculate(extractedExams);
+  
+  await WhatsAppSender.reply(
+    whatsappMessage.phone, 
+    `Detectamos ${extractedExams.length} exámenes. Con tu previsión FONASA, el copago es de $${fonasaCoverage.totalCopayment}. ¿Agendamos para mañana?`
+  );
+}
+```
+
+## El gotcha técnico: la calidad de la foto
+
+El desafío más duro acá no fue conectar la API de Meta. Fue la calidad del dato de entrada. La gente toma fotos a contraluz, con el papel doblado, o con la sombra del teléfono tapando el código del examen. 
+
+Si el OCR falla, el agente no puede simplemente decir "No entiendo la letra". Tuvimos que implementar un fallback de gracia donde el agente rescata lo que puede leer y escala silenciosamente la imagen al equipo del laboratorio con un flag de `CONFIDENCE_LOW`, manteniendo al paciente en el loop sin que sienta el rechazo del bot.
+
+## Zoom out: la carrera por el paciente asíncrono
+
+El problema de los laboratorios no es que falten pacientes. Es que el embudo de admisión filtra a los que no tienen tiempo o paciencia. Un laboratorio que resuelve la cotización en 30 segundos por WhatsApp está compitiendo en otra liga frente al que te hace llenar un formulario en su web para mandarte un PDF al día siguiente.
+
+## Lo que viene
+
+El siguiente paso es cerrar el ciclo comercial: conectar esta cotización automática directamente con la pasarela de pagos, para que el paciente llegue al laboratorio solo a sacarse la sangre, con la orden y el pago ya verificados.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
