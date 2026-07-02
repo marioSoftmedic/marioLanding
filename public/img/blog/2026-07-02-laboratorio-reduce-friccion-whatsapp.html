@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+    
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1200px;
+      height: 630px;
+      background-color: #0b1121;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
+      font-family: 'Inter', sans-serif;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 60px 80px;
+      position: relative;
+    }
+    
+    .header {
+      margin-bottom: 50px;
+    }
+    
+    .series-tag {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15); /* Emerald tint */
+      color: #10b981; /* Emerald */
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .title {
+      font-size: 46px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 0;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+      width: 90%;
+    }
+    
+    .diagram-area {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 25px;
+      margin-top: 20px;
+    }
+    
+    .author {
+      font-weight: 600;
+      font-size: 20px;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .domain {
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      font-size: 18px;
+    }
+    
+    .brand-accent {
+      color: #06b6d4; /* Cyan */
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="series-tag">EXAMYA ARCHITECTURE</div>
+      <h1 class="title">Recepción Asíncrona: WhatsApp + Shuri OCR</h1>
+    </div>
+    
+    <div class="diagram-area">
+      <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Emerald Gradient for main blocks -->
+          <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#047857" />
+            <stop offset="100%" stop-color="#10b981" />
+          </linearGradient>
+          
+          <!-- Cyan Gradient for secondary blocks -->
+          <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0891b2" />
+            <stop offset="100%" stop-color="#06b6d4" />
+          </linearGradient>
+          
+          <!-- Dark block -->
+          <linearGradient id="darkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#1e293b" />
+            <stop offset="100%" stop-color="#0f172a" />
+          </linearGradient>
+          
+          <!-- Glow effect -->
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        <!-- Conexiones -->
+        <!-- Patient to Shuri -->
+        <path d="M 180 150 L 300 150" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="6,6" />
+        <polygon points="290,144 300,150 290,156" fill="#94a3b8" />
+        <text x="240" y="140" fill="#94a3b8" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">Foto Orden</text>
+        
+        <!-- Shuri to OCR -->
+        <path d="M 460 150 L 580 150" fill="none" stroke="#10b981" stroke-width="3" />
+        <polygon points="570,144 580,150 570,156" fill="#10b981" />
+        
+        <!-- OCR to Pricing -->
+        <path d="M 740 150 L 860 150" fill="none" stroke="#06b6d4" stroke-width="3" />
+        <polygon points="850,144 860,150 850,156" fill="#06b6d4" />
+        <text x="800" y="140" fill="#06b6d4" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">FONASA</text>
+        
+        <!-- Fallback flow (downwards) -->
+        <path d="M 660 190 L 660 250 L 860 250" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" />
+        <polygon points="850,244 860,250 850,256" fill="#f59e0b" />
+        <text x="760" y="240" fill="#f59e0b" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">CONFIDENCE_LOW</text>
+
+        <!-- Bloque Paciente -->
+        <rect x="20" y="110" width="160" height="80" rx="8" fill="url(#darkGrad)" stroke="#334155" stroke-width="2" />
+        <text x="100" y="145" fill="#ffffff" font-family="'Inter', sans-serif" font-size="18" font-weight="600" text-anchor="middle">Paciente</text>
+        <text x="100" y="165" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="14" text-anchor="middle">(WhatsApp)</text>
+        
+        <!-- Bloque Shuri -->
+        <rect x="300" y="110" width="160" height="80" rx="8" fill="url(#emeraldGrad)" filter="url(#glow)" />
+        <text x="380" y="145" fill="#ffffff" font-family="'Inter', sans-serif" font-size="18" font-weight="800" text-anchor="middle">Shuri Agent</text>
+        <text x="380" y="165" fill="#d1fae5" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">State Machine</text>
+        
+        <!-- Bloque OCR -->
+        <rect x="580" y="110" width="160" height="80" rx="8" fill="url(#cyanGrad)" filter="url(#glow)" />
+        <text x="660" y="145" fill="#ffffff" font-family="'Inter', sans-serif" font-size="18" font-weight="800" text-anchor="middle">OCREngine</text>
+        <text x="660" y="165" fill="#cffafe" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">Extracción</text>
+        
+        <!-- Bloque Pricing / FONASA -->
+        <rect x="860" y="110" width="160" height="80" rx="8" fill="url(#darkGrad)" stroke="#334155" stroke-width="2" />
+        <text x="940" y="145" fill="#ffffff" font-family="'Inter', sans-serif" font-size="18" font-weight="600" text-anchor="middle">Cotización</text>
+        <text x="940" y="165" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="14" text-anchor="middle">Automática</text>
+        
+        <!-- Bloque Humano (Fallback) -->
+        <rect x="860" y="220" width="160" height="60" rx="8" fill="transparent" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" />
+        <text x="940" y="245" fill="#f59e0b" font-family="'Inter', sans-serif" font-size="16" font-weight="600" text-anchor="middle">Equipo LIS</text>
+        <text x="940" y="265" fill="#fcd34d" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">Revisión Manual</text>
+      </svg>
+    </div>
+    
+    <div class="footer">
+      <div class="author">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="3" stroke-dasharray="8 4" />
+          <circle cx="12" cy="12" r="4" fill="#10b981" />
+        </svg>
+        Mario Inostroza <span class="brand-accent">|</span> Examya
+      </div>
+      <div class="domain">mariohealthbits.dev</div>
+    </div>
+  </div>
+</body>
+</html>
