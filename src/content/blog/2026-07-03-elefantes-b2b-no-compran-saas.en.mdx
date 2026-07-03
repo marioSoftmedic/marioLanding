@@ -1,0 +1,61 @@
+---
+title: "Why tech giants don't care about your SaaS (and what to sell them instead)"
+description: "If you try to sell a finished software product to a corporate healthcare integrator, you will lose. Sell them the lego piece they're missing."
+date: 2026-07-03
+lang: "en"
+image: "/img/blog/elefantes-b2b-no-compran-saas.png"
+tags: [examya, b2b, architecture, digital-health, entrepreneurship]
+draft: false
+series: "examya"
+seriesOrder: 12
+related: [2026-06-04-objecion-ventas-b2b-migrar-lis, 2026-06-11-vender-cumplimiento-operativo-ia-clinica]
+canonicalSlug: "2026-07-03-elefantes-b2b-no-compran-saas"
+audience: "healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "examya"
+newsletterPriority: 4
+---
+
+You get the dream meeting. You're sitting across from the alliances manager of one of the largest tech integrators in LATAM—the kind of company that wins $10 million bids to modernize entire hospital networks. You open your laptop, show them your SaaS, the beautiful dashboard you spent six months building. He nods, smiles, tells you it's very interesting. And never calls you back.
+
+If you're building B2B HealthTech, chances are you've hit this wall. And the problem isn't your code; it's your builder's ego.
+
+## What nobody tells you about corporate bids
+
+Massive integrators don't buy closed SaaS. Their business is selling custom development and orchestrating massive legacy systems. When you present an "all-in-one" software with its own interface, they don't see a partner; they see a tool competing with the dashboard they want to bill the hospital for.
+
+To them, your user interface has no value. Your UI is friction.
+
+## The real data: Examya's pivot
+
+This is exactly what happened to us with Examya. At first, we tried to position ourselves as a complete platform. We kept crashing.
+
+But corporate elephants have chronic pains. They know how to install servers and hospital systems, but they suffer when trying to solve the asynchronous "last mile" (like a WhatsApp bot reading a wrinkled medical order with OCR) or trying to adapt 15-year-old systems to the new HL7 FHIR standard demanded by interoperability laws.
+
+We changed our pitch: *"You guys provide the HIS and win the bid. We'll give you the endpoint that handles WhatsApp OCR and the adapter layer so you comply with the interoperability law"*. The conversation went from a polite "we'll review it" to "I need you to talk to my software architect on Tuesday".
+
+## What we built: Decoupling to connect
+
+We didn't throw our code in the trash; we simply separated the head from the body. We packaged Examya's hard logic (the clinical intent and OCR engine) and Fhirex (our FHIR interoperability layer) as agnostic microservices.
+
+We don't sell a final product. We sell "plug-and-play" components ready to be consumed by third-party software.
+
+## The technical gotcha: raw evidence
+
+The mistake here is thinking that selling APIs makes the sales job easier. False. You face the most brutal technical scrutiny. You convince a commercial director with a PPT; you convince a corporate integration architect with flawless RESTful documentation, low SLAs, and by proving how you generate `AuditEvent` and `Provenance` resources so he can certify compliance without breaking a sweat.
+
+## Zoom out: trench warfare vs the elephant's engine
+
+If you're building digital health in Latin America today, you have to make an early strategic decision. Either you're going to fight a trench war, clinic by clinic, to get them to adopt your dashboard, or you're going to become the invisible engine that gives superpowers to the elephants who already have the distribution and the winning contracts.
+
+Both paths are valid, but mixing them is commercial suicide.
+
+## What's next
+
+Our next focus is standardizing a public "Developer Portal" for Fhirex. We want the integrator's software architect to test legacy data transformation to FHIR autonomously, without even talking to sales.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

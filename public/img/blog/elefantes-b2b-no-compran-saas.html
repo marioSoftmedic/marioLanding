@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+    
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1200px;
+      height: 630px;
+      background-color: #0b1121;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
+      font-family: 'Inter', sans-serif;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 60px 80px;
+      position: relative;
+    }
+    
+    .header {
+      margin-bottom: auto;
+    }
+    
+    .series-tag {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15); /* Emerald tint */
+      color: #10b981; /* Emerald */
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .card-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .title {
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin: 0 0 30px 0;
+      color: #f8fafc;
+      letter-spacing: -1.5px;
+      width: 95%;
+    }
+
+    .title .highlight {
+      color: #06b6d4; /* Cyan */
+    }
+    
+    .subtitle {
+      font-size: 32px;
+      color: #94a3b8;
+      line-height: 1.5;
+      width: 85%;
+      margin: 0;
+      border-left: 4px solid #10b981;
+      padding-left: 20px;
+    }
+    
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 25px;
+      margin-top: 40px;
+    }
+    
+    .author {
+      font-weight: 600;
+      font-size: 20px;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .domain {
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      font-size: 18px;
+    }
+    
+    .brand-accent {
+      color: #06b6d4; /* Cyan */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="series-tag">EXAMYA B2B STRATEGY</div>
+    </div>
+    
+    <div class="card-content">
+      <h1 class="title">A los grandes integradores no les interesa tu SaaS. <span class="highlight">Quieren piezas de lego.</span></h1>
+      <p class="subtitle">El error más caro en salud B2B es competir contra el dashboard de quien ya ganó la licitación corporativa.</p>
+    </div>
+    
+    <div class="footer">
+      <div class="author">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="3" stroke-dasharray="8 4" />
+          <circle cx="12" cy="12" r="4" fill="#10b981" />
+        </svg>
+        Mario Inostroza <span class="brand-accent">|</span> Examya
+      </div>
+      <div class="domain">mariohealthbits.dev</div>
+    </div>
+  </div>
+</body>
+</html>

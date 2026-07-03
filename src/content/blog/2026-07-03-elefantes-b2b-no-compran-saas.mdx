@@ -1,0 +1,60 @@
+---
+title: "Por qué a los gigantes tecnológicos no les interesa tu SaaS (y qué venderles en su lugar)"
+description: "Si le intentas vender un software terminado a un integrador corporativo en salud, vas a perder. Véndeles la pieza de lego que les falta."
+date: 2026-07-03
+lang: "es"
+image: "/img/blog/elefantes-b2b-no-compran-saas.png"
+tags: [examya, b2b, architecture, digital-health, entrepreneurship]
+draft: false
+series: "examya"
+seriesOrder: 12
+related: [2026-06-04-objecion-ventas-b2b-migrar-lis, 2026-06-11-vender-cumplimiento-operativo-ia-clinica]
+audience: "healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "examya"
+newsletterPriority: 4
+---
+
+Consigues la reunión soñada. Estás frente al gerente de alianzas de uno de los integradores tecnológicos más grandes de LATAM —el tipo de empresa que gana licitaciones de 10 millones de dólares para modernizar redes de hospitales enteros—. Abres tu laptop, le muestras tu SaaS, el dashboard hermoso en el que trabajaste seis meses. Él asiente, sonríe, te dice que está muy interesante. Y nunca más te devuelve el llamado.
+
+Si estás construyendo HealthTech B2B, es probable que hayas chocado contra este muro. Y el problema no es tu código, es tu ego de builder.
+
+## Lo que nadie cuenta de las licitaciones corporativas
+
+Los integradores masivos no compran SaaS cerrados. Su negocio es vender desarrollo a medida y orquestar sistemas legados gigantescos. Cuando les presentas un software "todo en uno" con su propia interfaz, no ven un partner; ven una herramienta que compite con el dashboard que ellos mismos le quieren cobrar al hospital.
+
+Para ellos, tu interfaz de usuario no tiene valor. Tu UI es fricción.
+
+## Los datos reales: el pivote de Examya
+
+Nos pasó exactamente esto con Examya. Al principio, intentábamos posicionarnos como una plataforma completa. Chocábamos. 
+
+Pero los elefantes corporativos tienen dolores crónicos. Ellos saben instalar servidores y sistemas hospitalarios, pero sufren resolviendo la "última milla" asíncrona (como que un bot por WhatsApp lea una orden médica arrugada con OCR) o intentando adaptar sistemas de hace 15 años al nuevo estándar HL7 FHIR que exige la Ley 21.668 en Chile.
+
+Cambiamos el pitch: *"Ustedes pongan el HIS y ganen la licitación. Nosotros les entregamos el endpoint que hace el OCR por WhatsApp y la capa adaptadora para que cumplan con la ley de interoperabilidad"*. La conversación pasó de un cortés "lo revisaremos" a "necesito que hables con mi arquitecto de software el martes".
+
+## Lo que construimos: Desacoplar para conectar
+
+No tiramos código a la basura, simplemente separamos la cabeza del cuerpo. Empaquetamos la lógica dura de Examya (el motor de intención clínica y OCR) y Fhirex (nuestra capa de interoperabilidad FHIR) como microservicios agnósticos.
+
+No vendemos un producto final. Vendemos componentes "plug-and-play" listos para ser consumidos por el software de un tercero.
+
+## El gotcha técnico: la evidencia cruda
+
+El error acá es pensar que al vender APIs el trabajo comercial es más fácil. Falso. Te enfrentas al escrutinio técnico más brutal. A un director comercial lo convences con una PPT; a un arquitecto de integraciones corporativo lo convences con documentación RESTful impecable, SLAs bajos, y demostrando cómo generas los recursos `AuditEvent` y `Provenance` para que él pueda certificar el cumplimiento de la Ley 21.719 sin transpirar.
+
+## Zoom out: la guerra de trincheras vs el motor de los elefantes
+
+Si construyes en salud digital en Latinoamérica hoy, tienes que tomar una decisión estratégica temprana. O vas a ir clínica por clínica peleando una guerra de trincheras para que adopten tu dashboard, o te vas a convertir en el motor invisible que le da superpoderes a los elefantes que ya tienen la distribución y los contratos ganados.
+
+Ambos caminos son válidos, pero mezclarlos es suicidio comercial.
+
+## Lo que viene
+
+El próximo foco para nosotros es estandarizar un "Developer Portal" público para Fhirex. Queremos que el arquitecto de software del integrador pueda probar la transformación de datos legados a FHIR de forma autónoma, sin siquiera hablar con ventas.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
