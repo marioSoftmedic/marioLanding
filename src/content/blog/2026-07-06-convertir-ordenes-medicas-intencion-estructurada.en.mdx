@@ -1,0 +1,78 @@
+---
+title: "What we learned converting medical orders into structured intent"
+description: "Receiving a photo via WhatsApp isn't automation. How we turned blurry prescriptions into deterministic JSON for automatic quoting in Examya."
+date: 2026-07-06
+lang: "en"
+image: "/img/blog/convertir-ordenes-medicas-intencion-estructurada.png"
+tags: [Examya, WhatsApp, B2B, IA, Salud Digital, Arquitectura]
+draft: false
+series: "examya"
+seriesOrder: 16
+related: [2026-07-02-laboratorio-reduce-friccion-whatsapp, 2026-04-14-ocr-medico-whatsapp-como-mi-agente-lee-ordenes-y-resultados]
+canonicalSlug: "2026-07-06-convertir-ordenes-medicas-intencion-estructurada"
+audience: "clinical-lab-directors | builders | healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 4
+---
+
+## The Chaos at the Front Desk
+
+On Tuesday at 11:00 AM, a patient sent a WhatsApp message to the lab. The photo of the medical order was poorly lit, cropped, and the doctor's handwriting looked like ancient Sanskrit.
+
+A human receptionist takes between 3 and 5 minutes to decipher that, cross-reference it with the pricing catalog, and reply with a quote. Multiply that by 200 daily messages. The front-desk team burns out.
+
+## What Nobody Tells You About OCR
+
+Everyone thinks the core problem in digital health is extracting text from an image (OCR). But reading "Cmplete blud count" (including the doctor's spelling mistakes) is useless on its own.
+
+The real challenge isn't parsing text; it's parsing *intent*.
+
+Is the patient just asking if the lab performs the test? Do they want a quote? Are they trying to schedule a home visit? If your system doesn't understand intent, you've merely moved the friction from paper to a chat screen.
+
+## 60% Noise, 40% Booking
+
+When we started processing this in Examya, we realized that 60% of incoming messages weren't direct booking requests; they were exploratory pricing inquiries.
+
+If you treat every message as a booking request, you break the patient experience.
+
+## Extracting Intent with ShuriStateMachine
+
+We built `ShuriStateMachine`, our agent that takes that blurry photo, extracts the medical entities, and turns them into a structured object: 
+
+```typescript
+{ 
+  intent: "budget", 
+  patientType: "FONASA", 
+  exams: ["0301045", "0302047"] 
+}
+```
+
+## The Gotcha: Determinism Over Magic
+
+Our first mistake was trusting the LLM (the AI) to map the exam and quote it directly. Bad idea. AI hallucinates non-existent exams or mixes up biochemical profiles.
+
+The design decision that changed everything: we took away the AI's freedom to guess. The LLM extracts the raw text and vector-matches it against a closed FONASA catalog or the lab's LIS. If there's no exact match, it raises a flag for human oversight. Determinism over magic.
+
+## From Call Center to Clinical API
+
+A photo of an order via WhatsApp is the most universal (and chaotic) format in Latin Healthcare.
+
+Converting that photo into structured intent is the key to real automation. Once you have a reliable JSON, you can query the LIS, apply business rules, and return a formal quote to the patient in seconds—without a human ever touching the keyboard.
+
+The lab transforms from an overloaded call center into a clinical API.
+
+## What's Next: Predictive Rules
+
+We are currently refining the extraction of complementary diagnoses (ICD-10) from the same photo to enable predictive scheduling rules (e.g., automatically requesting fasting indications before the patient even asks).
+
+## Let's Talk
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
+
+---
+
