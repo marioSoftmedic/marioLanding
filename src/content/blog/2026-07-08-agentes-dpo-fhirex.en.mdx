@@ -1,0 +1,56 @@
+---
+title: "Why your DPO shouldn't read logs manually (and how AI solves it)"
+description: "Law 21.719 demands absolute traceability. Here is how we orchestrate AI agents in Fhirex to map API access to FHIR AuditEvents."
+date: 2026-07-08
+lang: "en"
+image: "/img/blog/agentes-dpo-fhirex.png"
+tags: [ai, digital-health, interoperability, FHIR]
+draft: false
+series: "agentes"
+seriesOrder: 14
+canonicalSlug: "agentes-dpo-fhirex"
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+A clinic or laboratory's Data Protection Officer (DPO) has an impossible job: ensuring every piece of clinical data remains private, auditable, and traceable. The problem is that when it's time to audit a data access event, the IT team usually hands over a `.txt` file or a raw database dump full of incomprehensible logs.
+
+With the arrival of Law 21.719 (Chile's new data privacy framework), this artisanal process is no longer just inefficient; it's a massive legal risk.
+
+### The problem with raw auditing
+
+Auditing who viewed which exam, when, and under what legal context (consent) is a nightmare if your infrastructure wasn't built for privacy by design.
+
+If you rely on a developer manually searching server logs to piece together a traceability report, your RegTech shield is broken. It simply doesn't scale.
+
+### Our decision at Fhirex
+
+When we were designing the compliance layer at Fhirex, we made a strict architectural decision: take the human out of the raw auditing loop.
+
+Instead of building complex dashboards on top of messy logs, we decided to orchestrate a **dedicated AI agent focused entirely on traceability**.
+
+### The AuditEvent Agent
+
+We built a workflow where the AI operates as a passive but intelligent observer.
+
+Every time a sensitive transaction occurs in the API (e.g., a doctor downloads a PDF of results), the event is intercepted. The agent analyzes the payload, understands the context of the action, and automatically maps it to a native `AuditEvent` resource under the HL7 FHIR standard.
+
+We don't save a text string saying "User X downloaded Exam Y". We save a structured, interoperable, and cryptographically signed object specifying the actor, the patient, the accessed resource, and the justification.
+
+### The RegTech Shield
+
+This approach changes the game. When the DPO needs technical evidence to respond to an ARCO request or audit a process, they don't have to ask IT for a favor. The evidence already exists, is normalized in FHIR, and is instantly available.
+
+Law 21.719 is not an administrative checklist; it is an infrastructure challenge. And AI agents are the perfect tool to solve it without slowing down daily operations.
+
+### What's next
+
+Our next step in the Fhirex roadmap is connecting these `AuditEvent` resources to a preventive alert engine that notifies us of anomalies before they turn into security breaches.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
