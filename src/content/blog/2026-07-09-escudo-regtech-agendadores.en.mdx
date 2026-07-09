@@ -1,0 +1,67 @@
+---
+title: "The Classic Objection: 'We Already Have a Scheduler' and the RegTech Shield"
+description: "Why competing against Medilink is a mistake, and how Laws 21.668 and 21.719 changed our B2B pitch from 'scheduling' to 'compliance'."
+date: 2026-07-09
+lang: "en"
+image: "/img/blog/escudo-regtech-agendadores.png"
+tags: [b2b, interoperability, examya]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: []
+canonicalSlug: "2026-07-09-escudo-regtech-agendadores"
+audience: "clinical-lab-directors | healthtech-founders | healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+## Hook
+
+When I started pitching Examya to clinic and lab managers, the first five meetings ended exactly the same way. The manager would smile, nod, and say, *"It looks great Mario, but thanks, we already use Medilink,"* or *"We already have a web scheduler."*
+
+It was the default objection. And honestly, it frustrated me at first. I knew our agent did OCR on medical orders in milliseconds, autonomously quoted them, and closed the payment over WhatsApp. But to them, we were just "another scheduler." We were drowning in a red ocean.
+
+## What nobody tells you
+
+The problem wasn't the product; it was the positioning. If you present yourself to a clinic as booking software, your competition is the status quo. You're fighting to save 5 minutes of a receptionist's time.
+
+What nobody tells you about B2B healthcare sales is that management isn't moved by "operational efficiency" nearly as much as they are terrified of **legal risk**. A traditional scheduler solves a calendar problem, but in 2026, the real problem keeping directors awake at night is medical data compliance and mandatory interoperability.
+
+## The real data
+
+The ecosystem changed drastically with two regulations in Chile:
+1. **Law 21.668 (Health Interoperability):** Requires systems to speak the same language (HL7 FHIR standard).
+2. **Law 21.719 (Personal Data Protection):** Mandates a DPO (Data Protection Officer) and total traceability.
+
+Receiving a medical order (highly sensitive data) through a receptionist's WhatsApp Web, saving it to a local folder, and typing it into a scheduler isn't just inefficient: it's a violation that now carries fines of up to 10,000 UTM. Your classic scheduler doesn't cover that exposure.
+
+## What you built
+
+That's why at Examya we did a hard pivot. We stopped selling "automatic bookings" and started selling a **"RegTech Shield."**
+
+At the architectural level, we modified our `ShuriStateMachine` so it isn't just a conversational bot. Every patient step—from sending the prescription image to paying—is immutably logged. We mapped our intent data structure (`LAB_SEARCH_INTENT`) directly to FHIR resources (`ServiceRequest`, `Patient`, `Consent`).
+
+We don't tell the manager to "replace your scheduler." We tell them: *"Keep your scheduler for the calendar, but put Examya as the compliance firewall on your WhatsApp channel."*
+
+## The gotcha
+
+The most painful lesson was realizing that technical complexity doesn't sell. In my early demos, I'd open the editor and show how we parsed the OCR JSON. Huge mistake. The medical manager doesn't care if you use Node.js, Python, or dark magic.
+
+The real commercial *gotcha* happened when I changed the pitch to a single question: *"Does your current scheduler cover your legal liability if a medical order leaks from your clinic's WhatsApp tomorrow?"* That question changes the dynamic of the meeting immediately.
+
+## Zoom out
+
+This is a fundamental lesson if you're building HealthTech in LATAM. Don't sell software; sell risk reduction. Regulatory compliance is often seen as a boring "feature" left for the end of the roadmap, but in institutional B2B, compliance is the core value proposition. It's the defensive moat that separates you from commoditized SaaS.
+
+## What's next
+
+We are iterating on this. Next week we will deploy a specific traceability dashboard to production. The idea is that each lab's DPO can log in, filter by date, and download a complete audit report with one click to present to the Ministry of Health.
+
+## CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
