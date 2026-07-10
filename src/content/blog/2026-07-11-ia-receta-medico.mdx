@@ -1,0 +1,41 @@
+---
+title: "El punto ciego del OCR en salud: por qué la IA tropieza con la receta de tu médico"
+description: "El OCR de WhatsApp cotiza tus exámenes en segundos, pero necesita ayuda con la letra de médico. 3 pasos para la foto perfecta."
+date: 2026-07-11
+lang: "es"
+image: "/img/blog/ia-receta-medico.png"
+tags: [Salud, IA, Examya]
+draft: false
+audience: "patients"
+funnelStage: "awareness"
+primaryCta: "contact"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 0
+---
+
+## La Ilusión de la Cotización Instantánea
+Es sábado por la mañana. Tienes que cotizar unos exámenes que te pidió el médico. Le sacas una foto rápida a la receta mientras caminas, la mandas por WhatsApp y... el bot te dice que no la puede leer. Frustrante, ¿no?
+
+## Lo que nadie cuenta sobre el OCR médico
+Detrás de esa respuesta instantánea en WhatsApp hay un motor de inteligencia artificial (un OCR) haciendo un esfuerzo titánico. Su trabajo es separar lo que es un examen médico real de lo que parece un garabato. Y aunque la tecnología es increíble, la clásica "letra de médico" sigue siendo su mayor enemigo.
+
+## Los datos reales en los logs de Examya
+Esta semana en Examya monitoreamos por qué algunas cotizaciones fallaban. Vimos casos donde el motor devolvía un error técnico (como un "401" por caída del token al reintentar, o fallas de esquema Zod) simplemente porque la receta estaba cortada, había sombra sobre el texto, o el enfoque estaba tan borroso que la IA confundía una "Glicemia" con un dibujo abstracto.
+
+## Lo que construimos: Precisión sobre velocidad
+Para resolver esto, diseñamos a Shuri (nuestro agente en WhatsApp) para que sea honesto. Si la foto viene mal, en lugar de inventar un examen que no te pidieron (y cobrarte mal), Shuri detiene el proceso y te pide explícitamente una foto mejor. Mantenemos una arquitectura donde la precisión clínica está por encima de la velocidad a ciegas.
+
+## El Gotcha: La cámara no importa, el contraste sí
+El secreto no está en tener una cámara de mil megapíxeles, sino en el contraste. El mayor gotcha que descubrimos es que una foto perfecta tomada desde muy lejos funciona peor que una foto recortada donde solo se ve el texto. La IA necesita que las letras resalten contra el papel blanco, sin el reflejo del flash ni la sombra de tu mano cruzando la imagen.
+
+## Zoom Out: Educar al paciente en IA
+Ayudar a la IA a leer tu receta significa que en 30 segundos tienes los precios con código FONASA directamente en tu teléfono, sin tener que ir a las 6 AM a sacar número a un laboratorio solo para preguntar cuánto cuesta. Es un trabajo en equipo: tú pones el buen enfoque, el bot hace el trabajo pesado.
+
+## Lo que viene
+Seguimos ajustando los "guardrails" de Shuri. Cada semana entiende mejor formatos extraños, recetas de consultorios antiguos y timbres difuminados. El objetivo es que la fricción desaparezca por completo para el paciente.
+
+## Únete a la Conversación
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
