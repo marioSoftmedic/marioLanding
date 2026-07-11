@@ -1,6 +1,6 @@
 ---
 title: "El punto ciego del OCR en salud: por qué la IA tropieza con la receta de tu médico"
-description: "El OCR de WhatsApp cotiza tus exámenes en segundos, pero necesita ayuda con la letra de médico. 3 pasos para la foto perfecta."
+description: "El OCR puede ayudar a cotizar exámenes por WhatsApp, pero necesita una orden médica legible. 3 pasos prácticos para enviar una mejor foto."
 date: 2026-07-11
 lang: "es"
 image: "/img/blog/ia-receta-medico.png"
@@ -18,22 +18,24 @@ newsletterPriority: 0
 Es sábado por la mañana. Tienes que cotizar unos exámenes que te pidió el médico. Le sacas una foto rápida a la receta mientras caminas, la mandas por WhatsApp y... el bot te dice que no la puede leer. Frustrante, ¿no?
 
 ## Lo que nadie cuenta sobre el OCR médico
-Detrás de esa respuesta instantánea en WhatsApp hay un motor de inteligencia artificial (un OCR) haciendo un esfuerzo titánico. Su trabajo es separar lo que es un examen médico real de lo que parece un garabato. Y aunque la tecnología es increíble, la clásica "letra de médico" sigue siendo su mayor enemigo.
+Detrás de esa respuesta en WhatsApp hay un motor de inteligencia artificial (un OCR) intentando convertir una imagen en texto útil. Su trabajo no es adivinar: es reconocer exámenes médicos con suficiente seguridad. Y ahí la letra manuscrita, los timbres, las sombras o una foto cortada pueden volver difícil una tarea que parece simple.
 
 ## Los datos reales en los logs de Examya
-Esta semana en Examya monitoreamos por qué algunas cotizaciones fallaban. Vimos casos donde el motor devolvía un error técnico (como un "401" por caída del token al reintentar, o fallas de esquema Zod) simplemente porque la receta estaba cortada, había sombra sobre el texto, o el enfoque estaba tan borroso que la IA confundía una "Glicemia" con un dibujo abstracto.
+Esta semana en Examya revisamos fallas reales del flujo de cotización por WhatsApp. El error `401` venía de un descalce de autenticación: la ruta esperaba un JWT de usuario, pero el bridge de WhatsApp enviaba un service token. El fallback de Zod venía de otro descalce: el prompt y el schema no hablaban exactamente el mismo idioma.
 
-## Lo que construimos: Precisión sobre velocidad
-Para resolver esto, diseñamos a Shuri (nuestro agente en WhatsApp) para que sea honesto. Si la foto viene mal, en lugar de inventar un examen que no te pidieron (y cobrarte mal), Shuri detiene el proceso y te pide explícitamente una foto mejor. Mantenemos una arquitectura donde la precisión clínica está por encima de la velocidad a ciegas.
+Eso no lo causó una mala foto. Pero la revisión volvió a poner sobre la mesa un problema distinto y cotidiano: aunque la infraestructura esté bien, una receta cortada, con sombra o muy borrosa puede impedir que el OCR lea los exámenes con seguridad.
 
-## El Gotcha: La cámara no importa, el contraste sí
-El secreto no está en tener una cámara de mil megapíxeles, sino en el contraste. El mayor gotcha que descubrimos es que una foto perfecta tomada desde muy lejos funciona peor que una foto recortada donde solo se ve el texto. La IA necesita que las letras resalten contra el papel blanco, sin el reflejo del flash ni la sombra de tu mano cruzando la imagen.
+## Principio de diseño: precisión sobre velocidad
+El guardrail correcto para este tipo de flujo no es adivinar. Si la lectura no alcanza confianza suficiente, el comportamiento seguro debería ser detenerse y pedir aclaración o una mejor imagen antes de avanzar con una cotización dudosa. En salud, la precisión clínica debe estar por encima de la velocidad a ciegas.
+
+## El Gotcha: No es solo la cámara
+No necesitas una cámara profesional. Lo que ayuda es más básico: buena luz, texto completo, enfoque razonable y que la orden no quede cortada. Una foto cercana puede servir mejor que una foto lejana si permite leer el texto completo, pero no hay magia: si el documento queda fuera de cuadro, con sombra fuerte o demasiado borroso, el OCR puede fallar.
 
 ## Zoom Out: Educar al paciente en IA
-Ayudar a la IA a leer tu receta significa que en 30 segundos tienes los precios con código FONASA directamente en tu teléfono, sin tener que ir a las 6 AM a sacar número a un laboratorio solo para preguntar cuánto cuesta. Es un trabajo en equipo: tú pones el buen enfoque, el bot hace el trabajo pesado.
+Ayudar a la IA a leer tu receta puede reducir fricción: menos llamadas, menos ida al laboratorio solo para preguntar precios y menos mensajes de ida y vuelta por una imagen que no se entiende. Es un trabajo en equipo: tú mandas una foto legible; el sistema intenta hacer el trabajo pesado con más seguridad.
 
 ## Lo que viene
-Seguimos ajustando los "guardrails" de Shuri. Cada semana entiende mejor formatos extraños, recetas de consultorios antiguos y timbres difuminados. El objetivo es que la fricción desaparezca por completo para el paciente.
+El próximo guardrail de producto es separar mejor los problemas: una cosa es un bug de infraestructura como el `401`, otra es un contrato mal alineado como el fallback de Zod, y otra distinta es una imagen difícil de leer. El objetivo es reducir fricción sin inventar certezas donde no las hay.
 
 ## Únete a la Conversación
 📱 [WhatsApp](https://wa.me/56962170366): +56962170366

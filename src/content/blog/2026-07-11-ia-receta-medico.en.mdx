@@ -1,6 +1,6 @@
 ---
 title: "The Blind Spot of Health AI: Why Medical OCR Stumbles on Your Doctor's Prescription"
-description: "WhatsApp OCR quotes your medical exams in seconds, but it needs a little help with doctor's handwriting. 3 steps for the perfect photo."
+description: "OCR can help quote medical exams over WhatsApp, but it needs a legible order. 3 practical steps for sending a clearer photo."
 date: 2026-07-11
 lang: "en"
 image: "/img/blog/ia-receta-medico.png"
@@ -19,22 +19,24 @@ newsletterPriority: 0
 It’s Saturday morning. You need to get a quote for some lab tests your doctor ordered. You take a quick photo of the prescription while walking, send it via WhatsApp, and... the bot tells you it can't read it. Frustrating, right?
 
 ## What Nobody Tells You About Medical OCR
-Behind that instant response on WhatsApp is an artificial intelligence engine (an OCR) making a titanic effort. Its job is to separate a real medical exam from what looks like a doodle. And while the technology is incredible, the classic "doctor's handwriting" remains its greatest enemy.
+Behind that WhatsApp response is an artificial intelligence engine (an OCR) trying to turn an image into useful text. Its job is not to guess: it is to recognize medical exams with enough confidence. Handwriting, stamps, shadows, or a cropped photo can make a task that looks simple much harder.
 
 ## The Real Data in Examya's Logs
-This week at Examya, we monitored why some automated quotes were failing. We saw cases where the engine returned a technical error (like a "401" token drop on retry, or Zod schema mismatches) simply because the prescription was cut off, there was a shadow over the text, or the focus was so blurry that the AI mistook "Glucose" for abstract art.
+This week at Examya, we reviewed real failures in the WhatsApp quoting flow. The `401` error came from an authentication mismatch: the route expected a user JWT, but the WhatsApp bridge was sending a service token. The Zod fallback came from a different mismatch: the prompt and the schema were not speaking exactly the same language.
 
-## What We Built: Accuracy Over Speed
-To solve this, we designed Shuri (our WhatsApp agent) to be honest. If the photo is bad, instead of inventing a test you weren't ordered (and charging you wrong), Shuri stops the process and asks explicitly for a better photo. We maintain an architecture where clinical accuracy comes before blind speed.
+A bad photo did not cause those production errors. But the review brought back a separate, everyday issue: even when the infrastructure is correct, a cropped, shadowed, or blurry prescription can prevent OCR from reading the ordered exams safely.
 
-## The Gotcha: The Camera Doesn't Matter, Contrast Does
-The secret isn't having a thousand-megapixel camera, but contrast. The biggest gotcha we discovered is that a perfect photo taken from far away works worse than a cropped photo showing only the text. The AI needs the letters to stand out against the white paper, without the glare of the flash or your hand's shadow crossing the image.
+## Design Principle: Accuracy Over Speed
+The right guardrail for this kind of flow is not to guess. If the reading does not reach sufficient confidence, the safe behavior should be to stop and ask for clarification or a clearer image before moving forward with a doubtful quote. In healthcare, clinical accuracy must come before blind speed.
+
+## The Gotcha: It Is Not Just the Camera
+You do not need a professional camera. What helps is more basic: good light, complete text, reasonable focus, and making sure the order is not cut off. A closer photo may help more than a distant one if it makes the full text readable, but there is no magic: if the document is out of frame, strongly shadowed, or too blurry, OCR can fail.
 
 ## Zoom Out: Educating the Patient Beats Forcing the AI
-Helping the AI read your prescription means that in 30 seconds you have the prices with your FONASA coverage codes directly on your phone, without having to go at 6 AM to pull a number at a lab just to ask how much it costs. It’s a team effort: you provide the good focus, the bot does the heavy lifting.
+Helping the AI read your order can reduce friction: fewer calls, fewer trips to a lab just to ask for prices, and fewer back-and-forth messages because an image was not readable. It is a team effort: you send a legible photo; the system tries to do the heavy lifting more safely.
 
 ## What's Next
-We continue tuning Shuri's guardrails. Every week it gets better at understanding strange formats, old clinic prescriptions, and blurred stamps. The goal is for the friction to disappear entirely for the patient.
+The next product guardrail is to separate problems more clearly: an infrastructure bug like the `401` is one thing, a misaligned contract like the Zod fallback is another, and a hard-to-read image is a different issue. The goal is to reduce friction without inventing certainty where there is none.
 
 ## Join the Conversation
 📱 [WhatsApp](https://wa.me/56962170366): +56962170366
