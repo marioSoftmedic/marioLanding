@@ -1,0 +1,69 @@
+---
+title: "Por qué el SEO clínico no es e-commerce: captación sin vulnerar privacidad"
+description: "Analizamos las métricas orgánicas de Examya: por qué rankear primero en códigos FONASA no basta si el funnel no resuelve la fricción clínica."
+date: 2026-07-14
+lang: "es"
+image: "/img/blog/seo-clinico-privacidad-ecommerce.png"
+tags: [Examya, Salud Digital, B2B, Arquitectura, Backend]
+draft: false
+series: "examya"
+seriesOrder: 17
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "clinical-labs-as-api"
+newsletterPriority: 4
+---
+
+## 1. El Hook
+
+El fin de semana estaba cruzando los datos de Google Search Console de Examya y me topé con un muro. Teníamos una fuerte visibilidad en primera página para búsquedas de exámenes específicos por código FONASA (como la TSH o perfiles lipídicos). Las impresiones subían, pero el CTR (Click-Through Rate) era bajo. El paciente busca el examen, nos encuentra en el top de Google, pero no hace clic, o si lo hace, rebota rápido.
+
+## 2. Lo que nadie cuenta
+
+Muchos laboratorios y clínicas intentan vender exámenes médicos online como si fueran zapatillas. Arman un flujo de e-commerce clásico, ponen un catálogo con un botón enorme de "Añadir al carrito" y esperan que el paciente complete el *checkout*. 
+
+Pero la salud no funciona así. El paciente no está comprando un producto de consumo; está resolviendo una angustia. No sabe si su orden médica está bien escrita, no sabe cuáles son los códigos exactos, y sobre todo, no quiere crearse un usuario y una contraseña a las 7 AM solo para cotizar. 
+
+## 3. Los datos reales
+
+En nuestro análisis del 11 de julio, vimos la correlación exacta: las páginas de catálogo puro generaban impresiones, pero el embudo de conversión se estancaba en el salto hacia la acción. El modelo mental del paciente requiere validación ("¿Me sirve esta orden?"). 
+
+Para solucionarlo, abrí la issue #1535. El objetivo era orquestar una estrategia de SEO y conversión orgánica, pero con una restricción técnica absoluta: una taxonomía de funnel *privacy-safe* que nunca exponga información de salud en la web abierta.
+
+## 4. Lo que construiste
+
+Separamos rígidamente la exploración del catálogo (público, indexable por Google, SEO-friendly) de la sesión clínica privada. 
+
+Cuando el paciente entra a la ruta de un examen, digamos `/examenes/0301045`, el CTA no es "Pagar". Es un deep link hacia el canal que el usuario ya domina: WhatsApp. Construimos un puente estructurado en el frontend que pasa la intención de búsqueda al agente Shuri:
+
+```typescript
+// apps/web/src/lib/seo/exam-catalog-seo.ts
+export function buildWhatsAppCta(examName: string, code: string): string {
+  const payload = `Hola Examya, necesito cotizar el examen ${examName} (Cód: ${code}). Tengo la orden médica.`;
+  return `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(payload)}`;
+}
+```
+
+Capturamos el tráfico orgánico, pero derivamos la transacción a un canal cerrado, encriptado y operado por IA.
+
+## 5. El gotcha
+
+El desafío técnico de este enfoque es cómo medir la conversión sin romper el *compliance*. Si usas trackers tradicionales inyectados en la ruta clínica, estás filtrando datos de intención de salud a terceros. 
+
+Tuvimos que aislar el funnel de adquisición implementando medición privacy-safe (con Plausible). El evento de analítica registra `cta_whatsapp_clicked` sumando +1 al contador de conversión de esa URL, pero bloquea cualquier identificador de sesión. Medimos flujos, no individuos.
+
+## 6. Zoom out
+
+Este detalle estructural refleja por qué los portales de pacientes tradicionales fracasan en retención. Intentan forzar un funnel transaccional de retail en un entorno donde prima la incertidumbre clínica y la privacidad (y donde leyes como la 21.719 no perdonan errores de *governance*). Si no reduces la fricción cognitiva de entrada, tu SEO no sirve de nada.
+
+## 7. Lo que viene
+
+El siguiente paso (Slice 1 de la issue #1535) es desplegar las pruebas de rutas indexables y afinar la instrumentación de los CTAs hacia WhatsApp en producción, midiendo el delta del CTR sin tocar el repositorio core del motor de IA. Seguimos empujando la interoperabilidad, un endpoint a la vez.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,70 @@
+---
+title: "Why clinical SEO isn't e-commerce: organic acquisition without breaching privacy"
+description: "Analyzing Examya's organic metrics: why ranking first for FONASA codes isn't enough if the funnel ignores clinical friction."
+date: 2026-07-14
+lang: "en"
+image: "/img/blog/seo-clinico-privacidad-ecommerce.png"
+tags: [Examya, Digital Health, B2B, Architecture, Backend]
+draft: false
+series: "examya"
+seriesOrder: 17
+canonicalSlug: "2026-07-14-seo-clinico-privacidad-ecommerce"
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "clinical-labs-as-api"
+newsletterPriority: 4
+---
+
+## 1. The Hook
+
+Over the weekend, I was cross-referencing Examya's Google Search Console data and hit a wall. We had strong first-page visibility for specific exam searches by FONASA codes (like TSH or lipid profiles). Impressions were climbing, but the Click-Through Rate (CTR) was surprisingly low. Patients were looking up the exam, finding us at the top of Google, but bouncing fast.
+
+## 2. What nobody tells you
+
+Many labs and clinics try to sell medical exams online as if they were sneakers. They build a classic e-commerce flow, throw up a catalog with a huge "Add to Cart" button, and expect the patient to checkout.
+
+But healthcare doesn't work that way. Patients aren't buying consumer goods; they are trying to resolve clinical anxiety. They don't know if their medical order is written correctly, they don't know the exact codes, and above all, they don't want to create a username and password at 7 AM just to get a quote.
+
+## 3. The real data
+
+In our July 11 analysis, we saw the exact correlation: pure catalog pages generated impressions, but the conversion funnel stalled at the leap to action. The patient's mental model requires validation ("Is this medical order useful?").
+
+To fix this, I opened issue #1535. The goal was to orchestrate an organic SEO and conversion strategy with an absolute technical constraint: a privacy-safe funnel taxonomy that never exposes health information on the open web.
+
+## 4. What you built
+
+We rigidly separated catalog exploration (public, Google-indexable, SEO-friendly) from the private clinical session.
+
+When a patient visits an exam route, say `/examenes/0301045`, the CTA isn't "Pay." It's a deep link to the channel the user already masters: WhatsApp. We built a structured bridge in the frontend that passes the search intent to the Shuri agent:
+
+```typescript
+// apps/web/src/lib/seo/exam-catalog-seo.ts
+export function buildWhatsAppCta(examName: string, code: string): string {
+  const payload = `Hola Examya, necesito cotizar el examen ${examName} (Cód: ${code}). Tengo la orden médica.`;
+  return `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(payload)}`;
+}
+```
+
+We capture organic traffic, but route the transaction to a closed, encrypted channel operated by AI.
+
+## 5. The gotcha
+
+The technical challenge of this approach is how to measure conversion without breaking compliance. If you use traditional trackers injected into the clinical route, you are leaking health intent data to third parties.
+
+We had to isolate the acquisition funnel by implementing privacy-safe measurement (with Plausible). The analytics event records `cta_whatsapp_clicked`, adding +1 to that URL's conversion counter, but blocks any session identifiers. We measure flows, not individuals.
+
+## 6. Zoom out
+
+This structural detail reflects why traditional patient portals fail at retention. They try to force a retail transactional funnel in an environment dominated by clinical uncertainty and privacy (where laws like 21.719 are unforgiving of governance errors). If you don't reduce the cognitive friction of entry, your SEO is useless.
+
+## 7. What's next
+
+The next step (Slice 1 of issue #1535) is deploying the indexable route tests and fine-tuning the CTA instrumentation towards WhatsApp in production, measuring the CTR delta without touching the core AI engine repository. We keep pushing interoperability, one endpoint at a time.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
