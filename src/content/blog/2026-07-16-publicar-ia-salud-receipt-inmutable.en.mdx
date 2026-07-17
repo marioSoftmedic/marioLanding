@@ -1,0 +1,64 @@
+---
+title: "Why publishing health AI demands an immutable receipt"
+description: "Automating AI is easy. Proving what the AI generated vs what the human published is hard. How we built our immutable evidence pipeline."
+date: 2026-07-16
+lang: "en"
+image: "/img/blog/publicar-ia-salud-receipt-inmutable.png"
+tags: [AI, Agents, Architecture, Backend, Compliance]
+draft: false
+series: "agentes"
+seriesOrder: 18
+canonicalSlug: "2026-07-16-publicar-ia-salud-receipt-inmutable"
+audience: "builders | healthtech-founders | healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+## 1. El Hook
+
+When you automate workflows with artificial intelligence in healthcare, generating the output is the easy part. The real headache starts a second later: how do you prove, three months from now, that what was published is exactly what the agent generated and not something a human mistakenly altered along the way?
+
+## 2. Lo que nadie cuenta
+
+The ecosystem is obsessed with prompts and generation, but hardly anyone talks about the chain of custody of the output. If an agent creates an asset (whether a clinical report or an operational asset) and someone modifies it before publishing, the audit trail is broken.
+
+In healthtech, operating without an immutable trail is playing with fire. It doesn't matter if it's a diagnosis or an internal automation flow; if you use AI, you need to be able to audit its behavior deterministically.
+
+## 3. Los datos reales
+
+Yesterday we pushed commit `78e55019` to our repository. It wasn't a new commercial feature; it was the closing of a native review cycle to correct our receipt evidence pipeline.
+
+We had an automated pipeline, but we realized that the receipt handed off to the human operator wasn't correctly binding the cryptographic hashes of the final media against the original generation intent.
+
+## 4. Lo que construiste
+
+We implemented what we call an *atomic visible publication bundle*.
+
+It works like this: the AI agent generates an asset in an isolated and atomic manner. Immediately after, it calculates the file hashes and creates a verification document (`receipt.json`). This immutable receipt is the only thing handed over to the human operator during the handoff.
+
+If the human attempts to deploy a file whose hash doesn't exactly match the receipt signed by the agent, the pipeline blocks the deploy.
+
+## 5. El gotcha
+
+The technical detail that almost fooled us was the payload verification.
+
+Having the file hashes wasn't enough. We discovered that the human operator strictly needed to verify those hashes against the metadata payload *before* our native review step could be considered closed. We had to correct the fields so the validator would enforce this bit-by-bit match.
+
+## 6. Zoom out
+
+This is how serious digital health companies must treat AI. It's not about blindly trusting the model or having a human stare at screens all day.
+
+It's about building pipelines by design where the AI proposes, but the cryptographic chain of custody ensures that what the human approves is mathematically identical to what the machine generated. Compliance isn't a PDF document; it's evidence injected into your infrastructure.
+
+## 7. Lo que viene
+
+The next step is to expand this exact immutable receipt pattern from our operational flows to the clinical OCR engine in Examya, guaranteeing that every medical order extraction has its own certificate of immutability.
+
+## 8. CTA
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
