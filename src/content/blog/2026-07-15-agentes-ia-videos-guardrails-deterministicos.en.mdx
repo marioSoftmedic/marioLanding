@@ -1,0 +1,77 @@
+---
+title: "How we avoid delivering blocked videos with deterministic guardrails"
+description: "A valid MP4 contained RENDER BLOCKED. The pipeline now verifies the contract, visible content, hashes, and generation before handoff."
+date: 2026-07-15
+lang: "en"
+image: "/img/blog/agentes-ia-videos-guardrails-deterministicos.png"
+tags: [AI, Agents, Architecture, Backend, Production]
+draft: false
+series: "agentes"
+seriesOrder: 17
+canonicalSlug: "2026-07-15-agentes-ia-videos-guardrails-deterministicos"
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## The incident
+
+The pipeline received a *manifest*, the JSON contract that defines a Reel's content and export rules, with empty `evidenceLedger` and `claims` fields. Each *beat*, or timed segment of the video, was also missing its `evidenceRef`.
+
+The runtime did the right thing: it rejected the contract and displayed `RENDER BLOCKED`. The downstream step failed. The recorder captured that screen, and the handoff accepted the file because it existed and `ffprobe`, a tool that inspects codecs, dimensions, and duration, confirmed a valid format.
+
+An earlier, separate correction involved invalid duration and visual anchors. It was a different problem; no evidence supports treating it as the cause of this incident.
+
+## Why it happens
+
+A playable file does not prove that its content is correct. MP4 and WEBM can satisfy every technical property while containing a blocker screen, clipped text, or the wrong scene.
+
+The design error was treating format evidence as meaning evidence. Both controls are necessary, but they answer different questions.
+
+## The available evidence
+
+The incident record supports a bounded conclusion: the incomplete manifest triggered the blocker, and the recorder captured that state. Later inspection confirmed that the file could be opened.
+
+We do not have an aggregate failure rate or evidence that every generative pipeline will behave this way. We also did not retain the failed generation as reproducible proof, so the new verification demonstrates the current correction rather than reconstructing the historical incident.
+
+## The implemented solution
+
+The hardened flow begins with standalone manifest validation. It then selects a versioned deterministic template: the agent supplies structured content, not a free-form layout.
+
+Before recording, the browser runs a preflight for every beat. It checks visible text, clipping, blocker absence, and a clean console while external network access remains denied. The exporter then produces WEBM and MP4.
+
+Every media file, beat screenshot, and dependency receives a SHA-256 *hash*, a fingerprint that changes when content changes. They are installed as one immutable generation. Only after verification does the exporter atomically switch the *generation pointer*, the `current` reference that tells downstream tools which complete bundle to consume. A consumer verifier recalculates those proofs before handoff.
+
+```typescript
+// Simplified pseudocode of the real export flow.
+validateStandaloneManifest(manifest)
+await preflightEveryBeat({ network: "denied", blocker: "absent" })
+const generation = await renderAndHash(["webm", "mp4", "proofs", "dependencies"])
+await verifyGeneration(generation)
+await switchCurrentAtomically(generation)
+```
+
+## The non-obvious design decision
+
+The runtime should keep displaying a blocker when the contract is invalid. Hiding that screen would not fix the problem; it would only remove a useful signal.
+
+The correct defense belongs at the promotion boundary: no recorder or consumer may treat existence and format as authorization to install or deliver content. If verification fails, the current pointer does not move.
+
+## Why it matters
+
+Agents that produce public assets need verifiable contracts around their outputs. A schema validates structure; the browser validates presentation; `ffprobe` validates format; hashes validate integrity; the atomic switch prevents mixed generations.
+
+No layer replaces another. Together they reduce the chance of promoting an inconsistent bundle without promising that every future error is impossible.
+
+## Next step
+
+The next step is bounded retry behavior that preserves fail-closed semantics. An automated correction should compete for the `current` pointer only after producing another complete, verifiable generation.
+
+## Contact
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
