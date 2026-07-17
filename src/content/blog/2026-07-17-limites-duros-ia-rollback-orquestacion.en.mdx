@@ -1,0 +1,64 @@
+---
+title: "Why stopping an AI agent at 299 lines saves your architecture"
+description: "When AI writes code, unchecked speed is technical debt. How we use strict line budgets and forensic rollbacks to keep Pull Requests reviewable."
+date: 2026-07-17
+lang: "en"
+canonicalSlug: "2026-07-17-limites-duros-ia-rollback-orquestacion"
+image: "/img/blog/2026-07-17-limites-duros-ia-rollback-orquestacion.png"
+tags: [AI, Architecture, OpenCode, Backend, Testing]
+draft: false
+series: "agentes"
+seriesOrder: 5
+audience: "ctos | tech-leads | builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+Today we blocked an AI agent right in the middle of a task. We literally pulled the keyboard away mid-flight.
+
+It wasn't because the code was wrong or because it hallucinated a test result. It was because it wrote too much. 
+
+## What nobody tells you
+
+In the AI-assisted development space, everyone celebrates how many lines of code a model can spit out per second. But almost no one talks about the human cognitive load required to review that machine-generated code at the end of the month.
+
+The obvious temptation when you see that the machine's code compiles and the tests might pass is to just say: *"go ahead, it works."* But if you compromise today for a 6-line difference, next week you'll compromise for 100. And in three months, you'll be left with an unmanageable monolith where the agent dictated your repository's architecture based on its context window limitations, rather than your team's maintainability.
+
+## The real data
+
+The issue surfaced while working on Examya with Issue #1553 (Task 4c in our backlog). The OpenCode agent started orchestrating a worker and assembled a 319-line candidate. 
+
+Even after a corrective retry and optimizing our test matrix (keeping a readable RED matrix), the line count only dropped to 305. Our absolute hard limit (the operational "hard cap" for agents) is exactly 299 lines.
+
+## What we built: Forensic Rollback
+
+So we halted execution and applied a rollback. But not a blind one. We executed a forensic rollback.
+
+We preserved the failed candidate from Issue #1553 as a diagnostic patch so we could review it safely. Then, we restored the workspace exactly to its previous frozen state (Task 4b / Issue #1558). Zero noise, zero garbage staging. Completely pristine.
+
+```bash
+# Forensic diagnostic in Engram:
+Candidate is 319 authored lines and violates the 299 hard stop.
+Spec is readable, not minified, but incomplete/brittle.
+```
+
+## The gotcha
+
+The real gotcha of this whole session? The problem wasn't the agent; it was the scope of the task itself. 
+
+By enforcing the strict line limit, we realized that Issue #1553 was trying to do two things at once: persistent text routing and effect/ordering control. We split the ticket. We created Issue #1559 for routing and narrowed #1553 strictly to the effects logic.
+
+## Zoom out
+
+Artificial intelligence should not define the topology of your Pull Requests. Human architecture must dictate the boundaries of the agent. If a model can't solve a problem in 299 lines, the problem is too big and must be divided. Constraining AI forces you to design better software.
+
+## What's next
+
+We keep implementing these newly divided tasks, under strict TDD and atomic review budgets that keep the codebase safe without burning out our team.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

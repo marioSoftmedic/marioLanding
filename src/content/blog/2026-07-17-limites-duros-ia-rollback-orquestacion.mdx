@@ -1,0 +1,63 @@
+---
+title: "Por qué detener a un agente de IA a las 299 líneas salva tu arquitectura"
+description: "Cuando la IA escribe código, la velocidad sin control es deuda técnica. Cómo usamos rollbacks estrictos para mantener los Pull Requests revisables."
+date: 2026-07-17
+lang: "es"
+image: "/img/blog/2026-07-17-limites-duros-ia-rollback-orquestacion.png"
+tags: [IA, Arquitectura, OpenCode, Backend, Testing]
+draft: false
+series: "agentes"
+seriesOrder: 5
+audience: "ctos | tech-leads | builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+Hoy bloqueamos a un agente de IA a la mitad de una tarea. Literalmente, le quitamos el teclado en medio del vuelo. 
+
+No fue porque el código estuviera mal o porque hubiera alucinado un resultado. Fue porque escribió demasiado. 
+
+## Lo que nadie cuenta
+
+En el desarrollo asistido por IA, todo el mundo celebra la cantidad de líneas que un modelo puede escupir por segundo. Pero casi nadie habla de la carga cognitiva humana necesaria para revisar ese código a fin de mes. 
+
+La tentación obvia cuando ves que el código de la máquina compila y los tests podrían pasar es decirle: *"dale, total funciona"*. Pero si cedes hoy por 6 líneas de diferencia, la próxima semana cederás por 100. Y en tres meses, tendrás un monolito inmanejable donde el agente dictó la arquitectura del repositorio basándose en su propia ventana de contexto, no en la mantenibilidad de tu equipo.
+
+## Los datos reales
+
+El problema apareció trabajando en Examya con la Issue #1553 (la Tarea 4c de nuestro backlog). El agente de OpenCode comenzó a orquestar un worker y ensambló un candidato de 319 líneas. 
+
+Incluso con un *retry* correctivo y optimizando nuestra matriz de pruebas (dejando una matriz RED legible), el conteo bajó solo a 305 líneas. Nuestro límite duro (el "hard cap" operativo para agentes) es de exactamente 299 líneas.
+
+## Lo que construimos: Rollback Forense
+
+Así que bloqueamos la ejecución y aplicamos un rollback. Pero no un rollback ciego. Ejecutamos un rollback forense. 
+
+Preservamos el candidato fallido del Issue #1553 como un parche de diagnóstico para poder revisarlo de forma segura. Luego, restauramos el *workspace* exactamente a su estado congelado anterior (la Tarea 4b / Issue #1558). Cero ruido, cero staging basura. Todo limpio.
+
+```bash
+# Diagnóstico forense en Engram:
+Candidate is 319 authored lines and violates the 299 hard stop.
+Spec is readable, not minified, but incomplete/brittle.
+```
+
+## El gotcha
+
+¿El *gotcha* real de toda esta sesión? El problema no era el agente, era el *scope* de la tarea. 
+
+Al forzar el límite estricto de líneas, nos dimos cuenta de que la Issue #1553 estaba tratando de hacer dos cosas a la vez: enrutamiento persistente de texto y control de efectos/orden. Dividimos el ticket. Creamos la Issue #1559 para el enrutamiento y estrechamos la #1553 solo a la lógica de efectos.
+
+## Zoom out
+
+La inteligencia artificial no debe definir la topología de tus Pull Requests. La arquitectura humana debe dictar los límites del agente. Si un modelo no puede resolver el problema en 299 líneas, el problema es demasiado grande y debe ser dividido. Limitar la IA te obliga a diseñar mejor tu software.
+
+## Lo que viene
+
+Seguimos implementando las nuevas tareas divididas, bajo TDD estricto y con presupuestos de revisión atómicos que mantienen la base de código segura sin quemar a nuestro equipo.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
