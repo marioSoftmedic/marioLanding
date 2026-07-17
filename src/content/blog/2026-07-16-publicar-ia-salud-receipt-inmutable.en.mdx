@@ -1,6 +1,6 @@
 ---
 title: "Why publishing health AI demands an immutable receipt"
-description: "Automating AI is easy. Proving what the AI generated vs what the human published is hard. How we built our immutable evidence pipeline."
+description: "A verifiable editorial pipeline binds each Reel to its generation, consumer receipt, and visible bundle before human handoff."
 date: 2026-07-16
 lang: "en"
 image: "/img/blog/publicar-ia-salud-receipt-inmutable.png"
@@ -17,45 +17,56 @@ newsletterTopic: "ai-agents-production"
 newsletterPriority: 3
 ---
 
-## 1. El Hook
+## 1. The Hook
 
-When you automate workflows with artificial intelligence in healthcare, generating the output is the easy part. The real headache starts a second later: how do you prove, three months from now, that what was published is exactly what the agent generated and not something a human mistakenly altered along the way?
+Generating a video with an agent does not prove that the same file is ready for publication. Between export and human handoff, the content, dependencies, or pointer to the current generation may change.
 
-## 2. Lo que nadie cuenta
+The useful question is not only “does the MP4 exist?” but “what evidence binds this MP4 to the generation that is current now?”
 
-The ecosystem is obsessed with prompts and generation, but hardly anyone talks about the chain of custody of the output. If an agent creates an asset (whether a clinical report or an operational asset) and someone modifies it before publishing, the audit trail is broken.
+## 2. What People Leave Out
 
-In healthtech, operating without an immutable trail is playing with fire. It doesn't matter if it's a diagnosis or an internal automation flow; if you use AI, you need to be able to audit its behavior deterministically.
+An isolated hash does not solve the problem either. It may describe an old file while the current pointer already references a different generation.
 
-## 3. Los datos reales
+That is why the editorial pipeline separates four objects: an immutable generation, a current pointer, a consumer receipt bound to that pointer, and a visible bundle the operator can review. This is a publishing pattern for media assets, not a claim about clinical products.
 
-Yesterday we pushed commit `78e55019` to our repository. It wasn't a new commercial feature; it was the closing of a native review cycle to correct our receipt evidence pipeline.
+## 3. The Actual Evidence
 
-We had an automated pipeline, but we realized that the receipt handed off to the human operator wasn't correctly binding the cryptographic hashes of the final media against the original generation intent.
+The evidence lives in three canonical pipeline sources:
 
-## 4. Lo que construiste
+- `export-reel.mjs` installs each complete run under `.reel-generations/<basename>/<runId>/` and atomically switches the `<basename>.current` pointer (`C-PIPE-001`).
+- `verify-reel.mjs` writes a consumer receipt that binds the `runId`, pointer, artifacts, visual proofs, and dependency hashes (`C-PIPE-002`).
+- `visible-bundle.mjs` creates a real directory with `PUBLISH-ME.mp4`, support files, visual proofs, and `handoff-verification.json`, then checks that it remains bound to the current receipt (`C-PIPE-003`).
 
-We implemented what we call an *atomic visible publication bundle*.
+The source paths live under `~/.agents/skills/examya-social-editorial/assets/reel-templates/`. No external commit is used as a substitute for this evidence.
 
-It works like this: the AI agent generates an asset in an isolated and atomic manner. Immediately after, it calculates the file hashes and creates a verification document (`receipt.json`). This immutable receipt is the only thing handed over to the human operator during the handoff.
+## 4. What the Pipeline Does
 
-If the human attempts to deploy a file whose hash doesn't exactly match the receipt signed by the agent, the pipeline blocks the deploy.
+The demonstrable flow has four stages:
 
-## 5. El gotcha
+1. The exporter produces HTML, WEBM, MP4, verification, and one visible proof per beat inside an immutable generation.
+2. The `.current` pointer identifies the active generation.
+3. The consumer verifier recalculates the evidence and writes a stable receipt bound to that generation.
+4. The visible-bundle creator copies only regular files from that generation and leaves a verifiable `PUBLISH-ME.mp4` for the operator.
 
-The technical detail that almost fooled us was the payload verification.
+If the pointer or any bound hash changes, the checks stop passing. That blocks the editorial handoff; it neither runs nor proves a deployment.
 
-Having the file hashes wasn't enough. We discovered that the human operator strictly needed to verify those hashes against the metadata payload *before* our native review step could be considered closed. We had to correct the fields so the validator would enforce this bit-by-bit match.
+## 5. The Gotcha
 
-## 6. Zoom out
+The gotcha is temporal: a valid receipt can become stale even when the file it describes has not changed.
 
-This is how serious digital health companies must treat AI. It's not about blindly trusting the model or having a human stare at screens all day.
+That is why `check-receipt` does more than read JSON. It compares the receipt with the current pointer and current hashes. The visible-bundle check repeats that equality before handoff. Validity belongs to one specific run, not to the basename forever.
 
-It's about building pipelines by design where the AI proposes, but the cryptographic chain of custody ensures that what the human approves is mathematically identical to what the machine generated. Compliance isn't a PDF document; it's evidence injected into your infrastructure.
+## 6. Zooming Out
 
-## 7. Lo que viene
+This pattern proves one narrow property: a visible asset in the editorial pipeline matches a verified generation and its current consumer receipt (`C-PIPE-004`). It reduces the risk of handing off a stale or altered recording within this workflow.
 
-The next step is to expand this exact immutable receipt pattern from our operational flows to the clinical OCR engine in Examya, guaranteeing that every medical order extraction has its own certificate of immutability.
+It does not prove the integrity of medical orders, results, quotes, patient data, or clinical behavior, and it does not establish privacy guarantees. It also does not prove that the asset was deployed or published. Extending those guarantees would require product-specific evidence for every surface.
+
+## 7. What Comes Next
+
+The next editorial step is to run the formal checker, synchronize the corrected content with the site repository, and validate the build and deployment before claiming publication.
+
+The next technical step is to keep these checks as the gate for every new Reel and treat any dependency change as a new generation, not inherited validation.
 
 ## 8. CTA
 

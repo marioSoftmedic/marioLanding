@@ -1,6 +1,6 @@
 ---
 title: "Por qué publicar IA en salud exige un receipt inmutable"
-description: "Automatizar IA es fácil. Lo difícil es probar qué generó la IA y qué publicó el humano. Así construimos nuestro pipeline de evidencia inmutable."
+description: "Un pipeline editorial verificable liga cada Reel a su generación, receipt consumidor y bundle visible antes del handoff humano."
 date: 2026-07-16
 lang: "es"
 image: "/img/blog/publicar-ia-salud-receipt-inmutable.png"
@@ -18,43 +18,54 @@ newsletterPriority: 3
 
 ## 1. El Hook
 
-Cuando automatizas flujos con inteligencia artificial en salud, generar el resultado es la parte fácil. El verdadero dolor de cabeza empieza un segundo después: ¿cómo demuestras, tres meses más tarde, que lo que se publicó es exactamente lo que generó el agente y no algo que un humano alteró por error en el camino?
+Generar un video con un agente no demuestra que ese mismo archivo quedó listo para publicación. Entre la exportación y el handoff humano pueden cambiar el contenido, las dependencias o el puntero a la generación vigente.
+
+La pregunta útil no es solo “¿existe el MP4?”, sino “¿qué evidencia liga este MP4 con la generación que está vigente ahora?”.
 
 ## 2. Lo que nadie cuenta
 
-El ecosistema está obsesionado con los prompts y la generación, pero casi nadie habla de la cadena de custodia del output. Si un agente crea un activo (ya sea un reporte clínico o un activo operacional) y alguien lo modifica antes de publicarlo, el rastro de auditoría se rompe. 
+Un hash aislado tampoco resuelve el problema. Puede describir un archivo antiguo mientras el puntero actual ya referencia otra generación.
 
-En healthtech, operar sin un rastro inmutable es jugar con fuego. No importa si es un diagnóstico o un flujo de automatización interno; si usas IA, necesitas poder auditar su comportamiento de forma determinística.
+Por eso el pipeline editorial separa cuatro objetos: una generación inmutable, un puntero actual, un receipt consumidor ligado a ese puntero y un bundle visible que el operador puede revisar. Es un patrón de publicación de activos, no una afirmación sobre productos clínicos.
 
 ## 3. Los datos reales
 
-Ayer hicimos un push del commit `78e55019` en nuestro repositorio. No fue una nueva feature comercial, fue el cierre de un ciclo de revisión nativa para corregir nuestro pipeline de receipt evidence. 
+La evidencia está en tres fuentes canónicas del pipeline:
 
-Teníamos un pipeline automatizado, pero nos dimos cuenta de que el recibo que pasaba al operador humano no estaba amarrando correctamente los hashes criptográficos del media final contra la intención de generación original.
+- `export-reel.mjs` instala cada ejecución completa bajo `.reel-generations/<basename>/<runId>/` y cambia de forma atómica el puntero `<basename>.current` (`C-PIPE-001`).
+- `verify-reel.mjs` escribe un receipt consumidor que liga el `runId`, el puntero, los artefactos, las pruebas visuales y los hashes de dependencias (`C-PIPE-002`).
+- `visible-bundle.mjs` crea un directorio real con `PUBLISH-ME.mp4`, archivos de soporte, pruebas visuales y `handoff-verification.json`, y luego comprueba que siga ligado al receipt actual (`C-PIPE-003`).
+
+Las rutas fuente están bajo `~/.agents/skills/examya-social-editorial/assets/reel-templates/`. No hay un commit externo usado como sustituto de esta evidencia.
 
 ## 4. Lo que construiste
 
-Implementamos lo que llamamos un *atomic visible publication bundle*. 
+El flujo demostrable tiene cuatro etapas:
 
-Funciona así: el agente de IA genera un activo de manera aislada y atómica. Inmediatamente después, calcula los hashes del archivo y crea un documento de verificación (`receipt.json`). Este recibo inmutable es lo único que se le entrega al operador humano en el handoff. 
+1. El exportador produce HTML, WEBM, MP4, verificación y una prueba visible por beat dentro de una generación inmutable.
+2. El puntero `.current` identifica la generación vigente.
+3. El verificador consumidor vuelve a calcular la evidencia y escribe un receipt estable ligado a esa generación.
+4. El creador del bundle visible copia solo archivos regulares de esa generación y deja un `PUBLISH-ME.mp4` comprobable para el operador.
 
-Si el humano intenta hacer deploy de un archivo cuyo hash no coincide exactamente con el recibo firmado por el agente, el pipeline se bloquea.
+Si cambia el puntero o cualquiera de los hashes ligados, los checks dejan de pasar. Eso bloquea el handoff editorial; no ejecuta ni demuestra un deploy.
 
 ## 5. El gotcha
 
-El detalle técnico que casi nos engaña fue la verificación del payload. 
+El gotcha es temporal: un receipt válido puede volverse obsoleto sin que el archivo que describe cambie.
 
-Tener los hashes del archivo no era suficiente. Descubrimos que el operador humano necesitaba verificar estrictamente esos hashes contra el payload de metadatos *antes* de que nuestro paso de revisión nativa pudiera darse por cerrado. Tuvimos que corregir los campos para que el validador forzara esta coincidencia bit a bit.
+Por eso `check-receipt` no se limita a leer JSON. Contrasta el receipt con el puntero vigente y con los hashes actuales. El check del bundle visible repite esa igualdad antes del handoff. La validez pertenece a una ejecución concreta, no al basename para siempre.
 
 ## 6. Zoom out
 
-Así es como las empresas serias de salud digital deben tratar a la IA. No se trata de confiar ciegamente en el modelo ni de poner a un humano a mirar pantallas todo el día. 
+Este patrón prueba algo acotado: que un activo visible del pipeline editorial coincide con una generación verificada y con su receipt consumidor actual (`C-PIPE-004`). Reduce el riesgo de entregar una grabación obsoleta o alterada dentro de este flujo.
 
-Se trata de construir pipelines por diseño donde la IA propone, pero la cadena de custodia criptográfica asegura que lo que aprueba el humano es matemáticamente idéntico a lo que generó la máquina. Compliance no es un documento en PDF; es evidencia inyectada en tu infraestructura.
+No prueba integridad de órdenes médicas, resultados, cotizaciones, datos de pacientes ni comportamiento clínico, ni ofrece garantías de privacidad. Tampoco prueba que el activo fue desplegado o publicado. Extender esas garantías exigiría evidencia específica del producto y de cada superficie.
 
 ## 7. Lo que viene
 
-El siguiente paso es expandir este mismo patrón de recibos inmutables (receipt evidence) desde nuestros flujos operativos hacia el motor de OCR clínico en Examya, garantizando que cada extracción de una orden médica tenga su propio certificado de inmutabilidad.
+El siguiente paso editorial es ejecutar el checker formal, sincronizar el contenido corregido con el repositorio del sitio y validar build y despliegue antes de hablar de publicación.
+
+El siguiente paso técnico es mantener estos checks como gate de cada nuevo Reel y registrar cualquier cambio de dependencia como una nueva generación, no como una validación heredada.
 
 ## 8. CTA
 
