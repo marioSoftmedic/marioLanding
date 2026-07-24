@@ -1,0 +1,78 @@
+---
+title: "Why Your AI Orchestrator Needs a Deterministic Gate (Before Generating Content)"
+description: "Letting multiple AI agents decide which assets to generate on the fly breaks your CI/CD. Here is how we designed a strict cross-validation contract to prevent broken dependencies in production."
+date: 2026-07-24
+lang: "en"
+canonicalSlug: "2026-07-24-gatekeeper-deterministico-orquestacion-agentes"
+image: "/img/blog/2026-07-24-gatekeeper-deterministico.png"
+tags: ["ai", "agents", "architecture", "automation"]
+series: "agentes"
+seriesOrder: 20
+---
+
+Automating content publication with AI agents feels like magic until your CI/CD pipeline silently breaks because an agent decided, on its own, that today wasn't a good day to generate an image.
+
+Yesterday, our automated publishing pipeline failed. It wasn't a syntax error or a server crash. It was a problem of **logical coupling and unchecked autonomy**.
+
+If you are orchestrating multiple sub-agents to generate code, articles, or visual assets, this error will happen to you. Here is why it occurred and how a "Deterministic Gate" is the only way to save your architecture.
+
+## The Phantom Image Incident
+
+In our editorial workflow, we orchestrate a campaign across several agents. One defines the angle, another drafts the blog post, another creates social media copy, and another renders the visual assets.
+
+Yesterday, the orchestrating agent evaluated the decision matrix and marked the Blog as `not-applicable` to prioritize native social content (social-first). Up to that point, it was a reasonable autonomous decision based on our weekend rules.
+
+**The problem:** The social agent generated the copy, but the repository linter (our `cotocha-draft-checker`) failed catastrophically.
+
+Why? Because the linter, designed to ensure blog quality, required the physical existence of a 1200x630 Open Graph (OG) image. Since the primary agent decided to skip the blog, it never instructed the graphics agent to create that OG image. The logical dependency broke, the pipeline failed, and the entire process was blocked.
+
+## The Trap of On-the-Fly Decisions
+
+When building multi-agent systems, it is tempting to give them total autonomy. You tell the system: *"Here is the calendar, decide which format is best today and execute it"*.
+
+But software architectures do not tolerate ambiguity. If Agent A decides to skip Step 2, but Agent B assumes Step 2 always happens in order to execute Step 3, you have a ticking time bomb.
+
+Allowing logical dependencies to resolve *after* asset generation begins creates an unpredictable application state.
+
+## The Solution: The Deterministic Gate
+
+The only way to scale AI autonomy in production without breaking things is to strictly separate **decision-making** from **execution**.
+
+We implemented what we call a **Gate 1 (Frozen Decision Matrix)**.
+
+It works like this:
+1. The orchestrator proposes all the assets to be generated that day (Blog, LinkedIn, X.com, Carousels, Videos).
+2. It validates **matrix coherence**: If you declare a PDF carousel, the system immediately enforces the mandatory generation of a cover and alt text. If you declare there will be no blog, it adjusts the linter rules so it does not demand the physical OG image.
+3. It stops and waits for human approval.
+4. **Once approved, the matrix is frozen.** No downstream agent can alter which assets will be built.
+
+The drafting agent no longer makes structural decisions; it only executes the contract that was frozen in Gate 1.
+
+## Bonus Bug: Playwright and Invisible Dependencies
+
+Solving the orchestration led us to discover a fascinating bug in the visual rendering layer (Gate 3).
+
+We generate our LinkedIn carousels in HTML and use Playwright to export them to PDF headlessly. After the incident, we noticed some words in the PDFs were merging, collapsing the spaces.
+
+After debugging Playwright's Chromium rendering engine, we discovered two things:
+1. If you use a negative letter-spacing smaller than `-0.019em`, Playwright collapses characters in the final PDF if the font is not embedded correctly.
+2. The font dependency cannot be implicit. We had to force load the `Inter` font family directly from Google Fonts in the HTML `<head>` and set a hard limit on letter-spacing.
+
+It is another example of how implicit dependencies (trusting the host OS has the font) break automated processes.
+
+## Conclusion
+
+Artificial Intelligence is a brilliant execution tool, but a terrible pipeline architect at runtime.
+
+If you are building automated flows with AI:
+1. **Freeze state early.** Decide *what* you are going to build before writing a single line of code or content.
+2. **Make dependencies explicit.** If an asset depends on another, validate it in the planning phase, not during the build.
+3. **Use Gates.** An agent flow without static checkpoints (Gates) is not an autonomous system; it is a high-speed technical debt generator.
+
+Control the contract, and let the AI handle the rest.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
