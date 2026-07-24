@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-05-21T12:02:28.868524",
+  "generated_at": "2026-07-24T18:00:22.864504",
   "source": "engram-unified",
   "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
-  "total_memories": 1460,
+  "total_memories": 8102,
   "projects": {
-    "examya": 862,
-    "personal": 540,
-    "marioLanding": 13,
-    "estepa": 24,
-    "blog": 21
+    "examya": 5979,
+    "personal": 1767,
+    "marioLanding": 113,
+    "estepa": 221,
+    "blog": 22
   },
   "observations": [
     {
@@ -25,7 +25,7 @@
       "title": "Completed portfolio redesign with WOW factor",
       "type": "architecture",
       "topic_key": "architecture/portfolio-redesign",
-      "project": "marioLanding",
+      "project": "mariolanding",
       "updated_at": "2026-03-31 10:01:24",
       "content": "**What**: Rewrote all page templates (index.astro, [slug].astro, news/index.astro) to use the design system CSS variables instead of hardcoded zinc-* Tailwind classes. Replaced all emoji icons with inline SVGs. Added WOW-factor hero with gradient mesh background, grid pattern overlay, status badge, and scroll indicator.\n\n**Why**: User said the site \"se ve demasiado básica\" — needed to level up the visual design to match modern dark mode UI patterns (Linear/Vercel style).\n\n**Where**: portfolio/src/pages/index.astro, portfolio/src/pages/projects/[slug].astro, portfolio/src/pages/news/index.astro, portfolio/public/favicon.svg\n\n**Learned**: \n- Using inline `style` with CSS vars + `onmouseover`/`onmouseout` for hover states avoids Tailwind class proliferation with CSS variables\n- Glass-card cla"
     },
@@ -43,7 +43,7 @@
       "title": "Implemented Astro native i18n ES/EN with URL routing",
       "type": "architecture",
       "topic_key": "architecture/i18n",
-      "project": "marioLanding",
+      "project": "mariolanding",
       "updated_at": "2026-04-02 12:04:07",
       "content": "**What**: Added full ES/EN internationalization to the Astro 6 portfolio using URL-based routing (no JS toggle). Spanish at `/`, English at `/en/`.\n\n**Why**: SEO-friendly i18n — Google indexes both languages independently. Client-side toggle was rejected.\n\n**Where**:\n- `src/i18n/ui.ts` — all translation strings (ES + EN)\n- `src/i18n/utils.ts` — `getLang(pathname)`, `useTranslations(lang)`, `getAlternatePath()`, `basePath()`\n- `src/components/LangSwitch.astro` — ES/EN pill toggle in nav (desktop + mobile)\n- `src/layouts/Base.astro` — detects lang from URL, adds `<html lang>`, hreflang SEO tags, LangSwitch\n- `src/content.config.ts` — added `lang: z.enum(['es','en']).default('es')` and `canonicalSlug` to blog schema\n- `src/pages/index.astro` — uses `useTranslations('es')`\n- `src/pages/blog/in"
     },
