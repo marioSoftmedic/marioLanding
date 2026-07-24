@@ -1,0 +1,89 @@
+---
+title: "Three layers for a clinical roadmap"
+description: "Examya/Fhirex's Q3 roadmap separates infrastructure, B2B interoperability, and product to make their dependencies visible."
+date: 2026-07-23
+lang: "en"
+image: "/img/blog/tres-capas-roadmap-interoperabilidad-clinica.png"
+tags: [examya, interoperability, architecture, b2b]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 18
+related: [2026-06-30-estrategia-adapter-layer-lis-legacy-fhir, 2026-06-11-checklist-interoperabilidad-ley-21668-clinicas]
+canonicalSlug: "2026-07-23-tres-capas-roadmap-interoperabilidad-clinica"
+audience: "healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 3
+---
+
+## 1. The Hook
+
+While organizing Examya/Fhirex's Q3 roadmap, an unglamorous problem surfaced: infrastructure, interoperability, and product all wanted to move at once.
+
+Each workstream had a valid reason. The issue was not choosing one over another. Several product modules depended on capabilities that had not yet been resolved underneath.
+
+Building from Patagonia, when I see a roadmap like this, I do not start with dates. I start with what part of the plan supports the next one.
+
+## 2. What People Miss
+
+It is easy to call every pending initiative “parallel work.” But two initiatives can run in parallel only when their contracts, permissions, data, and flows do not block each other.
+
+In healthcare, that independence cannot be assumed. A module may look ready in a demo while it still relies on incomplete authorization, an insecure flow, or an integration without a clear boundary.
+
+The conflict is not visible in the task list. It appears later, when an infrastructure change forces integration work to be redone and product has to wait.
+
+## 3. The Real Data
+
+The internal Q3 map is organized in three layers:
+
+1. Infrastructure and security.
+2. B2B interoperability.
+3. Product.
+
+The first layer contains the foundations: the Core-CL SDK, discovery, authorization, and intent-router fixes. The second adds interoperability capabilities such as CIE-10, HAPI, and scheduling adapters.
+
+Product modules —Claims, Privacy Dashboard, and Docs Portal— are constrained by that earlier work. This is not a delivery forecast or a shipping promise. It is an explicit roadmap dependency.
+
+## 4. What We Built
+
+We did not build a longer list. We reordered the map so that each layer answers a different question.
+
+The foundations layer asks whether the system has the security and platform conditions to support what follows. The integration layer asks which B2B contract can be exposed on that base. The product layer asks which module makes sense once the prior two exist.
+
+That leads to a more useful conversation between product and architecture: before debating “what ships first,” we review “what enables what.”
+
+## 5. The Gotcha
+
+The trap was believing that speed came from opening all three workstreams as widely as possible. Without visible dependencies, each team can optimize its own task and make the overall system worse.
+
+```text
+Product → Interoperability → Infrastructure
+```
+
+Reading that arrow from right to left prevents a common mistake: prioritizing product does not remove its preconditions. If infrastructure or interoperability changes later, product absorbs the rework.
+
+The sequence is intended to avoid building in parallel on insecure flows, creating conflicts, and adding rework. It is a design objective, not a measured outcome yet.
+
+## 6. Zoom Out
+
+This pattern is not unique to Examya/Fhirex, nor is it a universal recipe for a clinic. It is a way to make dependencies visible when they are usually hidden between backlog, architecture, and commercial conversations.
+
+In clinical interoperability, a roadmap does more than arrange deliveries. It also shows where an internal capability ends and where a promise should not yet be made.
+
+That distinction matters: this map does not demonstrate regulatory compliance, production integration, or clinical outcomes. It documents an internal planning decision.
+
+## 7. What Comes Next
+
+The next step is to use this map to review every product module against its infrastructure and interoperability dependencies before opening more work.
+
+The operating question is simple: what evidence is missing before the preceding layer can be considered enabled? If we cannot answer it, the roadmap needs clarification before it grows.
+
+## 8. CTA
+
+Does your roadmap distinguish foundations, integration, and product, or does everything compete in parallel?
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

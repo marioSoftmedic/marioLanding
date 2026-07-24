@@ -1,0 +1,89 @@
+---
+title: "Tres capas para ordenar un roadmap clínico"
+description: "El roadmap Q3 de Examya/Fhirex separa infraestructura, interoperabilidad B2B y producto para hacer visibles sus dependencias."
+date: 2026-07-23
+lang: "es"
+image: "/img/blog/tres-capas-roadmap-interoperabilidad-clinica.png"
+tags: [examya, interoperability, architecture, b2b]
+status: published
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 18
+related: [2026-06-30-estrategia-adapter-layer-lis-legacy-fhir, 2026-06-11-checklist-interoperabilidad-ley-21668-clinicas]
+audience: "healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "resource"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 3
+---
+
+## 1. El Hook
+
+Al ordenar el roadmap Q3 de Examya/Fhirex apareció un problema poco glamoroso: infraestructura, interoperabilidad y producto estaban pidiendo avanzar al mismo tiempo.
+
+Cada frente tenía una razón válida. El problema no era priorizar uno contra otro. Era que varios módulos de producto dependían de capacidades que todavía no estaban resueltas debajo.
+
+Desde Patagonia, cuando miro un roadmap así, no pienso primero en fechas. Pienso en qué parte del plano sostiene a la siguiente.
+
+## 2. Lo que nadie cuenta
+
+Es fácil llamar “paralelo” a todo el trabajo pendiente. Pero dos iniciativas pueden correr en paralelo solo si sus contratos, permisos, datos y flujos no se bloquean entre sí.
+
+En salud, esa independencia no se puede asumir. Un módulo puede verse listo en una demo y seguir apoyado sobre una autorización incompleta, un flujo inseguro o una integración que aún no tiene un límite claro.
+
+El conflicto no aparece en la lista de tareas. Aparece después, cuando un cambio de infraestructura obliga a rehacer la integración y el producto queda esperando.
+
+## 3. Los datos reales
+
+El mapa interno Q3 quedó organizado en tres capas:
+
+1. Infraestructura y seguridad.
+2. Interoperabilidad B2B.
+3. Producto.
+
+La primera capa concentra los cimientos: SDK Core-CL, discovery, autorización y correcciones del router de intención. La segunda incorpora capacidades de interoperabilidad como CIE-10, HAPI y adapters de agendamiento.
+
+Los módulos de producto —Claims, Privacy Dashboard y Docs Portal— están condicionados por ese trabajo previo. No es una estimación de tiempo ni una promesa de entrega. Es una dependencia explícita del roadmap.
+
+## 4. Lo que construiste
+
+No construimos una lista más larga. Reordenamos el mapa para que cada capa responda una pregunta distinta.
+
+La capa de cimientos pregunta si el sistema tiene las condiciones de seguridad y plataforma para soportar lo que sigue. La capa de integración pregunta qué contrato B2B puede exponerse sobre esa base. La capa de producto pregunta qué módulo tiene sentido habilitar cuando las dos anteriores existen.
+
+El resultado es una conversación más útil con producto y arquitectura: antes de discutir “qué sale primero”, revisamos “qué habilita a qué”.
+
+## 5. El gotcha
+
+La trampa fue creer que la velocidad venía de abrir los tres frentes al máximo. En realidad, sin dependencias visibles, cada equipo puede optimizar su propia tarea y empeorar el sistema completo.
+
+```text
+Producto → Interoperabilidad → Infraestructura
+```
+
+Leer esa flecha de derecha a izquierda evita una confusión frecuente: priorizar producto no elimina sus precondiciones. Si infraestructura o interoperabilidad cambian después, el producto absorbe el retrabajo.
+
+La secuencia busca evitar construir sobre flujos inseguros, generar conflictos y sumar retrabajo. Es un objetivo de diseño, no un resultado medido todavía.
+
+## 6. Zoom out
+
+Este patrón no es exclusivo de Examya/Fhirex ni pretende ser una receta universal para una clínica. Es una forma de hacer visibles dependencias que suelen quedar escondidas entre backlog, arquitectura y conversaciones comerciales.
+
+En interoperabilidad clínica, un roadmap no solo ordena entregas. También expone dónde termina una capacidad interna y dónde empieza una promesa que todavía no corresponde hacer.
+
+Esa distinción importa: este mapa no acredita cumplimiento normativo, integración productiva ni resultados clínicos. Describe una decisión interna de planificación.
+
+## 7. Lo que viene
+
+El siguiente paso es usar este mapa para revisar cada módulo de producto contra sus dependencias de infraestructura e interoperabilidad antes de abrir más trabajo.
+
+La pregunta operativa será simple: ¿qué evidencia falta para considerar habilitada la capa anterior? Si no podemos responderla, el roadmap necesita aclararse antes de crecer.
+
+## 8. CTA
+
+¿Tu roadmap distingue cimientos, integración y producto, o todo compite en paralelo?
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
