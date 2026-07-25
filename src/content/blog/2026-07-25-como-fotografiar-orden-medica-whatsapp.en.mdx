@@ -1,0 +1,44 @@
+---
+title: "How to Photograph Your Medical Order for Frictionless WhatsApp Quoting"
+description: "OCR systems and validation teams need a clear image to process your medical exams. Follow these 3 simple steps to avoid delays."
+date: 2026-07-25
+lang: "en"
+image: "/img/blog/como-fotografiar-orden-medica-whatsapp.png"
+tags: [Health, AI, Examya]
+draft: false
+audience: "patients"
+funnelStage: "awareness"
+primaryCta: "contact"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 0
+series: "examya"
+seriesOrder: 13
+canonicalSlug: "2026-07-25-como-fotografiar-orden-medica-whatsapp"
+---
+
+## 1. El Hook
+It is Saturday morning. You need to quote some medical exams ordered by your specialist. You open WhatsApp, take a quick photo of the crumpled paper on your bedsheet, send it to the Examya channel, and the system replies asking for a new image. You wonder why artificial intelligence stumbles over something so simple.
+
+## 2. Lo que nadie cuenta
+Behind that WhatsApp reply is an artificial intelligence engine (an OCR) and a team of human validators working in parallel. In healthcare, clinical precision is always above blind speed. If the system does not have a high level of confidence in reading an exam, the correct guardrail is to stop and ask for clarification instead of guessing an incorrect quote. The OCR cannot guess what it cannot see.
+
+## 3. Los datos reales
+Upon reviewing Examya support logs from the past few weeks, we identified that more than 40% of image re-requests are not due to the quality of the patient's camera, but rather simple lighting and framing errors. Stamps covering the doctor's signature, wrinkles cutting off key characters, or the phone's own shadow blocking the text are the primary causes triggering the automated rejection for lack of legibility.
+
+## 4. Lo que construiste
+To mitigate this, we implemented a validator in the Examya admission flow that checks for the presence of essential components before passing the image to the extraction pipeline. Using processing logic in NestJS, the system scans for text bounding boxes in critical zones to ensure that the patient's RUT (ID), the detail of the exams, and the doctor's signature/stamp are within the frame analyzed by the OCR.
+
+## 5. El gotcha
+The real technical issue occurred when photos came in with a heavy shadow in the center. The OCR engine processed the image but returned broken characters or incomplete FONASA codes, causing a schema mismatch in the backend. The solution was not to force the engine to guess, but to program a local contrast validator that analyzes the lighting before sending the image to the heavy extraction service.
+
+## 6. Zoom out
+Helping the artificial intelligence read your medical order reduces administrative reprocessing for clinics and partner laboratories. This means fewer clarification phone calls, less time spent at the front desk, and an accurate quote. It is a shared effort where a better capture by the patient enables an ultra-fast automated workflow.
+
+## 7. Lo que viene
+The next step in the Examya backlog is to incorporate an interactive guide within the WhatsApp flow itself. The bot will send a quick animated visual guide with examples of good and bad captures the moment it detects an image was rejected, reducing the re-sending friction for the patient.
+
+## 8. CTA
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

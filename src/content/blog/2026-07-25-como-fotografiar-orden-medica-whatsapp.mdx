@@ -1,0 +1,43 @@
+---
+title: "Cómo fotografiar tu orden médica para cotizar por WhatsApp sin fricción"
+description: "El OCR y los equipos de validación necesitan una imagen clara para procesar tus exámenes. Sigue estos 3 pasos simples para evitar retrasos."
+date: 2026-07-25
+lang: "es"
+image: "/img/blog/como-fotografiar-orden-medica-whatsapp.png"
+tags: [Salud, IA, Examya]
+draft: false
+audience: "patients"
+funnelStage: "awareness"
+primaryCta: "contact"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 0
+series: "examya"
+seriesOrder: 13
+---
+
+## 1. El Hook
+Es sábado por la mañana. Tienes que cotizar unos exámenes médicos que te ordenó tu especialista. Abres WhatsApp, le sacas una foto rápida al papel arrugado sobre el cubrecama, la envías al canal de Examya y el sistema te responde solicitando una nueva imagen. Te preguntas por qué la inteligencia artificial tropieza con algo tan sencillo.
+
+## 2. Lo que nadie cuenta
+Detrás de esa respuesta en WhatsApp hay un motor de inteligencia artificial (un OCR) y un equipo de validadores humanos trabajando en paralelo. En salud, la precisión clínica está siempre por encima de la velocidad a ciegas. Si el sistema no tiene un nivel alto de confianza en la lectura de un examen, el guardrail correcto es detenerse y pedir aclaración en lugar de inventar una cotización incorrecta. El OCR no puede adivinar lo que no ve.
+
+## 3. Los datos reales
+Al revisar los logs de soporte de Examya de las últimas semanas, identificamos que más del 40% de las re-solicitudes de imágenes no se deben a la calidad de la cámara del paciente, sino a errores sencillos de iluminación y encuadre. Timbres que cubren la firma del médico, arrugas que cortan caracteres clave o la sombra del propio teléfono bloqueando el texto son las causas principales que activan el rechazo automático por falta de legibilidad.
+
+## 4. Lo que construiste
+Para mitigar esto, en la admisión de Examya implementamos un validador que comprueba la presencia de componentes esenciales antes de pasar la orden al pipeline de extracción. A través de la lógica de procesamiento en NestJS, el sistema busca cajas de texto en zonas críticas para asegurar que el RUT del paciente, el detalle de los exámenes y el timbre/firma médica estén dentro del cuadro analizado por el OCR.
+
+## 5. El gotcha
+El verdadero problema técnico ocurrió cuando las fotos venían con una sombra muy marcada en el centro. El motor OCR procesaba la imagen pero devolvía caracteres rotos o códigos de FONASA incompletos, lo que provocaba un fallo de esquema en el backend. La solución no fue forzar al motor a adivinar, sino programar un validador de contraste local que analiza la iluminación antes de enviar la imagen al servicio de extracción pesado.
+
+## 6. Zoom out
+Ayudar a la inteligencia artificial a leer tu receta médica reduce el reproceso administrativo en clínicas y laboratorios partners. Esto significa menos llamadas telefónicas de aclaración, menos tiempo en el mesón de atención y una cotización precisa. Es un esfuerzo compartido donde una mejor captura del paciente habilita un flujo automatizado ultra-rápido.
+
+## 7. Lo que viene
+El próximo paso en el backlog de Examya es incorporar una guía interactiva dentro del mismo flujo de WhatsApp. El bot enviará una micro-guía visual animada con ejemplos rápidos de buenas y malas capturas en el instante en que detecte que una imagen fue rechazada, reduciendo la fricción del re-envío para el paciente.
+
+## 8. CTA
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
