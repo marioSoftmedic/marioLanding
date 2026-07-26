@@ -1,0 +1,60 @@
+---
+title: "La falla silenciosa en tu orquestación de IA: Prompts vs. Esquemas Zod"
+description: "Cuando un agente de IA falla silenciosamente en producción porque su prompt y su esquema de validación no coinciden sintácticamente. Lecciones de la PR #1522 sobre observabilidad y validación tolerante."
+date: 2026-07-26
+image: "/img/blog/2026-07-26-intent-router-zod-mismatch.png"
+tags: ["ai", "agents", "architecture", "automation"]
+series: "agentes"
+seriesOrder: 21
+---
+
+Cuando construyes agentes de inteligencia artificial para producción, la frontera más frágil no es la alucinación creativa o que el modelo empiece a filosofar. La frontera más frágil es, por lejos, el tipo de dato.
+
+Hace unas semanas nos enfrentamos a un bug sumamente instructivo en Shuri, el bot de WhatsApp de Examya. Nuestro enrutador de intenciones (el `IntentRouter`) caía repetidamente a sus expresiones regulares de fallback. El bot seguía respondiendo y la experiencia de usuario se mantenía a salvo, pero de fondo, el motor de análisis estructurado estaba completamente apagado.
+
+¿La causa? Un mismatch sintáctico invisible entre lo que le pedíamos al LLM en el prompt del sistema y lo que esperábamos en el esquema de validación de Zod.
+
+## El mismatch invisible
+
+El enrutamiento de Shuri depende de que el LLM clasifique la intención del paciente (cotizar, comprar, saludar, etc.) de manera estructurada. Para asegurar que la salida cumpla con la interfaz de nuestro backend, utilizamos Zod para parsear el JSON retornado por el modelo.
+
+El error ocurrió debido a una discrepancia en la capitalización:
+- El `SYSTEM_PROMPT` le daba ejemplos al modelo y le pedía clasificar la intención en mayúsculas (ej. `QUOTE`, `PURCHASE`).
+- El esquema estricto de Zod (`IntentDecisionSchema`) validaba los intents usando un enum en minúsculas (ej. `quote`, `purchase`).
+
+El modelo, siguiendo las instrucciones al pie de la letra, devolvía `"intent": "QUOTE"`. Pero Zod, al ser estricto, fallaba de inmediato el parseo porque `"QUOTE"` no coincidía con `"quote"`. 
+
+Como el IntentRouter tenía un bloque `try/catch` que atrapaba el error pero caía a un fallback basado en expresiones regulares genéricas sin loguear la falla del parseador, el sistema operaba a ciegas.
+
+## La caída ciega a fallbacks
+
+Los mecanismos de fallback son excelentes para dar resiliencia al software, pero se vuelven peligrosos cuando enmascaran fallas del sistema de manera indefinida. 
+
+Al no contar con observabilidad real sobre los errores del validador, el hecho de que Zod fallara en el 100% de las respuestas estructuradas pasó desapercibido por días. El sistema funcionaba a medias gracias a las expresiones regulares, pero perdiendo toda la riqueza del análisis semántico y el mapeo de entidades (como síntomas o IDs nacionales).
+
+## La solución en la PR #1522
+
+Para solucionar este incidente en producción y asegurar que no volviera a ocurrir de forma silenciosa, implementamos tres principios de resiliencia en la validación de agentes:
+
+1. **Normalización previa antes de validar:**
+   Antes de pasar el JSON de salida del LLM al validador de Zod, el sistema ahora normaliza los strings. Coercionamos a minúsculas y mapeamos sinónimos comunes en español (ej. "cotizacion" o "cotizar" a `quote`) para neutralizar la variabilidad natural del modelo.
+
+2. **Tipado flexible con valores por defecto:**
+   Hicimos opcionales los campos no críticos dentro del esquema de Zod (como `symptoms` y `entities`). Si el LLM omite estos campos en respuestas cortas, Zod no lanza una excepción; simplemente inyecta valores vacíos o seguros por defecto.
+
+3. **Observabilidad explícita del parseador:**
+   Reemplazamos los `catch` mudos por logging estructurado que graba exactamente tres elementos: el JSON crudo retornado por el LLM, el objeto parcial que logramos parsear y el error sintáctico de Zod. Si el validador vuelve a fallar, ahora podemos ver la causa raíz al instante en Railway.
+
+## Conclusión
+
+El lenguaje humano es inherentemente flexible, pero el código es determinístico y estricto. Cuando integras ambos mundos a través de un esquema de validación:
+
+1. **Tus esquemas deben ser estrictos, pero tu pipeline de entrada debe ser tolerante.** Normaliza los formatos antes de aplicar la validación de tipos.
+2. **Nunca silencies un parseador de IA.** Un fallback silencioso es el caldo de cultivo ideal para errores persistentes en producción.
+3. **Mide la salud del tipado.** Monitorea la tasa de éxito de tus validadores de esquemas; si tu fallback regex se activa demasiado, tu prompt o tu código están desalineados.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

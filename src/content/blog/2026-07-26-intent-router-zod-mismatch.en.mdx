@@ -1,0 +1,62 @@
+---
+title: "The Silent Failure in Your AI Orchestration: Prompts vs. Zod Schemas"
+description: "When an AI agent fails silently in production because its system prompt and its validation schema do not align syntactically. Lessons from PR #1522 on observability and tolerant validation."
+date: 2026-07-26
+lang: "en"
+canonicalSlug: "2026-07-26-intent-router-zod-mismatch"
+image: "/img/blog/2026-07-26-intent-router-zod-mismatch.png"
+tags: ["ai", "agents", "architecture", "automation"]
+series: "agentes"
+seriesOrder: 21
+---
+
+When building artificial intelligence agents for production, the most fragile boundary is not creative hallucination or the model starting to philosophize. The most fragile boundary is, by far, the data type.
+
+A few weeks ago, we faced a highly instructive bug in Shuri, Examya's WhatsApp bot. Our intent router (`IntentRouter`) was repeatedly falling back to its auxiliary regular expressions. The bot kept responding and the user experience remained safe, but under the hood, the structured parsing engine was completely turned off.
+
+The cause? An invisible syntactic mismatch between what we asked the LLM in the system prompt and what we expected in the Zod validation schema.
+
+## The Invisible Mismatch
+
+Shuri's routing relies on the LLM classifying the patient's intent (quote, purchase, greet, etc.) in a structured way. To ensure that the output complies with our backend's interface, we use Zod to parse the JSON returned by the model.
+
+The error occurred due to a capitalization discrepancy:
+- The `SYSTEM_PROMPT` provided examples to the model and asked it to classify the intent in uppercase (e.g., `QUOTE`, `PURCHASE`).
+- The strict Zod schema (`IntentDecisionSchema`) validated intents using a lowercase enum (e.g., `quote`, `purchase`).
+
+The model, following instructions to the letter, returned `"intent": "QUOTE"`. But Zod, being strict, immediately failed the parsing because `"QUOTE"` did not match `"quote"`.
+
+Since the `IntentRouter` had a `try/catch` block that caught the error but fell back to a generic regex-based logic without logging the parser failure, the system was operating blindly.
+
+## The Blind Fallback
+
+Fallback mechanisms are excellent for adding resilience to software, but they become dangerous when they mask system failures indefinitely.
+
+Without real observability of the validator errors, the fact that Zod failed on 100% of the structured responses went unnoticed for days. The system was functioning partially thanks to regular expressions, but losing all the richness of semantic analysis and entity mapping (like symptoms or national IDs).
+
+## The Solution in PR #1522
+
+To resolve this production incident and ensure it wouldn't happen silently again, we implemented three principles of resilience in agent validation:
+
+1. **Pre-Validation Normalization:**
+   Before passing the LLM's output JSON to the Zod validator, the system now normalizes strings. We coerce to lowercase and map common Spanish synonyms (e.g., "cotizacion" or "cotizar" to `quote`) to neutralize the model's natural variability.
+
+2. **Flexible Typing with Safe Defaults:**
+   We made non-critical fields within the Zod schema optional (such as `symptoms` and `entities`). If the LLM omits these fields in short responses, Zod does not throw an exception; it simply injects empty or safe default values.
+
+3. **Explicit Parser Observability:**
+   We replaced mute `catch` blocks with structured logging that records exactly three elements: the raw JSON returned by the LLM, the partial object we managed to parse, and the Zod syntactic error. If the validator fails again, we can now see the root cause instantly in Railway.
+
+## Conclusion
+
+Human language is inherently flexible, but code is deterministic and strict. When you integrate both worlds through a validation schema:
+
+1. **Your schemas must be strict, but your input pipeline must be tolerant.** Normalize formats before applying type validation.
+2. **Never silence an AI parser.** A silent fallback is the ideal breeding ground for persistent bugs in production.
+3. **Measure typing health.** Monitor the success rate of your schema validators; if your regex fallback is triggering too often, your prompt or your code are misaligned.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
