@@ -1,0 +1,80 @@
+---
+title: "Why Your Clinic Calendar Needs WhatsApp Interoperability: The Logic of No-Shows"
+description: "How real integration between the clinical calendar and WhatsApp automates 24-hour reminders and reduces no-shows in 15 minutes without spamming patients."
+date: 2026-07-27
+lang: "en"
+image: "/img/blog/triggers-calendario-citas.png"
+tags: [Health, AI, Examya, Interoperability]
+draft: false
+series: "examya"
+seriesOrder: 14
+related: [2026-07-10-trampa-24-horas-whatsapp-agente-proactivo, 2026-06-01-portales-resultados-legacy-vs-whatsapp-examya]
+canonicalSlug: "2026-07-27-triggers-calendario-citas"
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+Patient absenteeism is a constant drain on any Chilean clinic's OPEX. When a 20-minute appointment slot goes empty because someone forgot, it’s not just that single consultation that is lost: the specialist’s productivity stalls, the waiting list for other patients grows, and administrative staff waste valuable time making phone calls to reschedule.
+
+The traditional issue with automated SMS or email reminders is that they act as one-way horns. They notify the patient, but they do not allow them to act or interact with the schedule in real time. To solve this, we connected our partner health centers' calendars directly to Shuri's conversational engine on WhatsApp using the `check_calendar_triggers` production cron.
+
+## Three Time-Aware Triggers
+
+Effective automation in healthcare is not about blast messaging; it is about synchronizing communication with the actual appointment timeline. In the Examya backend, the orchestration engine divides the schedule lifecycle into three critical time windows:
+
+1. **The 24-Hour Reminder:** Patients receive an interactive message one day before their exam. The interface provides two direct options: confirm attendance or request rescheduling. Tapping a button updates the clinic's HIS status natively.
+2. **The 15-Minute No-Show Control:** If a patient fails to check in physically or digitally within the first 15 minutes of their scheduled time, the cron detects the delay. It generates an immediate alert in our system, allowing staff to free up the slot or reschedule urgent care.
+3. **The 20-Minute Post-Appointment Follow-up:** Twenty minutes after an appointment ends, the system automatically starts a follow-up flow. At this point, if the patient needs additional laboratory work, they can photograph their medical order and receive a quote in less than two minutes.
+
+## The Infrastructure Behind the Calendar
+
+To guarantee patient privacy under Chile's Ley 21.719 standards, alerts are never sent directly to Meta's Cloud API. Instead, each calendar trigger creates a record in an audit model called `MessageApproval`.
+
+This model acts as an intermediate control layer. Our clinical and administrative teams can review outgoing messages before they hit WhatsApp to verify there are no scheduling anomalies and that we are not transmitting sensitive data outside the official channel. If approved, the message is dispatched using the corresponding interactive template.
+
+```typescript
+// Simplified calendar trigger implementation for no-shows
+async function handleNoShowTrigger(appointmentId: string, startTime: Date) {
+  const diffMinutes = differenceInMinutes(new Date(), startTime);
+  
+  if (diffMinutes >= 15 && diffMinutes < 30) {
+    const appointment = await db.appointment.findUnique({
+      where: { id: appointmentId },
+      include: { patient: true }
+    });
+
+    if (appointment && appointment.status === 'PENDING_CHECKIN') {
+      await db.messageApproval.create({
+        data: {
+          patientId: appointment.patientId,
+          triggerType: 'CALENDAR_NO_SHOW',
+          status: 'PENDING_REVIEW',
+          payload: {
+            phone: appointment.patient.phone,
+            templateName: 'appointment_no_show_recovery',
+            vars: [appointment.patient.name, format(startTime, 'HH:mm')]
+          }
+        }
+      });
+    }
+  }
+}
+```
+
+## The Proactivity Trade-off
+
+During the development of this feature, we learned that proactivity can easily turn into spam if not handled carefully. If a patient has multiple exams scheduled for the same day, a sloppy design would send three or four separate confirmation messages.
+
+The solution was to consolidate concurrent appointments into a single unified messaging block. The `check_calendar_triggers` logic groups appointments for the same patient under a single conversational session, ensuring the user receives only one interactive message detailing their entire itinerary for the day.
+
+## The Next Operational Step
+
+Our goal is to automate full interactive rescheduling directly within WhatsApp. Currently, when a patient indicates they cannot attend, the alert is sent to the HIS for clinical staff to process manually. In the next sprint, the bot will directly offer three available time slots retrieved dynamically using the `get_doctor_availability` endpoint.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

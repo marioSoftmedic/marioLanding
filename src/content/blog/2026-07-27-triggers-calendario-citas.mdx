@@ -1,0 +1,79 @@
+---
+title: "Por qué tu agenda médica necesita interoperabilidad con WhatsApp: la lógica del no-show"
+description: "Cómo la integración real entre el calendario clínico y WhatsApp automatiza recordatorios de 24 horas y reduce no-shows en 15 minutos sin saturar a los pacientes."
+date: 2026-07-27
+lang: "es"
+image: "/img/blog/triggers-calendario-citas.png"
+tags: [Salud, IA, Examya, Interoperabilidad]
+draft: false
+series: "examya"
+seriesOrder: 14
+related: [2026-07-10-trampa-24-horas-whatsapp-agente-proactivo, 2026-06-01-portales-resultados-legacy-vs-whatsapp-examya]
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+El ausentismo de pacientes es un sangrado constante en el OPEX de cualquier centro médico en Chile. Cuando un bloque horario de 20 minutos queda vacío porque alguien olvidó su cita, no solo se pierde esa consulta: se detiene la productividad del especialista, aumenta la lista de espera de otros pacientes y el personal administrativo pierde tiempo llamando por teléfono para intentar reprogramar.
+
+El problema tradicional de los recordatorios automáticos por SMS o correo electrónico es que se comportan como bocinas unidireccionales. Le avisan al paciente, pero no le permiten actuar ni interactuar con la agenda en tiempo real. Para resolver esto, conectamos directamente el calendario de los centros de salud asociados con el motor conversacional de Shuri en WhatsApp mediante el cron de producción `check_calendar_triggers`.
+
+## Tres disparadores basados en el tiempo real
+
+La automatización efectiva en salud no consiste en disparar mensajes masivos, sino en sincronizar la comunicación con la realidad de la cita. En el backend de Examya, el proceso de orquestación divide el ciclo de vida de la agenda en tres ventanas temporales críticas:
+
+1. **El recordatorio de 24 horas:** El paciente recibe un mensaje interactivo un día antes del examen. La interfaz ofrece dos opciones directas: confirmar asistencia o solicitar reprogramación. Al presionar un botón, el estado se actualiza en el HIS de la clínica de forma nativa.
+2. **El control de no-show a los 15 minutos:** Si un paciente no realiza su check-in físico o digital dentro de los primeros 15 minutos de su hora agendada, el cron detecta el retraso. Genera una alerta inmediata en nuestro sistema que permite al personal liberar el cupo o reprogramar la atención de urgencia.
+3. **El follow-up pos-cita a los 20 minutos:** Veinte minutos después de que finalice la cita asignada en el calendario, el sistema inicia automáticamente un flujo de seguimiento. En este punto, si el paciente requiere exámenes complementarios, puede fotografiar su orden médica y cotizarla en menos de dos minutos.
+
+## La infraestructura detrás del calendario
+
+Para garantizar la privacidad de los pacientes bajo el estándar de la Ley 21.719, las alertas no se envían de forma directa a la API de Meta. Cada trigger de calendario crea un registro en un modelo de auditoría llamado `MessageApproval`.
+
+Este modelo actúa como una capa de control intermedio. Nuestro equipo clínico y administrativo puede revisar los mensajes antes de que salgan a WhatsApp para verificar que no existan inconsistencias o que no estemos enviando datos sensibles fuera del canal oficial. Si el mensaje es aprobado, se despacha utilizando la plantilla interactiva correspondiente.
+
+```typescript
+// Implementación simplificada del trigger de calendario para no-shows
+async function handleNoShowTrigger(appointmentId: string, startTime: Date) {
+  const diffMinutes = differenceInMinutes(new Date(), startTime);
+  
+  if (diffMinutes >= 15 && diffMinutes < 30) {
+    const appointment = await db.appointment.findUnique({
+      where: { id: appointmentId },
+      include: { patient: true }
+    });
+
+    if (appointment && appointment.status === 'PENDING_CHECKIN') {
+      await db.messageApproval.create({
+        data: {
+          patientId: appointment.patientId,
+          triggerType: 'CALENDAR_NO_SHOW',
+          status: 'PENDING_REVIEW',
+          payload: {
+            phone: appointment.patient.phone,
+            templateName: 'appointment_no_show_recovery',
+            vars: [appointment.patient.name, format(startTime, 'HH:mm')]
+          }
+        }
+      });
+    }
+  }
+}
+```
+
+## El trade-off de la proactividad
+
+Durante el desarrollo de esta característica aprendimos que la proactividad puede transformarse en spam si no se controla adecuadamente. Si un paciente tiene múltiples exámenes agendados el mismo día, un diseño descuidado enviaría tres o cuatro mensajes de confirmación separados.
+
+La solución fue consolidar las citas concurrentes en un único bloque de mensajería unificado. La lógica de `check_calendar_triggers` agrupa las horas del mismo paciente bajo una misma sesión conversacional, garantizando que el usuario solo reciba un mensaje interactivo detallando todo su itinerario del día.
+
+## El siguiente paso operacional
+
+Nuestra meta es automatizar la reprogramación interactiva completa sin salir de WhatsApp. Actualmente, cuando un paciente indica que no asistirá, la alerta viaja al HIS para que el personal clínico actúe manualmente. En el próximo sprint, el bot ofrecerá directamente tres bloques horarios disponibles recuperados dinámicamente mediante el endpoint `get_doctor_availability`.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
