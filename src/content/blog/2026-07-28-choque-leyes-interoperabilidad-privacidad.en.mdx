@@ -1,0 +1,64 @@
+---
+title: "The Inevitable Clash in Digital Health: Sharing by Law (21.668), Protecting Under Penalty (21.719)"
+description: "Why medical and IT directors in Chile are risking their personal assets by attempting to comply with mandatory interoperability using insecure channels or legacy APIs."
+date: 2026-07-28
+lang: "en"
+image: "/img/blog/choque-leyes-interoperabilidad-privacidad.png"
+tags: [Interoperabilidad, Salud, Examya, Cumplimiento]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 18
+canonicalSlug: "2026-07-28-choque-leyes-interoperabilidad-privacidad"
+related: [2026-07-27-triggers-calendario-citas, 2026-06-26-log-servidor-no-sirve-ley-21719-auditoria-examya]
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+Chile's digital health ecosystem is moving toward a silent regulatory collision. On one hand, **Law 21.668** imposes a mandate to interoperability clinical records, forcing healthcare providers to open their databases to allow patient medical information to flow between institutions. On the other hand, **Law 21.719** (the new personal data protection standard that comes into full effect on **December 1, 2026**) severely penalizes the improper processing or leakage of sensitive data, which in healthcare is classified as \"specially protected\" data.
+
+For medical directors, legal representatives, and IT leaders, the dilemma is critical: the law orders them to share information, but if they do so carelessly (using PDFs via email, direct integrations to databases without access controls, or insecure legacy APIs), they violate the data protection law. And this time, the consequences are not just corporate: the law exposes the **personal assets of directors** and raises fines up to **10,000 UTM**.
+
+## The End of Naivety: Consent Is Not a Shield
+
+A common mistake among healthcare institutions is to assume that a patient's consent signed on paper (or accepted in a generic website T&C) is sufficient to waive liability. Under the guidelines of Law 21.719, consent is only one of the legal bases and must be **free, informed, specific, unequivocal, and verifiable**.
+
+Relying solely on consent without implementing data governance mechanisms is a high-risk strategy. If a patient requests their **ARCO-P** rights (Access, Rectification, Cancellation, Opposition, and Portability), the clinic must be able to:
+1. Prove the exact flow that the sensitive data followed.
+2. Have an immutable Record of Processing Activities (RAT).
+3. Notify security incidents in minimal timeframes (up to 3 hours in environments connected to the cybersecurity infrastructure).
+
+Forced interoperability cannot be a blank check for vulnerability.
+
+## Anatomy of the Clash: How Clinical Data Travels
+
+The paradox materializes when a clinical laboratory or a specialty center attempts to connect to an external HIS (Hospital Information System) or LIS (Laboratory Information System) to send results or refer patients.
+
+```
+[LIS / Legacy Database] ──(Insecure API/PDF)──> [Open Internet] ──> [Data Leak] ──> 10,000 UTM Fine (Law 21.719)
+         │
+[Fhirex Adapter Layer (RLS + RAT)] ──(HL7 FHIR Standard)──> [Authorized HIS] ──> Secure Interoperability (Law 21.668)
+```
+
+If that connection exposes RUTs, diagnoses, or lab test histories in bulk through a simple HTTP API without database-level filtering, the provider fails to demonstrate proactive compliance (Accountability).
+
+At Examya, we address this intersection of laws through software design. Simply validating an API token in the application layer is not enough. We implement security at the data level:
+
+*   **Vector Isolation and RLS (Row Level Security):** We synchronize information across isolated schemas where RLS queries and pgvector indexes ensure that a doctor or AI agent can only access data strictly necessary and authorized for that specific patient.
+*   **Automated RAT in Database:** Every read of sensitive data generates an immutable clinical audit log in real-time.
+
+## Designing for the Worst-Case Scenario
+
+Complying with Law 21.668 is not optional, but complying with it while violating Law 21.719 is operational suicide. The solution is not to delay interoperability, but to build it with privacy as the first directive. Healthcare organizations must migrate from reactive IT models to \"Privacy by Design\" architectures, where data traceability is guaranteed by code, not by administrative promises.
+
+---
+
+## Checklist before marking `draft: false`
+
+- [x] Preflight applied: slot, type, audience, series, and concrete anchor
+- [x] `tags` uses only valid aliases from `_TAXONOMY.md`
+- [x] `series` and `seriesOrder` are set correctly
+- [x] `canonicalSlug` is set to the final ES slug (`2026-07-28-choque-leyes-interoperabilidad-privacidad`)

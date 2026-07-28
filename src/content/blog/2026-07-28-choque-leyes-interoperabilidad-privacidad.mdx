@@ -1,0 +1,65 @@
+---
+title: "El choque inevitable en salud digital: Compartir por ley (21.668), proteger bajo sanción (21.719)"
+description: "Por qué los directores médicos y de TI en Chile arriesgan su patrimonio personal al intentar cumplir la interoperabilidad obligatoria usando canales inseguros o APIs legacy."
+date: 2026-07-28
+lang: "es"
+image: "/img/blog/choque-leyes-interoperabilidad-privacidad.png"
+tags: [Interoperabilidad, Salud, Examya, Cumplimiento]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 18
+related: [2026-07-27-triggers-calendario-citas, 2026-06-26-log-servidor-no-sirve-ley-21719-auditoria-examya]
+audience: "clinical-lab-directors"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+El ecosistema de salud digital en Chile avanza hacia una colisión regulatoria silenciosa. Por un lado, la **Ley 21.668** impone el mandato de interoperar fichas clínicas, obligando a los prestadores de salud a abrir sus bases de datos para permitir que la información médica del paciente fluya entre instituciones. Por otro lado, la **Ley 21.719** (el nuevo estándar de protección de datos personales que entra en vigencia plena el **1 de diciembre de 2026**) penaliza severamente el tratamiento inadecuado o la fuga de datos sensibles, que en salud son catalogados como datos "especialmente protegidos".
+
+Para los directores médicos, representantes legales y líderes de TI, el dilema es crítico: la ley les ordena compartir la información, pero si lo hacen de forma descuidada (usando PDFs por correo, integraciones directas a bases de datos sin control de accesos, o APIs legacy inseguras), violan la ley de protección de datos. Y esta vez, las consecuencias no son solo corporativas: la ley expone el **patrimonio personal de los directivos** y eleva las multas hasta las **10.000 UTM**.
+
+## El fin de la ingenuidad: consentimiento no es escudo
+
+Un error común entre las instituciones de salud es asumir que el consentimiento del paciente firmado en un papel (o aceptado en un T&C genérico de la web) es suficiente para eximirse de responsabilidad. Bajo las directrices de la Ley 21.719, el consentimiento es solo una de las bases legales y debe ser **libre, informado, específico, inequívoco y verificable**. 
+
+Confiar únicamente en el consentimiento sin implementar mecanismos de gobernanza es una estrategia de alto riesgo. Si un paciente solicita sus derechos **ARCO-P** (Acceso, Rectificación, Cancelación, Oposición y Portabilidad), la clínica debe ser capaz de:
+1. Demostrar el flujo exacto que siguió ese dato sensible.
+2. Contar con un Registro de Actividades de Tratamiento (RAT) inmutable.
+3. Notificar incidentes de seguridad en tiempos mínimos (hasta 3 horas en entornos conectados a la infraestructura de ciberseguridad).
+
+La interoperabilidad forzada no puede ser un cheque en blanco para la vulnerabilidad.
+
+## La anatomía del choque: ¿Cómo viaja el dato clínico?
+
+La paradoja se materializa cuando un laboratorio clínico o un centro de especialidades intenta conectarse a un HIS (Hospital Information System) o LIS (Laboratory Information System) externo para enviar resultados o derivar pacientes. 
+
+```
+[LIS / Base de datos Legacy] ──(API insegura/PDF)──> [Internet Abierta] ──> [Fuga de datos] ──> Multa 10.000 UTM (Ley 21.719)
+         │
+[Capa Adapter Fhirex (RLS + RAT)] ──(Estándar HL7 FHIR)──> [HIS Autorizado] ──> Interoperabilidad Segura (Ley 21.668)
+```
+
+Si esa conexión expone el RUT, los diagnósticos o el historial de exámenes de forma masiva a través de una API HTTP simple sin filtrado a nivel de base de datos, el prestador incumple la proactividad del cumplimiento (Accountability). 
+
+En Examya abordamos esta intersección de leyes desde el diseño de software. No basta con validar un token de API en la capa de aplicación. Implementamos seguridad a nivel de datos:
+
+*   **Aislamiento Vectorial y RLS (Row Level Security):** Sincronizamos la información a través de esquemas aislados donde las consultas RLS y los índices pgvector aseguran que un médico o agente de IA solo pueda acceder a la data estrictamente necesaria y autorizada para ese paciente en particular.
+*   **RAT Automatizado en Base de Datos:** Cada lectura de un dato sensible genera un log inmutable de auditoría clínica en tiempo real. 
+
+## Diseñar para el peor escenario
+
+Cumplir con la Ley 21.668 no es opcional, pero cumplirla violando la Ley 21.719 es suicidio operacional. La solución no es retrasar la interoperabilidad, sino construirla con la privacidad como primera directriz. Las organizaciones de salud deben migrar de modelos reactivos de TI a arquitecturas "Privacy by Design", donde la trazabilidad del dato esté garantizada por código, no por promesas administrativas.
+
+---
+
+## Checklist antes de marcar `draft: false`
+
+- [x] Preflight editorial completo: slot AM/PM, tipo, audiencia, serie/standalone y ancla concreta
+- [x] `tags` usa solo aliases listados en `_TAXONOMY.md`
+- [x] Si toca Examya, Cerebro Digital, Interoperabilidad o Agentes, `series` y `seriesOrder` están seteados desde `_INDEX.md`
+- [x] Si quiero enlazar manualmente a otros posts, `related: [slug1, slug2]` (slugs sin `.md`)
+- [ ] Si es versión EN, `canonicalSlug` está seteado al slug ES final completo (`YYYY-MM-DD-...`)
+- [ ] Versión EN existe en el repo con `lang: "en"` y mismo `canonicalSlug`
