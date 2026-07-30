@@ -1,0 +1,104 @@
+---
+title: "La IA no debería decidir qué contenido clínico merece confianza"
+description: "El 26 de julio validamos una base técnica para separar catálogo, procedencia y revisión antes de decidir qué contenido puede indexarse."
+date: 2026-07-29
+lang: "es"
+image: "/img/blog/contenido-clinico-procedencia-verificable.png"
+tags: [IA, Agentes, Arquitectura, Salud Digital]
+status: published
+draft: false
+series: "agentes"
+seriesOrder: 22
+related: [2026-05-26-new-review-duplicate-guard-agente-contenido, 2026-05-28-ia-clinica-falla-por-el-dato-no-por-el-modelo]
+audience: "healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 0
+---
+
+# La IA no debería decidir qué contenido clínico merece confianza
+
+Un catálogo de exámenes puede tener nombres, códigos y precios. Eso no lo convierte en contenido clínico revisado.
+
+Tampoco demuestra que la fuente siga vigente, que una persona calificada haya evaluado el texto o que la página deba aparecer en buscadores.
+
+Ese límite parece obvio cuando se escribe en una pizarra. En un sistema con IA, bases de datos y publicación automática, es muy fácil borrarlo sin darse cuenta.
+
+## El problema empieza antes del modelo
+
+Cuando un agente encuentra un registro bien estructurado, tiende a tratarlo como conocimiento disponible. Pero estructura no equivale a autoridad.
+
+Un catálogo responde preguntas operativas: qué examen existe, cómo se identifica o cómo se relaciona con una cotización. El contenido clínico responde otras preguntas: de dónde viene la información, cuándo fue revisada, quién la revisó y hasta cuándo se considera vigente.
+
+Mezclar ambos dominios crea una inferencia peligrosa: "si está en la base de datos, merece confianza".
+
+La IA no debería resolver esa inferencia por similitud, confianza estadística ni calidad aparente de la redacción. Esa decisión necesita reglas explícitas y verificables.
+
+## La fundación que validamos
+
+El 26 de julio implementamos y validamos una primera unidad técnica para separar ambos dominios.
+
+La decisión principal fue no agregar metadata editorial directamente al catálogo. En su lugar, modelamos una relación separada para la procedencia y revisión del contenido asociado a un examen.
+
+Esa fundación contempla datos como:
+
+- la fuente del contenido y su versión;
+- la fecha de revisión;
+- la vigencia de la fuente;
+- la identidad del revisor cuando corresponda;
+- el estado necesario para evaluar elegibilidad de forma determinística.
+
+La validación incluyó una migración aditiva, validación del esquema y cuatro pruebas de integración sobre PostgreSQL descartable. También se verificó que los registros históricos del catálogo no recibieran una condición de "revisados" por defecto.
+
+Eso último importa mucho: cuando falta evidencia, el sistema debe conservar el estado desconocido. No inventar confianza para completar un campo.
+
+Esta es una fundación de datos validada. No significa que exista una experiencia pública, que todo el catálogo esté revisado ni que esta lógica esté desplegada.
+
+## El gotcha: una fuente vigente tampoco basta
+
+Durante el diseño apareció un segundo límite.
+
+Supongamos que un contenido tiene fuente, fecha vigente y revisor identificado. Aun así puede ser demasiado breve, incompleto o inútil para una decisión de publicación.
+
+Por eso aprobamos una política adicional: el contenido clínico insuficiente debe fallar cerrado. Tener metadata correcta no compensa un texto pobre.
+
+La regla conceptual queda así:
+
+```text
+catálogo disponible
+≠ contenido clínico revisado
+≠ contenido clínico vigente
+≠ contenido elegible para indexación
+```
+
+Cada transición necesita evidencia propia. Ningún modelo debería saltarse esas fronteras porque el resultado "parece correcto".
+
+## Qué debería decidir la IA
+
+La IA sí puede ayudar a detectar vacíos, comparar versiones, proponer una clasificación o preparar material para revisión.
+
+Pero la autoridad para convertir un registro en contenido confiable no debe vivir dentro de una inferencia opaca. Debe estar representada en el sistema mediante estados, relaciones y condiciones que puedan probarse.
+
+Es la misma diferencia entre pedirle a un agente que sugiera y permitirle que certifique. Lo primero puede acelerar el trabajo. Lo segundo exige una autoridad que el modelo no tiene.
+
+## Por qué importa más allá de Examya
+
+Este patrón se aplica a cualquier producto que combine catálogos con información sensible: medicamentos, prestaciones, seguros, protocolos o educación para pacientes.
+
+El error común es invertir primero en generación, búsqueda o posicionamiento y recién después preguntar qué contenido merecía entrar al sistema.
+
+La secuencia debería ser la contraria: procedencia, revisión, vigencia y suficiencia antes de distribución.
+
+No es una garantía clínica, de seguridad, de compliance ni de SEO. Es una frontera arquitectónica más honesta: impedir que disponibilidad técnica sea confundida con confianza.
+
+## Lo que viene
+
+El siguiente paso es conectar esta fundación con reglas compartidas de elegibilidad y probar los casos que deben quedar fuera: fuente vencida, revisor no verificable, contenido incompleto o ausencia de revisión.
+
+Solo después tiene sentido discutir hubs públicos, sitemaps o experiencias de descubrimiento. Primero se construye la autoridad del dato. Después se decide cómo mostrarlo.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

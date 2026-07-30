@@ -1,0 +1,105 @@
+---
+title: "AI Should Not Decide Which Clinical Content Deserves Trust"
+description: "On July 26, we validated a technical foundation that separates catalog data, provenance, and review before indexability decisions."
+date: 2026-07-29
+lang: "en"
+image: "/img/blog/contenido-clinico-procedencia-verificable.png"
+tags: [AI, Agents, Architecture, Digital Health]
+status: published
+draft: false
+canonicalSlug: "2026-07-29-contenido-clinico-procedencia-verificable"
+series: "agentes"
+seriesOrder: 22
+related: [2026-05-26-new-review-duplicate-guard-agente-contenido, 2026-05-28-ia-clinica-falla-por-el-dato-no-por-el-modelo]
+audience: "healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 0
+---
+
+# AI Should Not Decide Which Clinical Content Deserves Trust
+
+An exam catalog can contain names, codes, and prices. That does not make it reviewed clinical content.
+
+It also does not prove that the source is still current, that a qualified person evaluated the text, or that the page should appear in search engines.
+
+That boundary looks obvious on a whiteboard. In a system with AI, databases, and automated publishing, it is surprisingly easy to erase.
+
+## The problem starts before the model
+
+When an agent finds a well-structured record, it tends to treat it as available knowledge. But structure is not authority.
+
+A catalog answers operational questions: which exam exists, how it is identified, or how it connects to a quote. Clinical content answers different questions: where the information came from, when it was reviewed, who reviewed it, and how long its source remains current.
+
+Mixing those domains creates a dangerous inference: "if it is in the database, it deserves trust."
+
+AI should not resolve that inference through similarity, statistical confidence, or polished writing. The decision needs explicit and verifiable rules.
+
+## The foundation we validated
+
+On July 26, we implemented and validated a first technical unit that separates those domains.
+
+The main decision was not to add editorial metadata directly to the catalog. Instead, we modeled a separate relationship for the provenance and review of content associated with an exam.
+
+That foundation accounts for data such as:
+
+- the content source and its version;
+- the review date;
+- the source validity period;
+- the reviewer's identity when applicable;
+- the state required for deterministic eligibility evaluation.
+
+Validation included an additive migration, schema validation, and four integration tests against a disposable PostgreSQL database. We also verified that historical catalog records were not marked as reviewed by default.
+
+That last point matters: when evidence is missing, the system must preserve an unknown state. It must not invent trust to fill a field.
+
+This is a validated data foundation. It does not mean that a public experience exists, that every catalog record has been reviewed, or that this logic has been deployed.
+
+## The gotcha: a current source is still not enough
+
+A second boundary emerged during design.
+
+Suppose a piece of content has a source, a valid date, and an identified reviewer. It can still be too thin, incomplete, or useless for a publishing decision.
+
+That led to an additional approved policy: insufficient clinical content must fail closed. Correct metadata cannot compensate for weak content.
+
+The conceptual rule is simple:
+
+```text
+available catalog data
+!= reviewed clinical content
+!= current clinical content
+!= content eligible for indexing
+```
+
+Each transition needs its own evidence. No model should cross those boundaries because the result "looks right."
+
+## What AI should decide
+
+AI can help detect gaps, compare versions, propose classifications, or prepare material for review.
+
+But the authority to turn a record into trusted content should not live inside an opaque inference. It should be represented in the system through states, relationships, and conditions that can be tested.
+
+It is the difference between asking an agent to suggest and allowing it to certify. The first can accelerate work. The second requires authority the model does not have.
+
+## Why this matters beyond Examya
+
+This pattern applies to any product that combines catalogs with sensitive information: medicines, procedures, insurance plans, protocols, or patient education.
+
+The common mistake is to invest first in generation, retrieval, or discovery, then ask which content should have entered the system.
+
+The sequence should be reversed: provenance, review, validity, and sufficiency before distribution.
+
+This is not a clinical, security, compliance, or SEO guarantee. It is a more honest architectural boundary: availability must not be mistaken for trust.
+
+## What comes next
+
+The next step is to connect this foundation to shared eligibility rules and test every case that must remain excluded: expired sources, unverifiable reviewers, incomplete content, or missing review.
+
+Only then does it make sense to discuss public hubs, sitemaps, or discovery experiences. Build the authority of the data first. Decide how to display it second.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
