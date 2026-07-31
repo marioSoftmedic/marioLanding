@@ -1,0 +1,87 @@
+---
+title: "La impaciencia que rompe a tu IA: Condiciones de carrera en WhatsApp"
+description: "Cómo la impaciencia del usuario y los reintentos de red destruyen el contexto de los agentes de IA, y cómo solucionarlo con candados distribuidos en Redis."
+date: 2026-07-31
+lang: "es"
+image: "/img/blog/redis-locks-concurrencia-whatsapp.png"
+draft: false
+status: "published"
+category: "IA"
+tags: [ai, architecture, whatsapp, backend, examya]
+series: "agentes"
+seriesOrder: 23
+author: "Mario Inostroza"
+---
+
+## Preflight editorial
+- Fecha: 2026-07-31
+- Slot: AM
+- Día: Viernes
+- Pilar semanal: Founder / B2B Comunidad (Reflexión Builder)
+- Tipo: serie-planificada
+- Tema central: Escalando bots médicos en WhatsApp: Condiciones de carrera y locks distribuidos.
+- Ángulo: Cuando la impaciencia del usuario rompe el estado del LLM. Cómo los clics rápidos o reintentos de red destruyen el contexto, generando respuestas duplicadas o pérdida de datos clínicos, y cómo bloquearlo con Redis.
+- Audiencia primaria: B2B (CTOs, Tech Leads, Founders en HealthTech).
+- Audiencia secundaria: B2C (Pacientes: confianza en la robustez operativa).
+- Adaptación secundaria: Sí, mensaje de confianza B2C.
+- HTML requerido: B2B (Diagrama Estructural PDF).
+- B2B video prompt status: not-applicable (esfuerzo en diagrama estructural PDF).
+- B2C video prompt status: obligatorio (Confianza paciente).
+- Carousel decision: required (Carrusel PDF LinkedIn Técnico).
+- Reel template selection: not-applicable.
+- Activo Visual: Diagrama Estructural ("El ciclo Read-Process-Persist y el Bloqueo Redis").
+- Tipo de activo: Blog + Carrusel PDF B2B + Video Generativo B2C.
+- Objetivo: Autoridad técnica y confianza operacional.
+- CTA: Comentar / Primer comentario.
+- Link: En el primer comentario.
+- Serie aplicable: agentes
+- Próximo seriesOrder: 23
+- Related sugeridos: [2026-07-10-trampa-24-horas-whatsapp-agente-proactivo, 2026-06-08-no-confies-remitente-firmas-meta-whatsapp]
+- Dato propio/anécdota/decisión que ancla el post: Observación #6433 (Fix de race condition cruzada entre réplicas en Shuri usando Redis Lua compare-and-delete).
+
+---
+
+Desplegar un agente de IA en WhatsApp parece sencillo hasta que te enfrentas al peor enemigo de la sincronía: **la impaciencia del usuario**.
+
+En entornos clínicos reales con **Examya**, descubrimos rápidamente que los pacientes no esperan pacientemente a que el LLM termine de procesar su intención. Escriben una frase, se arrepienten y envían otra dos segundos después. O peor aún, la red móvil fluctúa y Meta (WhatsApp) ejecuta un reintento automático entregando el mismo *webhook* varias veces en milisegundos.
+
+Si tu agente opera con una arquitectura ingenua de *read-process-persist* (leer el estado de la base de datos, enviarlo al LLM y guardar la respuesta), este comportamiento destruye el contexto.
+
+### El ciclo fatal del Read-Process-Persist
+
+Imagina este escenario:
+1. Petición A entra. El backend lee el estado actual de la conversación (sesión vacía) e invoca al LLM.
+2. Petición B (un reintento de Meta o un segundo mensaje rápido) entra 100ms después. El backend lee el mismo estado de la conversación e invoca al LLM nuevamente.
+3. El LLM responde a la Petición A. El backend guarda la conversación y envía un mensaje: "Claro, coticemos tu examen".
+4. El LLM responde a la Petición B con la misma lógica desactualizada. El backend sobrescribe la base de datos, perdiendo el estado de A, y envía el mismo mensaje otra vez.
+
+El resultado es un bot que alucina, repite mensajes, pierde el hilo conductor de la cotización médica y, lo más grave en salud, corrompe el historial clínico del paciente.
+
+### Candados Distribuidos: La solución en Redis
+
+Para resolver esto en Shuri (nuestro agente médico), tuvimos que abandonar el procesamiento concurrente sin restricciones y forzar una serialización estricta por paciente.
+
+Implementamos un **Distributed Lock (candado distribuido) usando Redis**, apoyado en scripts Lua nativos (`compare-and-delete`). Así es como funciona:
+
+- Cuando llega un webhook de WhatsApp, extraemos el número de teléfono normalizado.
+- Generamos un `SHA-256 digest` único para esa sesión clínica.
+- El backend intenta adquirir un *lock* en Redis usando ese hash y un UUID de propiedad, con un *Time-To-Live* (TTL) máximo definido.
+- **Si el candado está libre**, la petición entra, lee la base de datos, procesa con el LLM, guarda el nuevo estado y libera el candado.
+- **Si el candado está ocupado**, las peticiones concurrentes (como los reintentos de Meta) rebotan inmediatamente o esperan en una cola breve. Nunca leen un estado obsoleto de la base de datos.
+
+### Por qué un candado local no sirve
+
+Podrías pensar: *"¿Por qué no usar un Mutex en memoria (Node.js/Python)?"*
+
+Porque a medida que escalas, tu bot ya no corre en una sola máquina. Corre en múltiples réplicas (pods de Kubernetes, instancias serverless). Un candado en memoria solo bloquea peticiones en ese contenedor específico. Dos peticiones del mismo usuario balanceadas a dos réplicas distintas volverán a causar una condición de carrera. Redis garantiza que el candado exista fuera de la instancia, operando como la fuente única de verdad para la concurrencia.
+
+### La IA no es una API stateless
+
+Construir en salud B2B nos enseñó una lección dura: **la IA conversacional no puede tratarse como una API sin estado (stateless)**.
+
+El LLM depende críticamente de la coherencia de su ventana de contexto. Si permites que la infraestructura de red o la ansiedad del usuario asíncrono desincronicen ese contexto de la base de datos, ningún *prompt engineering* te salvará del desastre. En salud digital, la robustez no se logra en el prompt; se logra en la arquitectura de concurrencia.
+
+---
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

@@ -1,0 +1,59 @@
+---
+title: "The Impatience That Breaks Your AI: Race Conditions on WhatsApp"
+description: "How user impatience and network retries destroy AI agents' context, and how to solve it with distributed locks in Redis."
+date: 2026-07-31
+lang: "en"
+image: "/img/blog/redis-locks-concurrencia-whatsapp.png"
+canonicalSlug: "2026-07-31-redis-locks-concurrencia-whatsapp"
+draft: false
+status: "published"
+category: "AI"
+tags: [ai, architecture, whatsapp, backend, examya]
+series: "agentes"
+seriesOrder: 23
+author: "Mario Inostroza"
+---
+
+Deploying an AI agent on WhatsApp seems straightforward until you face the worst enemy of synchrony: **user impatience**.
+
+In real clinical environments with **Examya**, we quickly discovered that patients don't wait patiently for the LLM to finish processing their intent. They type a sentence, change their mind, and send another one two seconds later. Or worse, the mobile network fluctuates, and Meta (WhatsApp) executes an automatic retry, delivering the exact same webhook multiple times in milliseconds.
+
+If your agent operates with a naive *read-process-persist* architecture (read the database state, send it to the LLM, and save the response), this behavior completely destroys the context.
+
+### The Fatal Read-Process-Persist Cycle
+
+Picture this scenario:
+1. Request A arrives. The backend reads the current conversation state (empty session) and invokes the LLM.
+2. Request B (a Meta retry or a fast follow-up message) arrives 100ms later. The backend reads the exact same state and invokes the LLM again.
+3. The LLM responds to Request A. The backend saves the conversation and sends a message: "Sure, let's quote your exam."
+4. The LLM responds to Request B using the same outdated logic. The backend overwrites the database, losing A's state, and sends the exact same message again.
+
+The result is a bot that hallucinates, repeats messages, loses the medical quote thread, and—most critically in healthcare—corrupts the patient's clinical history.
+
+### Distributed Locks: The Redis Solution
+
+To solve this in Shuri (our medical agent), we had to abandon unrestricted concurrent processing and enforce strict serialization per patient.
+
+We implemented a **Distributed Lock using Redis**, backed by native Lua scripts (`compare-and-delete`). Here is how it works:
+
+- When a WhatsApp webhook arrives, we extract the normalized phone number.
+- We generate a unique `SHA-256 digest` for that clinical session.
+- The backend attempts to acquire a lock in Redis using that hash and an ownership UUID, with a defined maximum Time-To-Live (TTL).
+- **If the lock is free**, the request enters, reads the database, processes with the LLM, saves the new state, and releases the lock.
+- **If the lock is busy**, concurrent requests (like Meta retries) bounce immediately or wait in a short queue. They never read stale database state.
+
+### Why a Local Lock Isn't Enough
+
+You might think: *"Why not just use an in-memory Mutex in Node.js/Python?"*
+
+Because as you scale, your bot no longer runs on a single machine. It runs across multiple replicas (Kubernetes pods, serverless instances). An in-memory lock only blocks requests on that specific container. Two requests from the same user balanced to two different replicas will cause a race condition all over again. Redis ensures the lock exists outside the instance, acting as the single source of truth for concurrency.
+
+### AI is Not a Stateless API
+
+Building in B2B healthcare taught us a hard lesson: **conversational AI cannot be treated as a stateless API**.
+
+The LLM depends critically on the coherence of its context window. If you allow network infrastructure or asynchronous user anxiety to desynchronize that context from the database, no amount of *prompt engineering* will save you from disaster. In digital health, robustness isn't achieved in the prompt; it's achieved in the concurrency architecture.
+---
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
