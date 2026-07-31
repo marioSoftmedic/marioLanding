@@ -1,0 +1,89 @@
+---
+title: "Antes de escalar, cuenta los dueños de cada conexión"
+description: "Mapeamos nueve clientes Prisma locales a rutas en Web y migramos seis propietarios en candidatos acotados, sin atribuir mejoras productivas."
+date: 2026-07-30
+lang: "es"
+image: "/img/blog/duenos-conexiones.png"
+tags: [Examya, Prisma, Arquitectura, Bases de Datos, Testing]
+draft: false
+series: "examya"
+seriesOrder: 15
+audience: "healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+Una plataforma comienza a recibir más tráfico y aparece una respuesta habitual: aumentar réplicas o subir el límite de conexiones.
+
+Pero hay una pregunta anterior que cambia por completo el cálculo: ¿quién crea cada cliente de base de datos dentro de cada proceso?
+
+En Examya decidimos responderla antes de hablar de capacidad. No porque hubiéramos demostrado un incidente en producción, sino porque escalar infraestructura sin conocer el ownership deja una parte importante del presupuesto fuera del mapa.
+
+## El límite no es el primer número
+
+Una conexión no aparece sola. La abre un cliente, dentro de un proceso, que corre en una réplica y comparte el presupuesto con otras piezas del sistema.
+
+Por eso una cifra aislada como “máximo de conexiones” dice poco. El cálculo también debe considerar réplicas, procesos, propietarios aprobados, workers, migraciones, el solapamiento de un rolling deploy y la holgura operativa.
+
+Agregar réplicas sin contar propietarios puede multiplicar la demanda potencial. Es un principio arquitectónico, no la descripción de un incidente de Examya.
+
+## Nueve propietarios locales a rutas
+
+El mapeo del Web encontró nueve clientes Prisma creados localmente en rutas: cinco en admin y cuatro en checkout. También apareció una preocupación separada de ownership en autenticación, que no mezclamos con este trabajo.
+
+Ese conteo fue útil porque convirtió una sospecha genérica en un inventario concreto. Ya no estábamos discutiendo si “Prisma usa muchas conexiones”. Estábamos identificando qué pieza era dueña de cada cliente y dónde debía vivir ese ownership.
+
+El hallazgo no prueba agotamiento, mayor latencia, costos adicionales ni impacto en usuarios. Prueba algo más acotado: existían nueve propietarios locales a rutas que debíamos revisar.
+
+## Consolidar sin hacer una gran migración
+
+La respuesta no fue cambiar todas las rutas de una vez. Dividimos el trabajo en candidatos locales y acotados, dirigidos hacia el propietario canónico `@/lib/prisma`.
+
+Se migraron seis propietarios del mapeo:
+
+- tres rutas de mutación admin;
+- dos rutas de lectura admin;
+- una ruta de cupones.
+
+La separación importó. Permitió revisar contratos pequeños en lugar de mezclar consultas, autorización, fórmulas y respuestas HTTP en un solo cambio difícil de atribuir.
+
+Tampoco presentamos esas migraciones como una mejora productiva. No hay evidencia aquí de commit de entrega, PR, despliegue ni reducción de conexiones vivas.
+
+## Qué respaldan las pruebas
+
+Los candidatos tuvieron evidencia focalizada: 29/29 en el primer grupo admin, 30/30 acumulado al incorporar las rutas de lectura y 5/5 para cupones.
+
+Esas pruebas respaldan preservación de comportamiento dentro de los contratos cubiertos. En particular, el grupo de lectura conservó las consultas, fórmulas, reglas RBAC y respuestas incluidas en su alcance.
+
+No respaldan corrección global, desempeño, capacidad ni comportamiento en producción. Esa diferencia es importante: una prueba puede decir que un refactor conserva un contrato sin decir que el sistema ahora soporta más carga.
+
+## El gotcha es confundir ownership con capacidad
+
+Consolidar clientes aclara la arquitectura. No entrega automáticamente un nuevo presupuesto de conexiones.
+
+Para recomendar un límite numérico todavía necesitamos medir la topología real: cuántas réplicas y procesos existen, qué propietarios están aprobados, qué límite se aplica, qué tareas auxiliares compiten por conexiones y cuánto solapamiento ocurre durante despliegues.
+
+Primero ownership. Después medición. Recién entonces capacidad.
+
+## Una pregunta para equipos de salud digital
+
+Las plataformas de salud suelen crecer mientras conviven APIs, paneles administrativos, checkout, workers y migraciones. Cada componente puede estar bien probado por separado y, aun así, compartir un recurso finito.
+
+Antes de aumentar capacidad, conviene construir un inventario simple:
+
+- proceso y réplica;
+- propietario del cliente de base de datos;
+- ciclo de vida del cliente;
+- límite aplicado y holgura;
+- workers, migraciones y solapamientos temporales.
+
+Nuestro siguiente paso no es prometer un número universal. Es mantener explícito el ownership y contrastarlo con mediciones de la topología que realmente se ejecuta.
+
+¿Tu equipo sabe cuántos clientes de base de datos crea cada proceso antes de aumentar réplicas o límites?
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

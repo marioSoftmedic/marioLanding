@@ -1,0 +1,90 @@
+---
+title: "Before scaling, count every database client owner"
+description: "We mapped nine route-local Prisma clients in Web and migrated six owners in bounded candidates without claiming production improvements."
+date: 2026-07-30
+lang: "en"
+image: "/img/blog/duenos-conexiones.png"
+tags: [Examya, Prisma, Architecture, Databases, Testing]
+draft: false
+series: "examya"
+seriesOrder: 15
+canonicalSlug: "2026-07-30-duenos-conexiones"
+audience: "healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+When a platform starts handling more traffic, a familiar answer appears: add replicas or raise the connection limit.
+
+But one earlier question changes the entire calculation: who creates each database client inside every process?
+
+At Examya, we decided to answer that before discussing capacity. Not because we had proved a production incident, but because scaling infrastructure without understanding ownership leaves an important part of the budget unmapped.
+
+## The limit is not the first number
+
+A connection does not appear on its own. A client opens it inside a process running on a replica, and that client shares the budget with other parts of the system.
+
+That is why an isolated “maximum connections” number tells us very little. The calculation must also consider replicas, processes, approved owners, workers, migrations, rolling-deployment overlap, and operating headroom.
+
+Adding replicas without counting owners can multiply potential demand. This is an architectural principle, not a description of an Examya production incident.
+
+## Nine route-local owners
+
+Our Web mapping found nine Prisma clients created locally in routes: five in admin and four in checkout. We also found a separate authentication ownership concern, which we kept outside this work.
+
+The count mattered because it turned a vague suspicion into a concrete inventory. We were no longer debating whether “Prisma uses too many connections.” We were identifying which component owned each client and where that ownership should live.
+
+The finding does not prove exhaustion, higher latency, added cost, or user impact. It proves something narrower: nine route-local owners existed and needed review.
+
+## Consolidating without one large migration
+
+We did not change every route at once. We split the work into bounded local candidates moving toward the canonical `@/lib/prisma` owner.
+
+Six mapped owners were migrated:
+
+- three admin mutation routes;
+- two admin read routes;
+- one coupon route.
+
+The separation mattered. It let us review smaller contracts instead of combining queries, authorization, formulas, and HTTP responses in a single change whose effects would be harder to attribute.
+
+We are not presenting those migrations as a production improvement. The available evidence does not establish a delivery commit, pull request, deployment, or fewer live connections.
+
+## What the tests support
+
+The candidates had focused evidence: 29/29 in the first admin group, 30/30 cumulatively after adding the read routes, and 5/5 for coupons.
+
+Those tests support behavior preservation within the covered contracts. In particular, the read group preserved the queries, formulas, RBAC rules, and responses included in its scope.
+
+They do not support global correctness, performance, capacity, or production behavior. That distinction matters: a test can show that a refactor preserves a contract without showing that the system now handles more load.
+
+## The gotcha: confusing ownership with capacity
+
+Consolidating clients clarifies the architecture. It does not automatically produce a new connection budget.
+
+To recommend a numeric limit, we still need to measure the real topology: replica and process counts, approved owners, enforced limits, auxiliary jobs competing for connections, and overlap during deployments.
+
+Ownership first. Measurement next. Capacity decisions only after both.
+
+## A diagnostic question for digital health teams
+
+Health platforms often grow while APIs, admin panels, checkout flows, workers, and migrations coexist. Each component may be well tested on its own while still sharing a finite resource.
+
+Before increasing capacity, build a simple inventory:
+
+- process and replica;
+- database client owner;
+- client lifecycle;
+- enforced limit and headroom;
+- workers, migrations, and temporary overlap.
+
+Our next step is not to promise a universal number. It is to keep ownership explicit and compare it with measurements from the topology that actually runs.
+
+Does your team know how many database clients each process creates before increasing replicas or limits?
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
