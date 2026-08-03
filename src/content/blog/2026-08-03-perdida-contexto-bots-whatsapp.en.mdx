@@ -1,0 +1,60 @@
+---
+title: "The hidden cost of a basic bot: Why greetings break your WhatsApp sales funnel"
+description: "Healthcare chatbots without transactional memory burn leads. Discover how lack of context turns a simple greeting or a 'yes' into lost sales, and how state machines fix it."
+date: "2026-08-03"
+lang: "en"
+canonicalSlug: "2026-08-03-perdida-contexto-bots-whatsapp"
+draft: false
+status: "published"
+image: "/img/blog/perdida-contexto-bots-whatsapp.png"
+tags: [Examya, WhatsApp, B2B, Digital Health, Architecture, AI]
+series: "examya"
+seriesOrder: 16
+---
+
+Imagine this: a patient wants to schedule a check-up, takes a picture of their medical order, goes to your clinic's WhatsApp, and writes: *"Hi, can you give me a quote for this?"* while attaching the image.
+
+Your clinic's chatbot replies: *"Hi! Welcome to XYZ Clinic. How can I help you today? 1. Get a quote, 2. Book an appointment"*.
+
+The bot **ignored** the medical order. The patient, frustrated, closes WhatsApp and goes to your competitor's lab.
+
+Why does this happen? Because most healthcare bots are "stateless" (they lack state memory) and rely on very basic intent classifiers.
+
+At Examya, we hit this problem head-on while processing thousands of daily interactions. Here is why a simple bot is making you lose money, and how to fix the architecture behind WhatsApp.
+
+### The "Stateless Intent" Problem
+
+In our early flows, if a patient typed "yes" or "sure" to confirm a payment, the bot would sometimes send them back to the "Package Recommendations" menu.
+
+What was happening in the code? Our `IntentRouter` was caching intents based solely on the raw text of the message. Since "yes" is a universal word, the bot read "yes" and associated it with the last time someone said "yes" in a completely different part of the menu, completely ignoring **where in the flow** the patient currently was.
+
+That patient was about to pay. Instead of a payment link, they got a generic menu. And the sale dropped.
+
+### The "Greeting Guard" that Choked the System
+
+We had a second scenario (documented in our internal bugfix #5648): patients sending a greeting alongside the PDF document or photo of their prescription.
+
+The bot read "Hi", the intent classifier shouted `GREETING`, and the bot triggered the welcome flow. By doing this, the system completely skipped triggering the Clinical OCR event on the attached document. The patient waited for their quote and received a *"Good morning!"* instead.
+
+Worse yet, if the patient insisted by sending the file again without text, the database got saturated creating duplicate sessions trying to correct the flow.
+
+### The Solution: Transactional Memory (State Machines)
+
+Bots based purely on prompts or static flows are useless for transactional healthcare. The architectural solution is to use State Machines coupled with the user's memory:
+
+1. **Context in Cache:** The key to deciding what to do with a "yes" cannot just be the word "yes". It must be `[current_user_state] + [message_text]`. A "yes" in the `state:quoting` emits a payment link. A "yes" in `state:welcome` starts the flow.
+2. **Payload Priority (The Document Rules):** We built contextual *greeting guards*. If a message contains greeting text **AND** an attached document, the system prioritizes the clinical payload. The greeting is operationally ignored, and the document immediately travels to the OCR engine for quoting.
+3. **Real Persistence:** The campaign state must be saved in the database (Postgres/Redis) at every step, not just in the server's RAM. That way, if the user replies 3 hours later, the bot knows exactly where to pick up.
+
+### Conclusion
+
+Automating your medical center's WhatsApp isn't just plugging in ChatGPT to answer FAQs. If your bot doesn't have transactional memory and hard routing rules, you will burn warm leads in every interaction.
+
+If your clinic or lab is still losing patients because of a bot that doesn't understand context, it's time to evaluate the infrastructure you rely on.
+
+---
+*Does your WhatsApp bot understand when a patient wants to pay, or does it send them back to the main menu? Let's talk about how Examya structures healthcare conversational flows with transactional memory.*
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
