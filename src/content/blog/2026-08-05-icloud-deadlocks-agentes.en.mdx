@@ -1,0 +1,65 @@
+---
+title: "The silent enemy of local agents: iCloud Deadlocks"
+description: "Why your local AI orchestrator runs out of working memory (Errno 11) and how to fix it with brctl."
+date: 2026-08-05
+lang: "en"
+image: "/img/blog/2026-08-05-icloud-deadlocks-agentes.png"
+tags: [AI, Agents, Architecture, Backend, Automation]
+draft: false
+series: "agentes"
+seriesOrder: 25
+canonicalSlug: "2026-08-05-icloud-deadlocks-agentes"
+audience: "builders | healthtech-founders | healthcare-executives"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+## The agent that forgot who it was
+
+Everything was working perfectly. Cotocha, my AI agent orchestrator, was processing its tasks in the background, writing logs, and retrieving context from Engram (its persistent memory in Obsidian).
+
+Until one morning, a critical process simply hung. There was no network timeout. The model's API didn't fail. The agent just "stayed thinking."
+
+## What nobody tells you about local memory
+
+When we build local agents that interact with a file system, we assume the hard drive is always there. But if you use an iCloud-synced vault on macOS to store context and decision history, the cloud has other plans.
+
+To optimize space, macOS silently evicts files you haven't used in a while. The file still appears in Finder, but its actual content is no longer on the disk.
+
+## Errno 11: Resource deadlock avoided
+
+I checked the logs and found this:
+```bash
+Errno 11: Resource deadlock avoided
+```
+
+The agent tried to read an Engram `.md` file using a synchronous I/O operation. macOS, seeing that the file was *evicted*, tried to download it from iCloud on demand. But the agent's synchronous read blocked the thread, creating a deadlock with the iCloud daemon. The file doesn't download, the agent doesn't advance, and the process dies silently.
+
+## How we fixed the AI's amnesia
+
+The solution isn't to switch clouds, but to make the orchestrator aware of the underlying infrastructure.
+
+We implemented a validation step before any critical read to the persistent memory. If the agent detects that a file is locked or cloud-only, it runs a native macOS command to force the download before trying to read it:
+
+```bash
+brctl download /absolute/path/to/file
+```
+
+This command tells the operating system to bring the file back to local memory. Once the download is complete, Engram's synchronous read works perfectly, and the agent retrieves its context.
+
+## A reminder about infrastructure
+
+When AI in production fails, it's easy to blame the LLM for a hallucination or the provider for latency. But in systems orchestrating autonomous agents, most silent failures come from classic infrastructure problems: race conditions and I/O deadlocks.
+
+If your AI agent relies on local memory, make sure that memory actually resides on disk before asking it to make a decision.
+
+## Traceability before magic
+
+The next step in our backlog is creating an active monitor that validates the sync status of the entire vault before the agent begins an intensive work cycle.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
