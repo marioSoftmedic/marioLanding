@@ -1,0 +1,61 @@
+---
+title: "Por qué filtrar datos por código es un peligro con IA en salud (y cómo usamos RLS en base de datos)"
+description: "Cuando conectas LLMs a tus datos (RAG), un simple WHERE en tu código no basta. Descubre cómo implementamos Row Level Security (RLS) en Postgres para blindar la Ley 21.719."
+date: 2026-08-07
+lang: "es"
+image: "/img/blog/2026-08-07-multi-tenant-rag-rls-salud.png"
+series: "agentes"
+seriesOrder: 25
+tags: ["IA", "Agentes", "Arquitectura", "Backend", "Cumplimiento", "Salud Digital"]
+draft: false
+audience: "builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+Cuando construyes software SaaS tradicional, es común y aceptado aislar los datos de los usuarios directamente en la capa de aplicación. El clásico `WHERE tenant_id = X` inyectado por tu ORM suele ser suficiente. 
+
+Pero cuando introduces Inteligencia Artificial, Agentes y sistemas RAG (Retrieval-Augmented Generation) operando sobre **datos clínicos**, esa práctica pasa de ser "suficiente" a ser un peligro inaceptable.
+
+En Examya procesamos órdenes médicas, resultados de laboratorio e historiales de pacientes. Con la entrada en vigencia de la **Ley 21.719** de Protección de Datos Personales, prometer que "nuestro código filtra bien" no basta. Necesitas garantías matemáticas.
+
+## El problema del filtrado de metadatos en código
+
+Un motor RAG funciona convirtiendo texto en vectores (embeddings) y buscando similitud semántica. Para que un usuario solo busque en *sus* propios documentos, los motores de bases de datos vectoriales ofrecen "filtrado por metadatos". Tú le pasas el vector y un filtro `{ "user_id": "123" }`.
+
+¿El problema? **Es un único punto de fallo.** 
+
+Si un agente autónomo deforma la consulta, si un bug en el enrutador de intenciones pierde el contexto de la sesión, o si un desarrollador olvida pasar el objeto de filtros en una actualización del ORM, el motor de IA hará la búsqueda semántica sobre **toda la base de datos**. 
+
+De repente, un agente podría responder la duda médica del paciente A usando los exámenes de laboratorio del paciente B. En salud digital, eso es el fin de tu empresa.
+
+## Defensa en profundidad: Row Level Security (RLS) en Postgres
+
+A finales de junio, mientras diseñábamos la arquitectura multi-tenant para los agentes clínicos de Examya, tomamos una decisión radical: **eliminar la responsabilidad del aislamiento de datos de la capa de aplicación.**
+
+Decidimos usar PostgreSQL con `pgvector` y activar **Row Level Security (RLS)** junto con índices compuestos.
+
+### ¿Cómo funciona?
+
+En lugar de confiar en que nuestra API construya siempre el `WHERE` correcto, configuramos políticas a nivel del motor de base de datos. 
+
+1. Cuando un paciente interactúa con nuestro agente en WhatsApp, nuestro backend autentica la sesión y abre una conexión a la base de datos.
+2. Antes de ejecutar cualquier consulta, el backend inyecta el ID del usuario directamente en el contexto de la sesión de Postgres (`SET LOCAL examya.current_tenant = '123'`).
+3. Las políticas RLS de Postgres dicen: *"Si alguien intenta leer la tabla de vectores, solo devuélvele las filas donde el `tenant_id` coincida con `examya.current_tenant`"*.
+
+### La caja fuerte matemática
+
+¿Qué pasa si nuestro código falla catastróficamente y manda un `SELECT * FROM clinical_vectors`? **La base de datos devuelve un array vacío.**
+
+¿Qué pasa si el agente de IA alucina y trata de buscar el nombre de otro paciente? **La base de datos se lo niega a nivel de disco.**
+
+El motor RAG físicamente no puede ver los datos de nadie más porque la base de datos se comporta como si el resto de los registros no existiera.
+
+## La privacidad no se promete, se construye
+
+En el ecosistema HealthTech, la confianza es tu único activo real. Cumplir con la Ley 21.719 no significa tener términos y condiciones más largos; significa diseñar arquitecturas donde las filtraciones cruzadas de datos sean **técnicamente imposibles** por defecto, incluso si tu propio software comete un error.
+
+Como *builders*, tenemos que dejar de asumir que nuestro código nunca va a fallar. Va a fallar. La pregunta es: ¿dónde pusiste el muro de contención?

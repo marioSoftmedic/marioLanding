@@ -1,0 +1,62 @@
+---
+title: "Why filtering data in code is a risk with AI in healthcare (and how we use database-level RLS)"
+description: "When connecting LLMs to your data (RAG), a simple WHERE clause in your code is not enough. Discover how we implemented Row Level Security (RLS) in Postgres to shield clinical data."
+date: 2026-08-07
+lang: "en"
+image: "/img/blog/2026-08-07-multi-tenant-rag-rls-salud.png"
+series: "agentes"
+seriesOrder: 25
+tags: ["IA", "Agentes", "Arquitectura", "Backend", "Cumplimiento", "Salud Digital"]
+draft: false
+canonicalSlug: "2026-08-07-multi-tenant-rag-rls-salud"
+audience: "builders | healthtech-founders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+When building traditional SaaS software, it's common and accepted to isolate user data directly at the application layer. The classic `WHERE tenant_id = X` injected by your ORM is usually enough.
+
+But when you introduce Artificial Intelligence, Agents, and RAG (Retrieval-Augmented Generation) systems operating on **clinical data**, that practice goes from being "enough" to being an unacceptable risk.
+
+At Examya, we process medical orders, laboratory results, and patient histories. With strict data protection laws, promising that "our code filters well" isn't enough. You need mathematical guarantees.
+
+## The problem with metadata filtering in code
+
+A RAG engine works by converting text into vectors (embeddings) and searching for semantic similarity. To ensure a user only searches within *their* own documents, vector database engines offer "metadata filtering." You pass the vector and a filter like `{ "user_id": "123" }`.
+
+The problem? **It's a single point of failure.**
+
+If an autonomous agent malforms the query, if a bug in the intent router loses the session context, or if a developer forgets to pass the filters object in an ORM update, the AI engine will perform the semantic search over **the entire database**.
+
+Suddenly, an agent could answer Patient A's medical question using Patient B's laboratory tests. In digital health, that is the end of your company.
+
+## Defense in depth: Row Level Security (RLS) in Postgres
+
+In late June, while designing the multi-tenant architecture for Examya's clinical agents, we made a radical decision: **remove the responsibility of data isolation from the application layer.**
+
+We decided to use PostgreSQL with `pgvector` and activate **Row Level Security (RLS)** alongside composite indexes.
+
+### How does it work?
+
+Instead of trusting our API to always build the correct `WHERE` clause, we configured policies at the database engine level.
+
+1. When a patient interacts with our agent on WhatsApp, our backend authenticates the session and opens a database connection.
+2. Before executing any query, the backend injects the user ID directly into the Postgres session context (`SET LOCAL examya.current_tenant = '123'`).
+3. The Postgres RLS policies state: *"If anyone tries to read the vector table, only return the rows where `tenant_id` matches `examya.current_tenant`."*
+
+### The mathematical safe
+
+What happens if our code fails catastrophically and sends a `SELECT * FROM clinical_vectors`? **The database returns an empty array.**
+
+What happens if the AI agent hallucinates and tries to search for another patient's name? **The database denies it at the disk level.**
+
+The RAG engine physically cannot see anyone else's data because the database behaves as if the rest of the records do not exist.
+
+## Privacy is not promised, it's built
+
+In the HealthTech ecosystem, trust is your only real asset. Compliance doesn't mean having longer terms and conditions; it means designing architectures where cross-data leaks are **technically impossible** by default, even if your own software makes a mistake.
+
+As builders, we have to stop assuming our code will never fail. It will fail. The question is: where did you put the retaining wall?
