@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content';
 import { tagsForPost, tagDisplay } from '../../../../lib/tags';
 import { useTranslations, basePath } from '../../../../i18n/utils';
 import { postsForLang } from '../../../../lib/relations';
+import { canonicalPath } from '../../../../lib/routes.mjs';
 
 const lang = 'en' as const;
 const t = useTranslations(lang);
@@ -48,7 +49,7 @@ const sizeFor = (n: number) => {
         <div class="flex flex-wrap gap-3 items-baseline">
           {entries.map(([slug, count]) => (
             <a
-              href={`${base}/blog/tags/${slug}`}
+              href={canonicalPath(`${base}/blog/tags/${slug}`)}
               class={`${sizeFor(count)} font-semibold px-3 py-1.5 rounded-lg transition-colors duration-200 hover:opacity-80`}
               style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);"
             >

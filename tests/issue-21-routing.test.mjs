@@ -97,6 +97,20 @@ runtimeTest("local Vercel resolves canonical and legacy paths in one redirect", 
 	}
 });
 
+test("one explicit alternate drives reciprocal hreflang and LangSwitch", () => {
+	const translations = read("src/lib/translations.ts");
+	const base = read("src/layouts/Base.astro");
+	const langSwitch = read("src/components/LangSwitch.astro");
+	assert.match(translations, /for \(const hub of HUBS\).*hubPath\(hub, "es"\).*hubPath\(hub, "en"\)/);
+	assert.match(translations, /blogPairs\.get\(sourceStem\(post\)\)/);
+	assert.match(translations, /projectPairs\.get\(stem\)/);
+	assert.match(translations, /languages\.size === 2/);
+	assert.match(base, /resolveAlternatePath\(canonicalPathname, lang\)/);
+	assert.match(base, /<LangSwitch currentPath=\{canonicalPathname\} alternatePath=\{alternatePath\}/);
+	assert.match(langSwitch, /interface Props \{[\s\S]*currentPath: string;[\s\S]*alternatePath: string \| null;/);
+	assert.doesNotMatch(langSwitch, /getAlternatePath|Astro\.url/);
+});
+
 test("robots submits only the sitemap index", () => {
 	const sitemapLines = read("public/robots.txt").split("\n").filter((line) => line.startsWith("Sitemap:"));
 	assert.deepEqual(sitemapLines, ["Sitemap: https://mariohealthbits.dev/sitemap-index.xml"]);
@@ -115,6 +129,11 @@ function linkHref(html, attributes) {
 	return tag?.match(/href="([^"]+)"/)?.[1];
 }
 
+function anchorHref(html, label) {
+	const tag = (html.match(/<a\b[^>]*>/g) ?? []).find((candidate) => candidate.includes(`aria-label="${label}"`));
+	return tag?.match(/href="([^"]+)"/)?.[1];
+}
+
 function filesBelow(directory) {
 	return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
 		const path = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
@@ -126,6 +145,21 @@ const hubPairs = [
 	["/agentes-ia-produccion/", "/en/ai-agents-production/"],
 	["/laboratorio-clinico-api/", "/en/clinical-lab-api/"],
 ];
+
+builtTest("required hubs emit final canonicals, reciprocal hreflang, and direct LangSwitch links", () => {
+	for (const [esPath, enPath] of hubPairs) {
+		const esHtml = read(htmlPath(esPath));
+		const enHtml = read(htmlPath(enPath));
+		const esUrl = `https://mariohealthbits.dev${esPath}`;
+		const enUrl = `https://mariohealthbits.dev${enPath}`;
+		assert.equal(linkHref(esHtml, { rel: "canonical" }), esUrl);
+		assert.equal(linkHref(enHtml, { rel: "canonical" }), enUrl);
+		assert.equal(linkHref(esHtml, { rel: "alternate", hreflang: "en" }), enUrl);
+		assert.equal(linkHref(enHtml, { rel: "alternate", hreflang: "es" }), esUrl);
+		assert.equal(anchorHref(esHtml, "View site in English"), enPath);
+		assert.equal(anchorHref(enHtml, "Ver sitio en Español"), esPath);
+	}
+});
 
 builtTest("redirect targets have matching final canonicals and internal links stay canonical", () => {
 	for (const path of ["/blog/", "/projects/openclaw/"]) {

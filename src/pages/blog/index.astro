@@ -5,6 +5,8 @@ import { getLang, useTranslations, basePath } from '../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../lib/tags';
 import { HUBS, hubPath } from '../../lib/hubs';
 import NewsletterSignup from '../../components/NewsletterSignup.astro';
+import { canonicalPath } from '../../lib/routes.mjs';
+import { postUrl } from '../../lib/relations';
 
 const lang = getLang(Astro.url.pathname);
 const t = useTranslations(lang);
@@ -33,7 +35,7 @@ const formatDate = (date: Date) =>
               {hub.title[lang]}
             </a>
           ))}
-          <a href={`${base}/blog/tags`} class="px-3 py-1.5 text-xs rounded-lg transition-opacity hover:opacity-80" style="background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-subtle);">
+          <a href={canonicalPath(`${base}/blog/tags`)} class="px-3 py-1.5 text-xs rounded-lg transition-opacity hover:opacity-80" style="background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-subtle);">
             {t('blog.tags.heading')}
           </a>
         </div>
@@ -49,13 +51,11 @@ const formatDate = (date: Date) =>
         </div>
       ) : (
         <div class="flex flex-col gap-1">
-          {posts.map((post) => {
-            const slug = post.data.canonicalSlug ?? post.id.replace(/\.en$/, '');
-            return (
-              <a
-                href={`${base}/blog/${slug}`}
-                class="group flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-8 py-6 border-b border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors duration-200"
-              >
+          {posts.map((post) => (
+            <a
+              href={postUrl(post, base)}
+              class="group flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-8 py-6 border-b border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors duration-200"
+            >
                 <time
                   datetime={post.data.date.toISOString()}
                   class="text-sm shrink-0 pt-0.5 tabular-nums"
@@ -102,9 +102,8 @@ const formatDate = (date: Date) =>
                 >
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
-              </a>
-            );
-          })}
+            </a>
+          ))}
         </div>
       )}
 
