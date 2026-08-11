@@ -79,8 +79,8 @@ export const HUBS: HubDef[] = [
 		eyebrow: { es: "Guía técnica", en: "Technical Guide" },
 		title: { es: "Agentes IA en Producción", en: "AI Agents in Production" },
 		description: {
-			es: "Arquitectura, testing, tool use, MCP y mitigación de alucinaciones para agentes que hacen trabajo real.",
-			en: "Architecture, testing, tool use, MCP and hallucination mitigation for agents that do real work.",
+			es: "Arquitectura, testing, MCP, revisión adversarial y límites de herramientas para operar agentes IA confiables en flujos reales de producción.",
+			en: "Architecture, testing, MCP, adversarial review, and tool boundaries for operating reliable AI agents in real production workflows.",
 		},
 		keywords: [
 			"agentes IA producción",

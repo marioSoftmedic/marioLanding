@@ -1,6 +1,6 @@
 ---
-title: "The Scout-Worker-Reviewer Pattern: How to scale AI agents without hallucinations"
-description: "Putting a single agent to solve everything is a recipe for disaster. How we divide responsibilities in Examya to achieve safe autonomy."
+title: "Scout-Worker-Reviewer for Reliable AI Agents"
+description: "The Scout-Worker-Reviewer pattern separates context, writing, and control to reduce collisions and keep production AI workflows reliable."
 date: 2026-06-17
 lang: "en"
 image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
@@ -18,8 +18,6 @@ newsletterTopic: "ai-agents-production"
 newsletterPriority: 4
 ---
 
-# The Scout-Worker-Reviewer Pattern: How to scale AI agents without hallucinations
-
 You give your star AI agent a two-page prompt.
 
 You ask it to investigate the codebase, plan the architecture, write the new feature, run the tests, and make the commit.
@@ -28,7 +26,7 @@ Five minutes later, the agent enters an infinite loop trying to fix a syntax err
 
 The error is not the model. The error is architectural: we are trying to build magical "Full-Stack Devs" instead of designing predictable assembly lines.
 
-After months of hitting the wall at Examya, we abandoned the monolithic agent and adopted the **Scout-Worker-Reviewer** pattern.
+After months of hitting the wall at [Examya](/en/examya), we abandoned the monolithic agent and adopted the **Scout-Worker-Reviewer** pattern. [Cotocha](/en/projects/openclaw) uses it to coordinate work on OpenClaw without mixing exploration, writing, and control.
 
 ## The trap of the "know-it-all" agent
 
@@ -37,6 +35,20 @@ When a single LLM has to read context, make product decisions, write code, and j
 The model suffers from "confirmation bias": if it wrote the function itself, it is highly unlikely to be able to audit it critically. It will try to justify its mistake instead of deleting it.
 
 To avoid this, we divided the workflow into three strictly isolated roles.
+
+## Why writing should not be parallelized
+
+Launching several agents to edit the same scope creates race conditions, overwritten files, and a diff that is difficult to attribute. Parallelism works better for reading: several agents can map risks or review one result without colliding.
+
+The operating rule is **many readers, one writer**:
+
+```text
+Orchestrator -> read-only Scout -> brief
+Orchestrator -> one writing Worker -> diff
+Orchestrator -> independent Reviewers -> findings or approval
+```
+
+Permission isolation matters as much as the prompt. The Scout does not edit, the Worker does not approve its own work, and Reviewers do not compete to rewrite it.
 
 ## 1. The Scout
 
@@ -51,7 +63,7 @@ If the Scout fails, the process stops before wasting a single generation token.
 
 ## 2. The Worker
 
-The Worker is the heavy-lifter (usually the most capable model, like Claude 3.5 Sonnet).
+The Worker is the agent with write access and the context needed to execute.
 
 It doesn't have to guess what to do because it receives the perfect `Brief` from the Scout. Its only directive is to execute the task with laser focus.
 
@@ -75,7 +87,7 @@ Only if the Reviewer gives explicit approval does the flow advance to the human 
 
 Intelligence in modern AI systems does not emerge from having one giant model do everything. It emerges from the choreography between smaller models, restricted to microscopic tasks.
 
-The Scout-Worker-Reviewer pattern costs a bit more in tokens and orchestration time, but the Return on Investment (ROI) in code stability and peace of mind is infinite.
+The Scout-Worker-Reviewer pattern adds steps and orchestration cost in exchange for responsibilities and evidence that are easier to audit.
 
 Treat your agents like Unix functions: let them do one thing, and do it excellently.
 
