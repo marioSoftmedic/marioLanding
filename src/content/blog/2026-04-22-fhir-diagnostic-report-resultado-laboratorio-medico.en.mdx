@@ -73,15 +73,15 @@ In Examya, the lifecycle of a study has four FHIR moments:
 
 ## Why this matters now in Chile
 
-[Law 21.668](/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya) requires healthcare providers to expose their clinical data in interoperable format. Lab results are explicitly part of that obligation.
+[Law 21.668](/en/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya) requires healthcare providers to adopt measures that enable clinical record interoperability. Laboratory results can form part of that record and exchange context.
 
-A well-formed FHIR DiagnosticReport meets that requirement at the base: it has the correct resource type, the LOINC code identifying the study, the patient's national ID as the identifier, and a reference back to the originating order.
+A well-formed FHIR DiagnosticReport can provide the structured result, coded study, patient identifier, and reference to the originating order. Whether it satisfies an applicable requirement also depends on regulation, profiles, identity, access control, and governance.
 
-What today takes hours (PDF → email → manual typing) can collapse to seconds: the lab validates, the DiagnosticReport flips to `final`, and the physician's EHR gets a notification via FHIR Subscription. No intermediaries.
+A flow that currently depends on PDF, email, and manual entry can become machine-to-machine: the lab validates, the DiagnosticReport changes to `final`, and an authorized system can receive the update through an agreed FHIR workflow.
 
 ## The missing link in the chain
 
-Previous posts in this series covered the law that mandates it ([Law 21.668](/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya)), labs as key actors ([clinical laboratories](/blog/2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile)), and the technical adapter layer ([FHIR + Law 21.668](/blog/2026-04-18-fhir-ley-21-668-interoperabilidad-chile)).
+Previous posts in this series covered the legal interoperability requirement ([Law 21.668](/en/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya)), labs as key actors ([clinical laboratories](/en/blog/2026-04-17-laboratorios-clinicos-clave-transformacion-digital-salud-chile)), and the technical adapter layer ([FHIR + Law 21.668](/en/blog/2026-04-18-fhir-ley-21-668-interoperabilidad-chile)).
 
 DiagnosticReport is where all of that materializes. It's the resource that closes the cycle: from the physician's order, to the result in their hands, in a format their system can read directly.
 
