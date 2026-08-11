@@ -1,0 +1,39 @@
+---
+title: "Escalando Agentes Clínicos en WhatsApp: Concurrencia y Seguridad Zero-Trust en Shuri"
+description: "Cómo resolvimos los problemas de concurrencia de webhooks (race conditions) y seguridad de LLMs en WhatsApp para salud usando Distributed Locks en Redis."
+date: "2026-08-11"
+author: "Mario Inostroza"
+category: "Ingeniería"
+tags: ["LLMs", "WhatsApp", "Redis", "Zero-Trust", "HealthTech"]
+image: "/img/blog/2026-08-11-shuri-concurrency.png"
+draft: false
+audience: "CTOs y Founders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "Concurrencia y Seguridad en LLMs"
+newsletterPriority: 1
+---
+
+# El problema oculto de los LLMs en WhatsApp
+
+Desplegar agentes de IA (LLMs) en WhatsApp para uso clínico esconde un problema grave que casi nadie menciona en los tutoriales de LangChain o LlamaIndex: **La concurrencia de webhooks y las Race Conditions**.
+
+## WhatsApp dispara sin piedad
+
+Cuando un paciente envía tres mensajes rápidos ("Hola", "Necesito un examen", "¿Cuánto vale?"), la API de Meta dispara tres webhooks concurrentes hacia nuestro backend. Si el agente procesa esto sin un sistema de bloqueo transaccional, el hilo 2 puede sobreescribir la memoria del hilo 1, corrompiendo el contexto clínico del paciente o, peor aún, cruzando datos de distintos pacientes.
+
+## La Solución Examya: Distributed Locks en Redis
+
+Para resolver esto en Shuri, abandonamos la lectura optimista e implementamos un **Distributed Lock en Redis**.
+
+El flujo `Read-Process-Persist` se serializa generando una llave (digest SHA-256) basada en el `channel_scope` y el `phone` normalizado del paciente. Cada operación adquiere ownership del lock mediante un UUID único, y maneja un _Lease TTL_ para evitar deadlocks si el worker muere en el proceso.
+
+## Zero-Trust: Matando el Token Global del LLM
+
+El segundo error común es otorgar a la IA un token "global" con acceso completo a la base de datos para ejecutar herramientas (Tool Calling). 
+
+En Examya implementamos **Operation-aware tokens**. Shuri no tiene poder absoluto. Cuando razona que debe buscar exámenes, nuestro motor le genera un token dinámico, temporal y ultra restrictivo (`agents:process medical-order-sales:exam-search`). Si el modelo alucina e intenta insertar un dato o consultar pagos, nuestra capa de autorización bloquea la transacción con un `403 Forbidden`.
+
+Menor privilegio por diseño.
+Construir IA en salud no es armar prompts bonitos; es ingeniería de software dura.
