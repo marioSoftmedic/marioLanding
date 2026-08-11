@@ -1,6 +1,6 @@
 ---
-title: Cotocha
-description: "AI agent orchestrator that automates daily operations: Telegram guard, infrastructure health checks, WhatsApp campaigns, GitHub automation and coding agent delegation."
+title: "Cotocha: OpenClaw Agent Orchestrator"
+description: "Cotocha is an AI agent orchestrator built on OpenClaw that coordinates tasks, memory, permissions, and reviews through Telegram and Slack."
 lang: 'en'
 emoji: "🐙"
 techStack:
@@ -14,20 +14,43 @@ featured: true
 image: "/img/projects/cotocha.png"
 ---
 
-**Cotocha** is my personal operations agent, built on OpenClaw (self-hosted AI agent gateway) running on a VPS in Contabo. Interaction is 100% through Telegram — direct channel and the "Command Center" group — and Slack.
+**Cotocha is a personal AI agent orchestrator built on OpenClaw.** OpenClaw provides the self-hosted gateway and runtime; Cotocha is the operating layer that receives requests, selects a specialist agent, preserves context, and returns the result through Telegram or Slack.
 
-## What it automates
+## How Cotocha works
+
+1. A request or scheduled trigger enters through Telegram, Slack, or a cron job.
+2. Cotocha classifies the task and delegates it to the agent or tool with the appropriate scope.
+3. The agent executes with retrievable memory in PostgreSQL + pgvector and local session memory.
+4. Sensitive tasks separate exploration, writing, and review before reaching a person or production.
+
+This separation follows the [Scout-Worker-Reviewer pattern](/en/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia): read and plan first, allow a single writing path, and review the result independently.
+
+## Cotocha and OpenClaw
+
+Cotocha is not a fork or replacement for OpenClaw. **OpenClaw is the agent infrastructure; Cotocha is the operational implementation running on top of it**, with channels, memory, schedules, skills, and delegation rules configured for my daily work.
+
+The build story is documented in [how Cotocha operates from a VPS](/en/blog/2026-04-01-cotocha-orquestador-agentes-ia) and the [lessons from multi-agent orchestration](/en/blog/2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo).
+
+## Architecture
+
+- **Channels**: Telegram for direct interaction and Slack for alerts and shared operations.
+- **Orchestration**: task classification, delegation, and result consolidation.
+- **Agents and skills**: bounded capabilities for infrastructure, code, calendars, and operations.
+- **Memory**: PostgreSQL + pgvector for semantic retrieval and local SQLite for sessions.
+- **Execution**: Node.js 22 on a Linux VPS, with different models selected by task.
+
+## Operational security
+
+Cotocha runs on self-hosted infrastructure and separates responsibilities instead of giving every tool to one agent. Agents receive bounded tasks; writing stays on a single path; results can go through independent review; and health checks monitor memory, disk, sessions, and cron jobs. This reduces blast radius, but it does not make the model a security authority or remove human oversight.
+
+## Use cases
 
 - **Telegram group guard** — monitors group members every 12 hours, detects intruders and alerts automatically.
 - **Infrastructure health checks** — every 3 hours checks memory, disk, active sessions and VPS cron jobs. Reports to `#infra-vps` on Slack.
 - **Calendar triggers** — manages automatic follow-ups, reminders and no-show detection from the calendar.
 - **GitHub issue automation** — detects bugs in repos, opens issues and generates PRs automatically.
-- **WhatsApp campaigns** — sends bulk messages to Examya leads with targeting and tracking.
+- **WhatsApp campaigns** — runs operational tasks for [Examya](/en/examya), separate from the product's editorial identity.
 - **Coding delegation** — spawns development agents (Codex, Claude Code, OpenCode, Gemini) for code tasks and supervises them.
-
-## Semantic memory
-
-Uses **PostgreSQL + pgvector** for vector storage: every conversation and event is embedded and retrievable via semantic search. Each agent also has its own local SQLite for session memory.
 
 ## Tech stack
 
