@@ -1,6 +1,6 @@
 ---
-title: "El patrón Scout-Worker-Reviewer: Cómo escalar agentes de IA sin que alucinen"
-description: "Poner a un solo agente a resolver todo es la receta para el desastre. Cómo dividimos responsabilidades en Examya para lograr autonomía segura."
+title: "Scout-Worker-Reviewer para agentes IA confiables"
+description: "El patrón Scout-Worker-Reviewer separa contexto, escritura y control para reducir colisiones y sostener flujos de agentes IA en producción."
 date: 2026-06-17
 lang: "es"
 image: "/img/blog/patron-scout-worker-reviewer-agentes-ia.png"
@@ -17,8 +17,6 @@ newsletterTopic: "ai-agents-production"
 newsletterPriority: 4
 ---
 
-# El patrón Scout-Worker-Reviewer: Cómo escalar agentes de IA sin que alucinen
-
 Le das un prompt de dos páginas a tu agente estrella. 
 
 Le pides que investigue el código, planifique la arquitectura, escriba la nueva feature, corra los tests y haga el commit.
@@ -27,7 +25,7 @@ Cinco minutos después, el agente entra en un loop infinito tratando de arreglar
 
 El error no es el modelo. El error es arquitectónico: estamos intentando construir "Devs Full-Stack" mágicos, en lugar de diseñar líneas de ensamblaje predecibles.
 
-Después de varios meses estrellándonos contra la pared en Examya, abandonamos el agente monolítico y adoptamos el patrón **Scout-Worker-Reviewer**.
+Después de varios meses estrellándonos contra la pared en [Examya](/examya), abandonamos el agente monolítico y adoptamos el patrón **Scout-Worker-Reviewer**. [Cotocha](/projects/openclaw) lo usa para coordinar trabajo sobre OpenClaw sin mezclar exploración, escritura y control.
 
 ## La trampa del agente "sabelotodo"
 
@@ -36,6 +34,20 @@ Cuando un solo LLM tiene que leer contexto, tomar decisiones de producto, escrib
 El modelo sufre de "ceguera por confirmación": si él mismo escribió la función, es muy poco probable que sea capaz de auditarla de forma crítica. Intentará justificar su error en lugar de borrarlo.
 
 Para evitar esto, dividimos el flujo en tres roles estrictamente aislados.
+
+## Por qué no paralelizar la escritura
+
+Lanzar varios agentes a editar el mismo alcance produce condiciones de carrera, archivos sobrescritos y un diff difícil de atribuir. El paralelismo funciona mejor en lectura: varios agentes pueden mapear riesgos o revisar un resultado sin colisionar.
+
+La regla operativa es **muchos lectores, un solo escritor**:
+
+```text
+Orquestador -> Scout de solo lectura -> brief
+Orquestador -> un Worker con escritura -> diff
+Orquestador -> Reviewers independientes -> hallazgos o aprobación
+```
+
+El aislamiento de permisos importa tanto como el prompt. El Scout no edita, el Worker no aprueba su propio trabajo y los Reviewers no compiten por reescribirlo.
 
 ## 1. El Scout (Explorador)
 
@@ -50,7 +62,7 @@ Si el Scout falla, el proceso se detiene antes de gastar un solo token de genera
 
 ## 2. El Worker (Operario)
 
-El Worker es el agente pesado (generalmente el modelo más capaz, como Claude 3.5 Sonnet).
+El Worker es el agente con capacidad de escritura y el contexto necesario para ejecutar.
 
 No tiene que adivinar qué hacer porque recibe el `Brief` perfecto del Scout. Su única directriz es ejecutar la tarea con un foco láser. 
 
@@ -74,7 +86,7 @@ Solo si el Reviewer da el visto bueno explícito, el flujo avanza al humano o a 
 
 La inteligencia en los sistemas de IA modernos no emerge de tener un modelo gigante que haga todo. Emerge de la coreografía entre modelos más pequeños, restringidos a tareas microscópicas.
 
-El patrón Scout-Worker-Reviewer cuesta un poco más en tokens y en tiempo de orquestación, pero el Retorno de Inversión (ROI) en estabilidad de código y paz mental es infinito.
+El patrón Scout-Worker-Reviewer agrega pasos y costo de orquestación, a cambio de responsabilidades y evidencia más fáciles de auditar.
 
 Trata a tus agentes como funciones de Unix: que hagan una sola cosa, y que la hagan de manera excelente.
 
