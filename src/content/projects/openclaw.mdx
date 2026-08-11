@@ -1,7 +1,7 @@
 ---
-title: Cotocha
-description: "Orquestador de agentes IA que automatiza operaciones diarias: guardia de Telegram, health checks de infraestructura, campañas WhatsApp, automatización de GitHub y delegación a agentes de coding."
-descriptionEn: "AI agent orchestrator that automates daily operations: Telegram guard, infrastructure health checks, WhatsApp campaigns, GitHub automation and coding agent delegation."
+title: "Cotocha: OpenClaw Agent Orchestrator"
+description: "Cotocha es un orquestador de agentes IA sobre OpenClaw: coordina tareas, memoria, permisos y revisiones desde Telegram y Slack."
+descriptionEn: "Cotocha is an AI agent orchestrator built on OpenClaw that coordinates tasks, memory, permissions, and reviews through Telegram and Slack."
 lang: 'es'
 emoji: "🐙"
 techStack:
@@ -15,20 +15,43 @@ featured: true
 image: "/img/projects/cotocha.png"
 ---
 
-**Cotocha** es mi agente personal de operaciones, construido sobre OpenClaw (self-hosted AI agent gateway) y corriendo en un VPS en Contabo. La interacción es 100% por Telegram — canal directo y el grupo "Centro de Mando" — y Slack.
+**Cotocha es un orquestador personal de agentes IA construido sobre OpenClaw.** OpenClaw aporta el gateway y el runtime self-hosted; Cotocha es la capa de operación que recibe solicitudes, elige un agente especializado, conserva contexto y devuelve el resultado por Telegram o Slack.
 
-## Qué automatiza
+## Cómo funciona Cotocha
+
+1. Una solicitud o un trigger programado entra por Telegram, Slack o un cron job.
+2. Cotocha clasifica la tarea y la delega al agente o herramienta con el alcance adecuado.
+3. El agente ejecuta la tarea con memoria recuperable desde PostgreSQL + pgvector y memoria local de sesión.
+4. Las tareas sensibles separan exploración, escritura y revisión antes de llegar a una persona o a producción.
+
+Esta separación sigue el [patrón Scout-Worker-Reviewer](/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia): leer y planificar primero, permitir una sola ruta de escritura y revisar el resultado de forma independiente.
+
+## Relación entre Cotocha y OpenClaw
+
+Cotocha no es un fork ni un reemplazo de OpenClaw. **OpenClaw es la infraestructura de agentes; Cotocha es la implementación operativa que corre sobre ella**, con canales, memoria, schedules, skills y reglas de delegación configuradas para mi trabajo diario.
+
+La historia de construcción está documentada en [cómo Cotocha opera desde un VPS](/blog/2026-04-01-cotocha-orquestador-agentes-ia) y en las [lecciones de orquestación multi-agente](/blog/2026-04-16-orquestacion-multi-agente-vs-agente-unico-lecciones-desde-el-campo).
+
+## Arquitectura
+
+- **Canales**: Telegram para interacción directa y Slack para alertas y operación compartida.
+- **Orquestación**: clasificación, delegación y consolidación de resultados por tarea.
+- **Agentes y skills**: capacidades acotadas para infraestructura, código, calendario y operaciones.
+- **Memoria**: PostgreSQL + pgvector para recuperación semántica y SQLite local para sesiones.
+- **Ejecución**: Node.js 22 en un VPS Linux, con modelos distintos según la tarea.
+
+## Seguridad operacional
+
+Cotocha corre en infraestructura self-hosted y separa responsabilidades en vez de entregar todas las herramientas a un único agente. Los agentes reciben tareas acotadas; la escritura se mantiene en una sola ruta; los resultados pueden pasar por revisión independiente; y los health checks vigilan memoria, disco, sesiones y cron jobs. Esto reduce el radio de impacto, pero no convierte al modelo en una autoridad de seguridad ni elimina la supervisión humana.
+
+## Casos de uso
 
 - **Guardia de grupos Telegram** — monitorea miembros del grupo cada 12 horas, detecta intrusos y alerta automáticamente.
 - **Health checks de infraestructura** — cada 3 horas revisa memoria, disco, sesiones activas y cron jobs del VPS. Reporta en `#infra-vps` de Slack.
 - **Calendar triggers** — gestiona follow-ups automáticos, recordatorios y detección de no-shows desde el calendario.
 - **GitHub issue automation** — detecta bugs en los repos, abre issues y genera PRs automáticamente.
-- **Campañas WhatsApp** — envío de mensajes masivos a leads de Examya con targeting y seguimiento.
+- **Campañas WhatsApp** — ejecución de tareas operativas para [Examya](/examya), separadas de la identidad editorial del producto.
 - **Coding delegation** — spawna agentes de desarrollo (Codex, Claude Code, OpenCode, Gemini) para tareas de código y los supervisa.
-
-## Memoria semántica
-
-Usa **PostgreSQL + pgvector** para almacenamiento vectorial: cada conversación y evento queda embeddeado y es recuperable mediante búsqueda semántica. Cada agente tiene además su propio SQLite local para memoria de sesión.
 
 ## Stack técnico
 
