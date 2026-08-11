@@ -37,7 +37,7 @@ const COPY: Record<
 				"Una vez por semana: ideas prácticas sobre Ley 21.668, FHIR, evidencia regulatoria y software clínico en Chile.",
 			benefit:
 				"Incluye el checklist para revisar si tu clínica o laboratorio está preparado para interoperabilidad.",
-			resourcePath: "/recursos/checklist-interoperabilidad-salud-chile",
+			resourcePath: "/recursos/checklist-interoperabilidad-salud-chile/",
 			buttonLabel: "Recibir el briefing",
 			secondaryLabel: "Ver checklist",
 		},
@@ -47,7 +47,7 @@ const COPY: Record<
 				"Once a week: practical notes on FHIR, regulation, clinical evidence and digital health in Chile.",
 			benefit:
 				"Includes a checklist for reviewing interoperability readiness in clinics and clinical labs.",
-			resourcePath: "/recursos/checklist-interoperabilidad-salud-chile",
+			resourcePath: "/recursos/checklist-interoperabilidad-salud-chile/",
 			buttonLabel: "Get the weekly brief",
 			secondaryLabel: "View checklist",
 		},
@@ -59,7 +59,7 @@ const COPY: Record<
 				"Ideas concretas para modernizar resultados, WhatsApp, LIS legacy e interoperabilidad sin romper la operación.",
 			benefit:
 				"Incluye una guía para modernizar la entrega de resultados sin reemplazar el LIS.",
-			resourcePath: "/recursos/modernizar-resultados-lis-whatsapp",
+			resourcePath: "/recursos/modernizar-resultados-lis-whatsapp/",
 			buttonLabel: "Recibir la guía y el briefing",
 			secondaryLabel: "Ver guía",
 		},
@@ -69,7 +69,7 @@ const COPY: Record<
 				"Concrete notes on modernizing results delivery, WhatsApp, legacy LIS and interoperability without breaking operations.",
 			benefit:
 				"Includes a guide for modernizing result delivery without replacing the LIS.",
-			resourcePath: "/recursos/modernizar-resultados-lis-whatsapp",
+			resourcePath: "/recursos/modernizar-resultados-lis-whatsapp/",
 			buttonLabel: "Get the guide and brief",
 			secondaryLabel: "View guide",
 		},
@@ -81,7 +81,7 @@ const COPY: Record<
 				"Un resumen semanal de lo que aprendo construyendo IA clínica, agentes y software de salud desde la Patagonia.",
 			benefit:
 				"Sin spam: 3 ideas, 1 decisión técnica y 1 aplicación práctica cada viernes.",
-			resourcePath: "/blog",
+			resourcePath: "/blog/",
 			buttonLabel: "Recibir el briefing",
 			secondaryLabel: "Leer el blog",
 		},
@@ -91,7 +91,7 @@ const COPY: Record<
 				"A weekly brief on what I learn building clinical AI, agents and health software from Patagonia.",
 			benefit:
 				"No spam: 3 ideas, 1 technical decision and 1 practical application every Friday.",
-			resourcePath: "/en/blog",
+			resourcePath: "/en/blog/",
 			buttonLabel: "Get the weekly brief",
 			secondaryLabel: "Read the blog",
 		},

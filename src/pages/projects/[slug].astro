@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
 import { getLang, useTranslations, basePath } from '../../i18n/utils';
+import { canonicalPath } from '../../lib/routes.mjs';
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects');
@@ -26,7 +27,7 @@ const previewHost = previewUrl?.startsWith('http') ? new URL(previewUrl).hostnam
 
 <Base title={`${project.data.title} — Mario Inostroza`} description={project.data.description}>
   <article class="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-    <a href={base + '/#proyectos'} class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg cursor-pointer">
+    <a href={canonicalPath(base + '/#proyectos')} class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg cursor-pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       {t('project.back')}
     </a>

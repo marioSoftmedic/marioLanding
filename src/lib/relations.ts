@@ -12,6 +12,7 @@
 
 import type { CollectionEntry } from 'astro:content';
 import { tagsForPost, type Lang } from './tags';
+import { canonicalPath } from './routes.mjs';
 
 export type BlogPost = CollectionEntry<'blog'>;
 
@@ -29,7 +30,7 @@ export function postUrlSlug(post: BlogPost): string {
  * basePath: '' for es, '/en' for en.
  */
 export function postUrl(post: BlogPost, basePath: string): string {
-  return `${basePath}/blog/${postUrlSlug(post)}`;
+  return canonicalPath(`${basePath}/blog/${postUrlSlug(post)}`);
 }
 
 /**

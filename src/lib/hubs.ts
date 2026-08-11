@@ -163,7 +163,7 @@ export const HUBS: HubDef[] = [
 ];
 
 export function hubPath(hub: HubDef, lang: Lang): string {
-	return lang === "es" ? `/${hub.slug.es}` : `/en/${hub.slug.en}`;
+	return lang === "es" ? `/${hub.slug.es}/` : `/en/${hub.slug.en}/`;
 }
 
 export function postsForHub(
