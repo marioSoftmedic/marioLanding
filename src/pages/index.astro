@@ -5,6 +5,8 @@ import { getCollection } from 'astro:content';
 import { getLang, useTranslations, basePath } from '../i18n/utils';
 import { HUBS, hubPath } from '../lib/hubs';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
+import { absoluteUrl, canonicalPath } from '../lib/routes.mjs';
+import { postUrl } from '../lib/relations';
 
 const lang = getLang(Astro.url.pathname);
 const t = useTranslations(lang);
@@ -28,12 +30,13 @@ const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'short', day: 'numeric' });
 
 const siteUrl = 'https://mariohealthbits.dev';
+const rootUrl = absoluteUrl('/', siteUrl);
 const homeSchema = [
   {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: 'Mario Inostroza',
-    url: siteUrl,
+    url: rootUrl,
     jobTitle: 'Software Engineer & AI Builder',
     description: 'Tecnólogo Médico y AI Builder desde Puerto Natales, Patagonia, especializado en agentes de IA para salud digital.',
     sameAs: [
@@ -46,7 +49,7 @@ const homeSchema = [
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Mario Inostroza',
-    url: siteUrl,
+    url: rootUrl,
     inLanguage: 'es-CL',
   },
 ];
@@ -95,7 +98,7 @@ const homeSchema = [
               {t('hero.cta-contact')}
             </a>
           </div>
-          <a href={base + '/blog'} class="inline-flex items-center gap-1.5 mt-5 text-sm transition-colors duration-200" style="color: var(--text-faint);">
+          <a href={canonicalPath(base + '/blog')} class="inline-flex items-center gap-1.5 mt-5 text-sm transition-colors duration-200" style="color: var(--text-faint);">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             {t('hero.blog-link')}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -156,7 +159,7 @@ const homeSchema = [
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((project) => {
-          const href = `${base}/projects/${project.id}`;
+          const href = canonicalPath(`${base}/projects/${project.id}`);
           const initials = project.data.title.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
           return (
@@ -278,7 +281,7 @@ const homeSchema = [
           <h2 id="blog-title" class="text-3xl sm:text-4xl font-bold tracking-tight">{t('section.blog.title')}</h2>
           <p class="mt-2" style="color: var(--text-muted);">{t('section.blog.subtitle')}</p>
         </div>
-        <a href={base + '/blog'} class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0"
+        <a href={canonicalPath(base + '/blog')} class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0"
           style="color: var(--accent-cyan); border-color: color-mix(in srgb, var(--accent-cyan) 20%, transparent); background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);"
         >
           {t('section.blog.cta')}
@@ -289,7 +292,7 @@ const homeSchema = [
       <div class="flex flex-col divide-y" style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); divide-color: var(--border-subtle);">
         {latestPosts.map((post) => (
           <a
-            href={`${base}/blog/${post.data.canonicalSlug ?? post.id.replace(/\.en$/, '')}`}
+            href={postUrl(post, base)}
             class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8 py-6 hover:opacity-80 transition-opacity duration-200"
           >
             <time

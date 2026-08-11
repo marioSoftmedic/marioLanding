@@ -5,6 +5,7 @@ import { useTranslations, basePath } from '../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../lib/tags';
 import RelatedPosts from '../../components/RelatedPosts.astro';
 import PostCTA from '../../components/PostCTA.astro';
+import { absoluteUrl, canonicalPath } from '../../lib/routes.mjs';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'es');
@@ -26,6 +27,7 @@ const formatDate = (date: Date) =>
 
 const slug = post.data.canonicalSlug ?? post.id;
 const siteUrl = 'https://mariohealthbits.dev';
+const rootUrl = absoluteUrl('/', siteUrl);
 const articleSchema = {
   '@context': 'https://schema.org',
   '@type': 'TechArticle',
@@ -35,18 +37,18 @@ const articleSchema = {
   author: {
     '@type': 'Person',
     name: 'Mario Inostroza',
-    url: siteUrl,
+    url: rootUrl,
     jobTitle: 'Tecnólogo Médico & AI Builder',
     sameAs: ['https://x.com/mariohealthbits', 'https://www.linkedin.com/in/mario-inostroza-softmedic/'],
   },
   publisher: {
     '@type': 'Organization',
     name: 'mariohealthbits.dev',
-    url: siteUrl,
+    url: rootUrl,
   },
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
-  url: `${siteUrl}/blog/${slug}`,
+  url: absoluteUrl(`/blog/${slug}`, siteUrl),
   inLanguage: 'es-CL',
   keywords: post.data.tags,
 };
@@ -58,7 +60,7 @@ const articleSchema = {
 
       <div class="mb-4">
         <a
-          href={base + '/blog'}
+          href={canonicalPath(base + '/blog')}
           class="inline-flex items-center gap-2 text-sm transition-colors duration-200"
           style="color: var(--text-faint);"
         >
@@ -86,7 +88,7 @@ const articleSchema = {
           <div class="flex flex-wrap gap-2 mb-4">
             {tagSlugs.map((slug) => (
               <a
-                href={`${base}/blog/tags/${slug}`}
+                href={canonicalPath(`${base}/blog/tags/${slug}`)}
                 class="px-2.5 py-1 text-xs rounded-md font-medium transition-opacity hover:opacity-80"
                 style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);"
               >

@@ -5,6 +5,7 @@ import { useTranslations, basePath } from '../../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../../lib/tags';
 import RelatedPosts from '../../../components/RelatedPosts.astro';
 import PostCTA from '../../../components/PostCTA.astro';
+import { absoluteUrl, canonicalPath } from '../../../lib/routes.mjs';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'en');
@@ -26,6 +27,7 @@ const formatDate = (date: Date) =>
 
 const slug = post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '');
 const siteUrl = 'https://mariohealthbits.dev';
+const rootUrl = absoluteUrl('/', siteUrl);
 const articleSchema = {
   '@context': 'https://schema.org',
   '@type': 'TechArticle',
@@ -35,18 +37,18 @@ const articleSchema = {
   author: {
     '@type': 'Person',
     name: 'Mario Inostroza',
-    url: siteUrl,
+    url: rootUrl,
     jobTitle: 'Medical Technologist & AI Builder',
     sameAs: ['https://x.com/mariohealthbits', 'https://www.linkedin.com/in/mario-inostroza-softmedic/'],
   },
   publisher: {
     '@type': 'Organization',
     name: 'mariohealthbits.dev',
-    url: siteUrl,
+    url: rootUrl,
   },
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
-  url: `${siteUrl}/en/blog/${slug}`,
+  url: absoluteUrl(`/en/blog/${slug}`, siteUrl),
   inLanguage: 'en-US',
   keywords: post.data.tags,
 };
@@ -57,7 +59,7 @@ const articleSchema = {
     <div class="max-w-3xl mx-auto">
 
       <div class="mb-4">
-        <a href={base + '/blog'} class="inline-flex items-center gap-2 text-sm transition-colors duration-200" style="color: var(--text-faint);">
+        <a href={canonicalPath(base + '/blog')} class="inline-flex items-center gap-2 text-sm transition-colors duration-200" style="color: var(--text-faint);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t('blog.post.back')}
         </a>
@@ -74,7 +76,7 @@ const articleSchema = {
           <div class="flex flex-wrap gap-2 mb-4">
             {tagSlugs.map((slug) => (
               <a
-                href={`${base}/blog/tags/${slug}`}
+                href={canonicalPath(`${base}/blog/tags/${slug}`)}
                 class="px-2.5 py-1 text-xs rounded-md font-medium transition-opacity hover:opacity-80"
                 style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);"
               >{tagDisplay(slug, 'en')}</a>

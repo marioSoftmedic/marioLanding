@@ -3,13 +3,14 @@
   "buildCommand": "pnpm run build",
   "installCommand": "pnpm install",
   "redirects": [
-    { "source": "/news", "destination": "/blog", "permanent": true },
-    { "source": "/news/", "destination": "/blog", "permanent": true },
-    { "source": "/en/news", "destination": "/en/blog", "permanent": true },
-    { "source": "/en/news/", "destination": "/en/blog", "permanent": true },
-    { "source": "/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia", "destination": "/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia", "permanent": true },
-    { "source": "/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia/", "destination": "/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia", "permanent": true },
-    { "source": "/en/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia", "destination": "/en/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia", "permanent": true },
-    { "source": "/en/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia/", "destination": "/en/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia", "permanent": true }
+    { "source": "/news", "destination": "/blog/", "permanent": true },
+    { "source": "/news/", "destination": "/blog/", "permanent": true },
+    { "source": "/en/news", "destination": "/en/blog/", "permanent": true },
+    { "source": "/en/news/", "destination": "/en/blog/", "permanent": true },
+    { "source": "/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia", "destination": "/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia/", "permanent": true },
+    { "source": "/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia/", "destination": "/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia/", "permanent": true },
+    { "source": "/en/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia", "destination": "/en/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia/", "permanent": true },
+    { "source": "/en/blog/2026-07-01-patron-scout-worker-reviewer-agentes-ia/", "destination": "/en/blog/2026-06-17-patron-scout-worker-reviewer-agentes-ia/", "permanent": true },
+    { "source": "/:path([^.]*(?:[^./]))", "destination": "/:path/", "permanent": true }
   ]
 }
