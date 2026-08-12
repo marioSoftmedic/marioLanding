@@ -8,6 +8,9 @@ import { HUBS, hubPath } from '../../lib/hubs';
 import NewsletterSignup from '../../components/NewsletterSignup.astro';
 import { absoluteUrl, canonicalPath } from '../../lib/routes.mjs';
 import { postUrl } from '../../lib/relations';
+import { Picture } from 'astro:assets';
+import heroImage from '../../assets/images/marioHealthBits4.png';
+import cotochaImage from '../../assets/images/projects/cotocha.png';
 
 const lang = 'en' as const;
 const t = useTranslations(lang);
@@ -108,13 +111,19 @@ const homeSchema = [
 
         <div class="relative flex-shrink-0">
           <div class="hero-image-wrapper">
-            <img
-              src="/img/marioHealthBits4.png"
+            <Picture
+              src={heroImage}
+              formats={['avif', 'webp']}
+              fallbackFormat="jpeg"
+              width={640}
+              height={357}
+              widths={[260, 320, 520, 640]}
+              sizes="(min-width: 768px) 320px, 260px"
               alt="Mario Inostroza — Software Engineer & AI Builder"
-              width="320"
-              height="400"
               loading="eager"
+              fetchpriority="high"
               decoding="async"
+              data-image-role="hero"
             />
           </div>
         </div>
@@ -170,7 +179,26 @@ const homeSchema = [
               class="glass-card group block overflow-hidden cursor-pointer"
             >
               <div class="relative h-40 flex items-center justify-center overflow-hidden" style="background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));">
-                {project.data.image ? (
+                {project.id === 'openclaw' ? (
+                  <>
+                    <Picture
+                      src={cotochaImage}
+                      formats={['avif', 'webp']}
+                      fallbackFormat="jpeg"
+                      width={720}
+                      height={666}
+                      widths={[320, 480, 720]}
+                      sizes="(min-width: 1024px) 368px, (min-width: 768px) calc((100vw - 56px) / 2), calc(100vw - 32px)"
+                      alt=""
+                      aria-hidden="true"
+                      class="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                      style="opacity: 0.55;"
+                      loading="lazy"
+                      data-image-role="cotocha"
+                    />
+                    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(10,10,15,0.1) 0%, rgba(10,10,15,0.7) 100%);"></div>
+                  </>
+                ) : project.data.image ? (
                   <>
                     <img
                       src={project.data.image}
