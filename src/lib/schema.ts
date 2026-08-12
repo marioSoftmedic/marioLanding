@@ -1,5 +1,6 @@
 import { absoluteUrl } from './routes.mjs';
 import { EDITORIAL_ENTITY } from '../data/editorial';
+import { articleSchemaType } from './editorial-contracts.mjs';
 
 export type BreadcrumbItem = { name: string; path: string };
 
@@ -26,7 +27,7 @@ export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: an
 	return [
 		{
 			'@context': 'https://schema.org',
-			'@type': 'TechArticle',
+			'@type': articleSchemaType(post.data.articleKind),
 			headline: post.data.title,
 			description: post.data.description,
 			image: post.data.image ? `${siteUrl}${post.data.image}` : `${siteUrl}/img/marioHealthBits.png`,

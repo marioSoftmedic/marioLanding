@@ -25,6 +25,7 @@ const blog = defineCollection({
 		title: z.string(),
 		date: z.coerce.date(),
 		updatedDate: z.coerce.date().optional(),
+		articleKind: z.enum(['blog', 'technical']).default('blog'),
 		corrections: z.array(z.object({ date: z.coerce.date(), note: z.string().min(1) })).default([]),
 		description: z.string(),
 		tags: z.array(z.string()).default([]),

@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { isIndexableTag, isSitemapPage } from '../src/lib/tag-indexability.mjs';
+import {
+	articleSchemaType,
+	validateArticleContract,
+	validatePillarContract,
+} from '../src/lib/editorial-contracts.mjs';
 
 test('indexes a locale tag only when it has three published posts and a unique description', () => {
 	assert.equal(isIndexableTag({ publishedCount: 3, description: 'Clinical interoperability.' }), true);
@@ -28,6 +33,35 @@ test('contains all four localized pillars with visible FAQs and required product
 	for (const marker of ["'clinical-lab-api': {", "'ai-agents-production': {", 'Examya', 'Fhirex', 'faqs:']) {
 		assert.match(pillars, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 	}
+	assert.match(pillars, /idNorma=1203827/);
+	assert.doesNotMatch(pillars, /idNorma=1214041|FHIR R4 Security/);
+});
+
+test('rejects invalid update and material-correction chronology', () => {
+	const base = { date: new Date('2026-01-02'), updatedDate: new Date('2026-01-02'), corrections: [] };
+	assert.deepEqual(validateArticleContract(base), ['updatedDate must be after date']);
+	assert.match(validateArticleContract({ ...base, updatedDate: new Date('2026-01-03'), corrections: [{ date: new Date('2026-01-04'), note: 'Material correction.' }] })[0], /no later than updatedDate/);
+	assert.match(validateArticleContract({ ...base, updatedDate: undefined, corrections: [{ date: new Date('2026-01-03'), note: '' }] })[0], /nonempty dated note/);
+});
+
+test('rejects unresolved author routes and visible/schema parity failures', () => {
+	assert.deepEqual(validateArticleContract({ date: new Date('2026-01-01'), authorRoute: '/en/autor/' }), ['author route does not resolve for locale']);
+	assert.match(validateArticleContract({ date: new Date('2026-01-01'), publisherLogo: '', visibleFaqs: [{ question: 'Visible?', answer: 'Yes.' }], schemaFaqs: [] }).join(' '), /publisher logo is required.*FAQ schema must match visible FAQs/);
+});
+
+test('rejects missing localized curated targets and FAQ drift', () => {
+	assert.deepEqual(validatePillarContract({
+		locale: 'en',
+		curatedArticles: [{ label: 'Missing', url: '/en/blog/missing/' }],
+		localizedArticlePaths: new Set(['/blog/only-es/']),
+		faqs: [{ question: 'Q?', answer: 'A.' }],
+		schemaFaqs: [{ question: 'Other?', answer: 'A.' }],
+	}), ['missing localized curated target', 'FAQ schema must match visible FAQs']);
+});
+
+test('classifies only opted-in technical articles as TechArticle', () => {
+	assert.equal(articleSchemaType(), 'BlogPosting');
+	assert.equal(articleSchemaType('technical'), 'TechArticle');
 });
 
 test('does not index a tag with an empty or reused locale description', () => {
@@ -82,18 +116,31 @@ test('renders curated pillar links from localized editorial data', async () => {
 
 test('built pages keep visible and JSON-LD trust, FAQ, breadcrumb, author, and sitemap parity', { skip: !process.env.ISSUE18_BUILT }, () => {
 	const dist = new URL('../dist/', import.meta.url);
+	const readHtml = (path) => readFileSync(new URL(path, dist), 'utf8');
+	const files = (path) => readdirSync(new URL(path, dist), { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? files(`${path}${entry.name}/`) : [`${path}${entry.name}`]);
+	const articlePages = [...files('blog/'), ...files('en/blog/')].filter((path) => /^((en\/)?blog\/)\d{4}-.*\/index\.html$/.test(path));
+	assert.equal(articlePages.length, 196, 'expected every built article to be audited');
+	for (const path of articlePages) {
+		const html = readHtml(path);
+		assert.match(html, /href="\/(?:autor\/|en\/author\/)/, `${path} has an author link`);
+		assert.match(html, /"@type":"(?:BlogPosting|TechArticle)"/, `${path} has an article schema type`);
+		assert.match(html, /"dateModified":/, `${path} has dateModified`);
+		assert.match(html, /"logo":\{"@type":"ImageObject","url":"https:\/\/mariohealthbits\.dev\/favicon\.svg"/, `${path} has a publisher logo`);
+	}
 	for (const path of ['autor/index.html', 'en/author/index.html', 'laboratorio-clinico-api/index.html', 'en/clinical-lab-api/index.html', 'agentes-ia-produccion/index.html', 'en/ai-agents-production/index.html']) {
-		const html = readFileSync(new URL(path, dist), 'utf8');
+		const html = readHtml(path);
 		assert.match(html, /application\/ld\+json/);
 		assert.match(html, /BreadcrumbList/);
 	}
-	for (const path of ['blog/2026-04-01-cotocha-orquestador-agentes-ia/index.html', 'en/blog/2026-04-01-cotocha-orquestador-agentes-ia/index.html']) {
-		const html = readFileSync(new URL(path, dist), 'utf8');
-		assert.match(html, /href="\/autor\/"|href="\/en\/author\//);
-		assert.match(html, /dateModified/);
-		assert.match(html, /mainEntityOfPage/);
+	for (const path of ['laboratorio-clinico-api/index.html', 'en/clinical-lab-api/index.html', 'agentes-ia-produccion/index.html', 'en/ai-agents-production/index.html']) {
+		const html = readHtml(path);
+		assert.match(html, /Respuesta directa|Direct answer/);
+		assert.match(html, /Fuentes primarias y referencias|Primary sources and references/);
+		assert.match(html, /FAQPage/);
+		assert.equal((html.match(/<h3>/g) ?? []).length >= 4, true, `${path} renders four visible FAQs`);
+		assert.match(html, /Examya/);
 	}
-	const sitemap = readFileSync(new URL('sitemap-0.xml', dist), 'utf8');
+	const sitemap = readHtml('sitemap-0.xml');
 	const thinTag = 'https://mariohealthbits.dev/blog/tags/cotocha/';
 	assert.equal(sitemap.includes(thinTag), false);
 	assert.equal(existsSync(new URL('blog/tags/cotocha/index.html', dist)), true);
