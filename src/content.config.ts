@@ -24,6 +24,8 @@ const blog = defineCollection({
 	schema: z.object({
 		title: z.string(),
 		date: z.coerce.date(),
+		updatedDate: z.coerce.date().optional(),
+		corrections: z.array(z.object({ date: z.coerce.date(), note: z.string().min(1) })).default([]),
 		description: z.string(),
 		tags: z.array(z.string()).default([]),
 		image: z.string().optional(),
@@ -47,6 +49,11 @@ const blog = defineCollection({
 			.optional(),
 		newsletterTopic: z.string().optional(),
 		newsletterPriority: z.number().int().min(0).max(5).optional(),
+	}).superRefine((data, ctx) => {
+		if (data.updatedDate && data.updatedDate <= data.date) ctx.addIssue({ code: 'custom', path: ['updatedDate'], message: 'updatedDate must be after date' });
+		for (const [index, correction] of data.corrections.entries()) {
+			if (!data.updatedDate || correction.date <= data.date || correction.date > data.updatedDate) ctx.addIssue({ code: 'custom', path: ['corrections', index, 'date'], message: 'correction date must be after publication and no later than updatedDate' });
+		}
 	}),
 });
 

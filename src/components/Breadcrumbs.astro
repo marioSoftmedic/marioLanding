@@ -1,0 +1,9 @@
+---
+import { canonicalPath } from '../lib/routes.mjs';
+const { items } = Astro.props;
+---
+<nav aria-label="Breadcrumb" class="mb-6 text-sm" style="color: var(--text-faint);">
+  <ol class="flex flex-wrap gap-2">
+    {items.map((item, index) => <li class="flex gap-2">{index > 0 && <span aria-hidden="true">/</span>}{index === items.length - 1 ? <span aria-current="page">{item.name}</span> : <a href={canonicalPath(item.path)}>{item.name}</a>}</li>)}
+  </ol>
+</nav>

@@ -17,6 +17,8 @@
     "test:issue21": "node --test tests/issue-21-routing.test.mjs",
     "test:issue21:built": "ISSUE21_BUILT=1 node --test tests/issue-21-routing.test.mjs",
     "test:issue21:vercel": "ISSUE21_VERCEL=1 node --test tests/issue-21-routing.test.mjs",
+    "test:issue18": "node --test tests/issue-18-topical-authority.test.mjs",
+		"test:issue18:built": "ISSUE18_BUILT=1 node --test tests/issue-18-topical-authority.test.mjs",
     "newsletter:digest": "node scripts/generate-newsletter-digest.mjs",
     "newsletter:validate": "node scripts/validate-newsletter-draft.mjs",
     "newsletter:preview": "node scripts/render-newsletter-preview.mjs",

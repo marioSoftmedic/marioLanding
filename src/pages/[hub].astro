@@ -4,8 +4,11 @@ import { getCollection } from 'astro:content';
 import { HUBS, hubPath, postsForHub } from '../lib/hubs';
 import { tagsForPost, tagDisplay } from '../lib/tags';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
-import { absoluteUrl } from '../lib/routes.mjs';
 import { postUrl } from '../lib/relations';
+import { PILLARS } from '../data/pillars';
+import PillarContent from '../components/PillarContent.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { buildCollectionPageSchema } from '../lib/schema';
 
 export async function getStaticPaths() {
   return HUBS.map((hub) => ({
@@ -18,32 +21,21 @@ const { hub } = Astro.props;
 const lang = 'es' as const;
 const allPosts = await getCollection('blog');
 const hubPosts = postsForHub(allPosts, hub, lang);
-const siteUrl = 'https://mariohealthbits.dev';
-const canonicalUrl = absoluteUrl(hubPath(hub, lang), siteUrl);
 const alternatePath = hubPath(hub, 'en');
+const pillar = PILLARS[hub.id as keyof typeof PILLARS]?.[lang];
+const path = hubPath(hub, lang);
+const breadcrumbs = [{ name: 'Inicio', path: '/' }, { name: hub.title[lang], path }];
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
 
-const schema = {
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: `${hub.title[lang]} — Mario Inostroza`,
-  description: hub.description[lang],
-  url: canonicalUrl,
-  inLanguage: 'es-CL',
-  about: hub.keywords,
-  isPartOf: {
-    '@type': 'Blog',
-    name: 'Blog — Mario Inostroza',
-    url: absoluteUrl('/blog/', siteUrl),
-  },
-};
+const schema = buildCollectionPageSchema({ name: `${hub.title[lang]} — Mario Inostroza`, description: hub.description[lang], lang, path, breadcrumbs, faqs: pillar?.faqs });
 ---
 
 <Base title={`${hub.title[lang]} — Mario Inostroza`} description={hub.description[lang]} schema={schema} alternatePath={alternatePath}>
   <section class="py-24 px-4">
     <div class="max-w-4xl mx-auto">
+      <Breadcrumbs items={breadcrumbs} />
       <a href="/blog/" class="inline-flex items-center gap-2 text-sm mb-10 transition-colors duration-200" style="color: var(--text-faint);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Blog
@@ -59,6 +51,8 @@ const schema = {
           ))}
         </div>
       </header>
+
+      {pillar && <PillarContent pillar={pillar} lang={lang} />}
 
       <div class="mb-12">
         <NewsletterSignup lang={lang} tags={hub.tags} newsletterTopic={hub.id} source={`hub-${hub.id}`} />

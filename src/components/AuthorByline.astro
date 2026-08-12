@@ -1,0 +1,14 @@
+---
+import { EDITORIAL_ENTITY } from '../data/editorial';
+const { lang, date, updatedDate } = Astro.props;
+const locale = lang === 'en' ? 'en-US' : 'es-CL';
+const authorUrl = EDITORIAL_ENTITY.url[lang];
+const format = (value: Date) => value.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
+---
+<div class="flex items-center gap-3 pb-8 border-b border-[var(--border-subtle)]">
+  <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--accent-orange-glow); color: var(--accent-orange);">MI</div>
+  <div>
+    <a href={authorUrl} class="text-sm font-medium" style="color: var(--text-primary);">Mario Inostroza</a>
+    <p class="text-xs" style="color: var(--text-faint);"><time datetime={date.toISOString()}>{format(date)}</time>{updatedDate && <> · {lang === 'en' ? 'Updated ' : 'Actualizado '}<time datetime={updatedDate.toISOString()}>{format(updatedDate)}</time></>}</p>
+  </div>
+</div>
