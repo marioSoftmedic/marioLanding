@@ -186,6 +186,18 @@ test('built pages keep visible and JSON-LD trust, FAQ, breadcrumb, author, and s
 		assert.match(html, /"dateModified":/, `${path} has dateModified`);
 		assert.match(html, /"logo":\{"@type":"ImageObject","url":"https:\/\/mariohealthbits\.dev\/favicon\.svg"/, `${path} has a publisher logo`);
 	}
+	for (const { path, updatedLabel, correctionHeading, visibleDate } of [
+		{ path: 'blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya/index.html', updatedLabel: 'Actualizado', correctionHeading: 'Correcciones materiales', visibleDate: '12 de agosto de 2026' },
+		{ path: 'en/blog/2026-04-16-ley-21668-interoperabilidad-salud-chile-oportunidad-examya/index.html', updatedLabel: 'Updated', correctionHeading: 'Material corrections', visibleDate: 'August 12, 2026' },
+	]) {
+		const html = readHtml(path);
+		assert.match(html, /"datePublished":"2026-04-16T00:00:00\.000Z"/);
+		assert.match(html, /"dateModified":"2026-08-12T00:00:00\.000Z"/);
+		assert.match(html, new RegExp(`${updatedLabel}[^<]*<time datetime="2026-08-12T00:00:00\\.000Z">${visibleDate}<\\/time>`));
+		assert.match(html, /href="https:\/\/www\.bcn\.cl\/leychile\/navegar\?idNorma=1203827"/);
+		assert.match(html, new RegExp(`<h2>${correctionHeading}<\\/h2>`));
+		assert.match(html, new RegExp(`<time datetime="2026-08-12T00:00:00\\.000Z">${visibleDate}<\\/time>`));
+	}
 	for (const path of ['autor/index.html', 'en/author/index.html', 'laboratorio-clinico-api/index.html', 'en/clinical-lab-api/index.html', 'agentes-ia-produccion/index.html', 'en/ai-agents-production/index.html']) {
 		const html = readHtml(path);
 		assert.match(html, /application\/ld\+json/);

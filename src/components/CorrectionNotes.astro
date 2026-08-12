@@ -1,4 +1,4 @@
 ---
 const { corrections = [], lang } = Astro.props;
 ---
-{corrections.length > 0 && <section aria-label={lang === 'en' ? 'Material corrections' : 'Correcciones materiales'}><h2>{lang === 'en' ? 'Material corrections' : 'Correcciones materiales'}</h2><ul>{corrections.map((correction) => <li><time datetime={correction.date.toISOString()}>{correction.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-CL')}</time>: {correction.note}</li>)}</ul></section>}
+{corrections.length > 0 && <section aria-label={lang === 'en' ? 'Material corrections' : 'Correcciones materiales'}><h2>{lang === 'en' ? 'Material corrections' : 'Correcciones materiales'}</h2><ul>{corrections.map((correction) => <li><time datetime={correction.date.toISOString()}>{correction.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-CL', { timeZone: 'UTC' })}</time>: {correction.note}</li>)}</ul></section>}
