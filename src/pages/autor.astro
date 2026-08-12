@@ -10,6 +10,7 @@ const schema = buildCollectionPageSchema({ name: 'Autor y política editorial �
     <nav aria-label="Breadcrumb"><a href="/">Inicio</a> / <span aria-current="page">Autor y política editorial</span></nav>
     <h1>Mario Inostroza</h1>
     <p><strong>{EDITORIAL_ENTITY.role.es}</strong></p>
+		<p>{EDITORIAL_ENTITY.profiles.map((profile) => <a href={profile.url} rel="me">{profile.label}</a>)}</p>
     <p>Esta experiencia editorial reúne una perspectiva de operaciones de laboratorio en Biohealth durante 2021 y decisiones de arquitectura de agentes en producción para Examya y Cotocha. No publica datos de pacientes ni información confidencial.</p>
     <h2>Política editorial y correcciones</h2>
     <p>Priorizo fuentes primarias cuando están disponibles para afirmaciones legales, regulatorias o de sistemas públicos. Reviso el contenido trimestralmente y cuando cambia una fuente relevante.</p>

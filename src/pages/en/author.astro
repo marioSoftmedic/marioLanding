@@ -10,6 +10,7 @@ const schema = buildCollectionPageSchema({ name: 'Author and editorial policy â€
     <nav aria-label="Breadcrumb"><a href="/en/">Home</a> / <span aria-current="page">Author and editorial policy</span></nav>
     <h1>Mario Inostroza</h1>
     <p><strong>{EDITORIAL_ENTITY.role.en}</strong></p>
+		<p>{EDITORIAL_ENTITY.profiles.map((profile) => <a href={profile.url} rel="me">{profile.label}</a>)}</p>
     <p>This editorial work draws on laboratory operations at Biohealth in 2021 and production-agent architecture decisions for Examya and Cotocha. It does not publish patient or confidential information.</p>
     <h2>Editorial and corrections policy</h2>
     <p>Primary sources are preferred when available for legal, regulatory, or public-system claims. Content is reviewed quarterly and when a relevant source changes.</p>

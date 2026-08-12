@@ -1,16 +1,20 @@
 ---
 import Base from '../../../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import { tagsForPost, tagDisplay, tagDescription } from '../../../../lib/tags';
+import { TAG_TAXONOMY, tagsForPost, tagDisplay, tagDescription } from '../../../../lib/tags';
 import { useTranslations, basePath } from '../../../../i18n/utils';
 import { postsForLang, postUrl } from '../../../../lib/relations';
 import { canonicalPath } from '../../../../lib/routes.mjs';
-import { isIndexableTag } from '../../../../lib/tag-indexability.mjs';
+import { buildTagIndexabilitySnapshot, isIndexableTagPage, tagPagePath } from '../../../../lib/tag-indexability.mjs';
 
 export async function getStaticPaths() {
   const allPosts = await getCollection('blog');
   const lang = 'en' as const;
   const posts = postsForLang(allPosts, lang);
+	const tagIndexability = buildTagIndexabilitySnapshot({
+		taxonomy: TAG_TAXONOMY,
+		posts: allPosts.filter((post) => !post.data.draft).map((post) => ({ locale: post.data.lang, tags: tagsForPost(post.data.tags) })),
+	});
 
   const byTag = new Map<string, typeof posts>();
   for (const p of posts) {
@@ -26,19 +30,18 @@ export async function getStaticPaths() {
     props: {
       tagSlug: slug,
       posts: postsForTag.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()),
+			indexable: isIndexableTagPage(tagPagePath(lang, slug), tagIndexability),
     },
   }));
 }
 
-const { tagSlug, posts } = Astro.props;
+const { tagSlug, posts, indexable } = Astro.props;
 const lang = 'en' as const;
 const t = useTranslations(lang);
 const base = basePath(lang);
 
 const display = tagDisplay(tagSlug, lang);
 const description = tagDescription(tagSlug, lang);
-const indexable = isIndexableTag({ publishedCount: posts.length, description });
-
 const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
 ---

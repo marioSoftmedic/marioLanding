@@ -31,7 +31,7 @@ export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: an
 			headline: post.data.title,
 			description: post.data.description,
 			image: post.data.image ? `${siteUrl}${post.data.image}` : `${siteUrl}/img/marioHealthBits.png`,
-			author: { '@type': 'Person', name: EDITORIAL_ENTITY.name, url: absoluteUrl(EDITORIAL_ENTITY.url[lang], siteUrl), jobTitle: EDITORIAL_ENTITY.role[lang] },
+			author: { '@type': 'Person', name: EDITORIAL_ENTITY.name, url: absoluteUrl(EDITORIAL_ENTITY.url[lang], siteUrl), jobTitle: EDITORIAL_ENTITY.role[lang], sameAs: EDITORIAL_ENTITY.profiles.map((profile) => profile.url) },
 			publisher,
 			mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(path, siteUrl) },
 			datePublished: post.data.date.toISOString(),

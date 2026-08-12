@@ -5,7 +5,7 @@ import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { isIndexableTag, isSitemapPage } from '../src/lib/tag-indexability.mjs';
+import { buildTagIndexabilitySnapshot, isIndexableTag, isIndexableTagPage, isSitemapPage, tagPagePath } from '../src/lib/tag-indexability.mjs';
 import {
 	articleSchemaType,
 	validateArticleContract,
@@ -15,6 +15,25 @@ import {
 test('indexes a locale tag only when it has three published posts and a unique description', () => {
 	assert.equal(isIndexableTag({ publishedCount: 3, description: 'Clinical interoperability.' }), true);
 	assert.equal(isIndexableTag({ publishedCount: 2, description: 'Clinical interoperability.' }), false);
+});
+
+test('uses one snapshot for valuable, thin, empty, and duplicate-description page and sitemap behavior', () => {
+	const taxonomy = [
+		{ slug: 'valuable', description: { es: 'Descripción única.', en: 'Unique description.' } },
+		{ slug: 'thin', description: { es: 'Descripción delgada.', en: 'Thin description.' } },
+		{ slug: 'empty', description: { es: '', en: '' } },
+		{ slug: 'duplicate-a', description: { es: 'Descripción repetida.', en: 'Repeated description.' } },
+		{ slug: 'duplicate-b', description: { es: '  DESCRIPCIÓN   REPETIDA.  ', en: '  REPEATED   DESCRIPTION.  ' } },
+	];
+	const posts = taxonomy.flatMap((tag) => Array.from({ length: tag.slug === 'thin' ? 2 : 3 }, () => ({ locale: 'es', tags: [tag.slug] })));
+	const snapshot = buildTagIndexabilitySnapshot({ taxonomy, posts });
+
+	for (const slug of ['valuable', 'thin', 'empty', 'duplicate-a', 'duplicate-b']) {
+		const path = tagPagePath('es', slug);
+		const expected = slug === 'valuable';
+		assert.equal(isIndexableTagPage(path, snapshot), expected, `${slug} page robots state`);
+		assert.equal(isSitemapPage(path, snapshot), expected, `${slug} sitemap state`);
+	}
 });
 
 test('defines the approved bilingual author routes and editorial safeguards', async () => {
@@ -29,6 +48,9 @@ test('defines the approved bilingual author routes and editorial safeguards', as
 	assert.match(editorial, /Medical Technologist and builder of health and artificial intelligence systems/);
 	assert.match(editorial, /quarterly/);
 	assert.match(editorial, /educational/);
+	assert.match(editorial, /https:\/\/x\.com\/marioHealthBits/);
+	assert.match(es, /EDITORIAL_ENTITY\.profiles/);
+	assert.match(en, /EDITORIAL_ENTITY\.profiles/);
 });
 
 test('contains all four localized pillars with visible FAQs and required product links', async () => {
@@ -109,13 +131,16 @@ test('keeps tag-page robots and sitemap filtering on the shared policy', async (
 		readFile(new URL('../src/pages/blog/tags/[tag].astro', import.meta.url), 'utf8'),
 		readFile(new URL('../src/pages/en/blog/tags/[tag].astro', import.meta.url), 'utf8'),
 	]);
+	assert.match(config, /buildTagIndexabilitySnapshot/);
 	assert.match(config, /isSitemapPage/);
-	assert.match(esTag, /isIndexableTag/);
-	assert.match(enTag, /isIndexableTag/);
+	assert.match(esTag, /buildTagIndexabilitySnapshot/);
+	assert.match(enTag, /buildTagIndexabilitySnapshot/);
+	assert.match(esTag, /noindex=\{!indexable\}/);
+	assert.match(enTag, /noindex=\{!indexable\}/);
 });
 
 test('excludes thin tag paths from sitemap regardless of trailing-slash normalization', () => {
-	const policy = new Map([['cotocha', false], ['ai', true]]);
+	const policy = new Map([['/blog/tags/cotocha/', false], ['/en/blog/tags/cotocha/', false], ['/blog/tags/ai/', true]]);
 	assert.equal(isSitemapPage('/blog/tags/cotocha/', policy), false);
 	assert.equal(isSitemapPage('/en/blog/tags/cotocha', policy), false);
 	assert.equal(isSitemapPage('/blog/tags/ai/', policy), true);

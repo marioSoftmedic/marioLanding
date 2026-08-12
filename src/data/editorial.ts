@@ -5,7 +5,9 @@ export const EDITORIAL_ENTITY = {
 		en: 'Medical Technologist and builder of health and artificial intelligence systems',
 	},
 	url: { es: '/autor/', en: '/en/author/' },
-	profiles: [],
+	profiles: [
+		{ label: 'X', url: 'https://x.com/marioHealthBits' },
+	],
 	policy: {
 		reviewCadence: 'quarterly',
 		disclaimer: 'educational and technical content; not medical, legal, or regulatory advice',
