@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { isIndexableTag, isSitemapPage } from '../src/lib/tag-indexability.mjs';
 import {
 	articleSchemaType,
@@ -57,6 +60,37 @@ test('rejects missing localized curated targets and FAQ drift', () => {
 		faqs: [{ question: 'Q?', answer: 'A.' }],
 		schemaFaqs: [{ question: 'Other?', answer: 'A.' }],
 	}), ['missing localized curated target', 'FAQ schema must match visible FAQs']);
+});
+
+const validationRoot = new URL('..', import.meta.url);
+const validator = new URL('../scripts/validate-posts.mjs', import.meta.url);
+
+async function expectValidatorFailure({ file, replace, diagnostic }) {
+	const fixtureRoot = await mkdtemp(join(tmpdir(), 'issue18-validator-'));
+	try {
+		await cp(new URL('../src/', import.meta.url), join(fixtureRoot, 'src'), { recursive: true });
+		const fixturePath = join(fixtureRoot, file.replace(/^src\//, 'src/'));
+		const source = await readFile(fixturePath, 'utf8');
+		await writeFile(fixturePath, source.replace(...replace));
+		let result;
+		try {
+			execFileSync(process.execPath, [validator.pathname, `--issue18-root=${fixtureRoot}`], { cwd: validationRoot, encoding: 'utf8', stdio: 'pipe' });
+		} catch (error) {
+			result = `${error.stdout}${error.stderr}`;
+			assert.equal(error.status, 1);
+		}
+		assert.match(result ?? '', diagnostic);
+	} finally {
+		await rm(fixtureRoot, { recursive: true, force: true });
+	}
+}
+
+test('the real validation process rejects each issue-18 contract breach', async (t) => {
+	await t.test('invalid author route', () => expectValidatorFailure({ file: 'src/data/editorial.ts', replace: [/en: '\/en\/author\/'/, "en: '/en/autor/'"], diagnostic: /author route does not resolve for locale/ }));
+	await t.test('FAQ-visible/schema divergence', () => expectValidatorFailure({ file: 'src/pages/[hub].astro', replace: [/faqs: pillar\?\.faqs/, 'faqs: []'], diagnostic: /FAQ schema must match visible FAQs/ }));
+	await t.test('missing publisher logo', () => expectValidatorFailure({ file: 'src/lib/schema.ts', replace: [/logo: \{ '@type': 'ImageObject', url: `\$\{siteUrl\}\/favicon\.svg` \},/, ''], diagnostic: /publisher logo is required/ }));
+	await t.test('missing localized curated target', () => expectValidatorFailure({ file: 'src/data/pillars.ts', replace: [/url: '\/en\/blog\//, "url: '/en/blog/missing-localized-target/"], diagnostic: /missing localized curated target/ }));
+	await t.test('invalid update chronology', () => expectValidatorFailure({ file: 'src/content/blog/2026-04-17-postgresql-drizzle-orm-mi-stack-favorito-para-proyectos-con-ia.mdx', replace: [/date: 2026-04-17/, 'date: 2026-04-17\nupdatedDate: 2026-04-17'], diagnostic: /updatedDate must be after date/ }));
 });
 
 test('classifies only opted-in technical articles as TechArticle', () => {

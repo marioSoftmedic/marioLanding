@@ -27,8 +27,10 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve, relative, basename } from "node:path";
+import { validateProjectEditorialContracts } from "../src/lib/editorial-contracts.mjs";
 
-const ROOT = resolve(process.cwd());
+const rootArg = process.argv.find((arg) => arg.startsWith('--issue18-root='));
+const ROOT = resolve(rootArg ? rootArg.slice('--issue18-root='.length) : process.cwd());
 const BLOG_DIR = join(ROOT, "src", "content", "blog");
 const EN_PATTERN = /\.en\.(md|mdx)$/;
 const ANY_POST_PATTERN = /\.(md|mdx)$/;
@@ -293,7 +295,7 @@ function validatePost(filePath, taxonomy, hubTags) {
 function main() {
 	const taxonomy = loadTaxonomy();
 	const hubTags = loadHubTags();
-	const argv = process.argv.slice(2);
+	const argv = process.argv.slice(2).filter((arg) => !arg.startsWith('--issue18-root='));
 	let targets;
 	if (argv.length > 0) {
 		targets = filterPosts(argv);
@@ -312,12 +314,13 @@ function main() {
 	}
 
 	const allResults = targets.flatMap((f) => validatePost(f, taxonomy, hubTags));
-	const failures = allResults.filter((r) => !r.ok);
+	const editorialFailures = validateProjectEditorialContracts(ROOT).map((error) => ({ ok: false, file: join(ROOT, 'src'), error }));
+	const failures = [...allResults.filter((r) => !r.ok), ...editorialFailures];
 
 	if (failures.length === 0) {
 		console.log(
 			green(
-				`[validate-posts] ✓ ${targets.length} post(s) validated — canonicalSlug + taxonomy + hub coverage OK.`,
+				`[validate-posts] ✓ ${targets.length} post(s) validated — canonicalSlug + taxonomy + hub coverage + editorial contracts OK.`,
 			),
 		);
 		process.exit(0);
