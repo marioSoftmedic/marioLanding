@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import { EDITORIAL_ENTITY } from '../data/editorial';
+import { buildCollectionPageSchema } from '../lib/schema';
+const breadcrumbs = [{ name: 'Inicio', path: '/' }, { name: 'Autor y política editorial', path: '/autor/' }];
+const schema = buildCollectionPageSchema({ name: 'Autor y política editorial — Mario Inostroza', description: 'Identidad editorial, fuentes y correcciones de mariohealthbits.dev.', lang: 'es', path: '/autor/', breadcrumbs });
+---
+<Base title="Autor y política editorial — Mario Inostroza" description="Identidad editorial, fuentes y correcciones de mariohealthbits.dev." alternatePath="/en/author/" schema={schema}>
+  <article class="py-24 px-4"><div class="max-w-3xl mx-auto prose-blog">
+    <nav aria-label="Breadcrumb"><a href="/">Inicio</a> / <span aria-current="page">Autor y política editorial</span></nav>
+    <h1>Mario Inostroza</h1>
+    <p><strong>{EDITORIAL_ENTITY.role.es}</strong></p>
+		<p>{EDITORIAL_ENTITY.profiles.map((profile) => <a href={profile.url} rel="me">{profile.label}</a>)}</p>
+    <p>Esta experiencia editorial reúne una perspectiva de operaciones de laboratorio en Biohealth durante 2021 y decisiones de arquitectura de agentes en producción para Examya y Cotocha. No publica datos de pacientes ni información confidencial.</p>
+    <h2>Política editorial y correcciones</h2>
+    <p>Priorizo fuentes primarias cuando están disponibles para afirmaciones legales, regulatorias o de sistemas públicos. Reviso el contenido trimestralmente y cuando cambia una fuente relevante.</p>
+    <p>Podés informar una corrección mediante el correo o el formulario de contacto disponible en este sitio. Las correcciones materiales se anotan con fecha junto a la fecha de actualización del artículo.</p>
+    <p>El contenido es educativo y técnico; no constituye consejo médico, legal ni regulatorio.</p>
+  </div></article>
+</Base>

@@ -29,6 +29,7 @@ async function buildIndex(): Promise<Map<string, string>> {
 	addPair(index, { es: "/", en: "/en/" });
 	addPair(index, { es: "/blog/", en: "/en/blog/" });
 	addPair(index, { es: "/blog/tags/", en: "/en/blog/tags/" });
+	addPair(index, { es: "/autor/", en: "/en/author/" });
 	for (const hub of HUBS) addPair(index, { es: hubPath(hub, "es"), en: hubPath(hub, "en") });
 
 	const blogPairs = new Map<string, Pair>();

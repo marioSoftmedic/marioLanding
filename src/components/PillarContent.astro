@@ -1,0 +1,12 @@
+---
+const { pillar, lang } = Astro.props;
+---
+<section class="prose-blog mb-12">
+  <h2>{lang === 'en' ? 'Direct answer' : 'Respuesta directa'}</h2><p>{pillar.directAnswer}</p>
+  <h2>{lang === 'en' ? 'Experience boundary' : 'Límite de experiencia'}</h2><p>{pillar.experience}</p>
+  <h2>{lang === 'en' ? 'A practical production path' : 'Una ruta práctica de producción'}</h2><ol>{pillar.process.map((step) => <li>{step}</li>)}</ol>
+  <h2>FAQ</h2>{pillar.faqs.map((faq) => <><h3>{faq.question}</h3><p>{faq.answer}</p></>)}
+	<h2>{lang === 'en' ? 'Curated reading' : 'Lecturas seleccionadas'}</h2><ul>{pillar.curatedArticles.map((article) => <li><a href={article.url}>{article.label}</a></li>)}</ul>
+  <h2>{lang === 'en' ? 'Relevant products' : 'Productos relacionados'}</h2><p>{pillar.products.map((product) => <><a href={product.url} target="_blank" rel="noopener noreferrer">{product.label}</a>{' '}</>)}</p>
+  <h2>{lang === 'en' ? 'Primary sources and references' : 'Fuentes primarias y referencias'}</h2><ul>{pillar.sources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a> — {source.owner} ({lang === 'en' ? 'accessed' : 'consultada'} {source.accessed})</li>)}</ul>
+</section>

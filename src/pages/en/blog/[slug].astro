@@ -5,7 +5,12 @@ import { useTranslations, basePath } from '../../../i18n/utils';
 import { tagsForPost, tagDisplay } from '../../../lib/tags';
 import RelatedPosts from '../../../components/RelatedPosts.astro';
 import PostCTA from '../../../components/PostCTA.astro';
-import { absoluteUrl, canonicalPath } from '../../../lib/routes.mjs';
+import { canonicalPath } from '../../../lib/routes.mjs';
+import AuthorByline from '../../../components/AuthorByline.astro';
+import CorrectionNotes from '../../../components/CorrectionNotes.astro';
+import { EDITORIAL_ENTITY } from '../../../data/editorial';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import { buildArticleSchema } from '../../../lib/schema';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'en');
@@ -26,38 +31,16 @@ const formatDate = (date: Date) =>
   date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'long', day: 'numeric' });
 
 const slug = post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '');
-const siteUrl = 'https://mariohealthbits.dev';
-const rootUrl = absoluteUrl('/', siteUrl);
-const articleSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'TechArticle',
-  headline: post.data.title,
-  description: post.data.description,
-  image: post.data.image ? `${siteUrl}${post.data.image}` : `${siteUrl}/img/marioHealthBits.png`,
-  author: {
-    '@type': 'Person',
-    name: 'Mario Inostroza',
-    url: rootUrl,
-    jobTitle: 'Medical Technologist & AI Builder',
-    sameAs: ['https://x.com/mariohealthbits', 'https://www.linkedin.com/in/mario-inostroza-softmedic/'],
-  },
-  publisher: {
-    '@type': 'Organization',
-    name: 'mariohealthbits.dev',
-    url: rootUrl,
-  },
-  datePublished: post.data.date.toISOString(),
-  dateModified: post.data.date.toISOString(),
-  url: absoluteUrl(`/en/blog/${slug}`, siteUrl),
-  inLanguage: 'en-US',
-  keywords: post.data.tags,
-};
+const path = `/en/blog/${slug}/`;
+const breadcrumbs = [{ name: 'Home', path: '/en/' }, { name: 'Blog', path: '/en/blog/' }, { name: post.data.title, path }];
+const articleSchema = buildArticleSchema({ post, lang: 'en', path, breadcrumbs });
 ---
 
 <Base title={`${post.data.title} — Mario Inostroza`} description={post.data.description} image={post.data.image} ogType="article" schema={articleSchema}>
   <article class="py-24 px-4">
     <div class="max-w-3xl mx-auto">
 
+      <Breadcrumbs items={breadcrumbs} />
       <div class="mb-4">
         <a href={canonicalPath(base + '/blog')} class="inline-flex items-center gap-2 text-sm transition-colors duration-200" style="color: var(--text-faint);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -87,18 +70,14 @@ const articleSchema = {
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4" style="color: var(--text-primary);">{post.data.title}</h1>
         <p class="text-lg mb-6" style="color: var(--text-muted);">{post.data.description}</p>
 
-        <div class="flex items-center gap-3 pb-8 border-b border-[var(--border-subtle)]">
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--accent-orange-glow); color: var(--accent-orange);">MI</div>
-          <div>
-            <p class="text-sm font-medium" style="color: var(--text-primary);">{t('blog.post.author')}</p>
-            <time datetime={post.data.date.toISOString()} class="text-xs" style="color: var(--text-faint);">{formatDate(post.data.date)}</time>
-          </div>
-        </div>
+        <AuthorByline lang="en" date={post.data.date} updatedDate={post.data.updatedDate} />
       </header>
 
       <div class="prose-blog">
         <Content />
       </div>
+
+      <CorrectionNotes corrections={post.data.corrections} lang="en" />
 
       <PostCTA
         lang="en"
