@@ -1,0 +1,88 @@
+---
+title: "Recovery architecture for clinical WhatsApp bots"
+description: "How we redesigned the bot-to-human handoff with PostgreSQL and deduplicated queues to prevent patients from getting stuck in loops."
+date: 2026-08-13
+lang: "en"
+image: "/img/blog/whatsapp-recovery.png"
+tags: [Architecture, WhatsApp, Healthcare, PostgreSQL]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: [shuri-concurrency, agentes-ia-videos-guardrails]
+canonicalSlug: "2026-08-13-whatsapp-recovery"
+audience: "healthtech-founders | clinical-lab-directors | builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## The bot doesn't understand my prescription
+
+It happens every day. A patient tries to schedule a medical exam via WhatsApp, uploads a picture of their medical order, but the image is blurry. The bot replies: "I couldn't read your order, please try again." The patient, frustrated, sends the same picture again. The bot repeats the message.
+
+That patient just got trapped in a loop. And when an automated healthcare flow fails without knowing who to ask for help, the clinic doesn't just lose an appointment: they lose that person's trust.
+
+## The hidden handoff problem
+
+Most healthcare automation tools fail at the basics. They don't know what to do when the AI gets confused. They just get stuck.
+
+Routing to a human (bot-to-human handoff) looks trivial on paper, but in clinical infrastructure, it is complex. If the patient sends 5 frustrated messages, do you open 5 tickets at the front desk? If an executive takes over the chat, how do you stop the bot from continuing to reply at the same time? How do you guarantee that the executive from Clinic A doesn't accidentally see data from Clinic B?
+
+At Examya, we realized that friction and patient drop-off happened exactly in this abyss.
+
+## The deduplicated rescue queue
+
+The first thing we tackled was spamming the human team. When the AI detects multiple failed intents or a threshold of consecutive errors, it routes a single rescue ticket to Chatwoot.
+
+If the patient keeps writing complaints, the infrastructure deduplicates those events into a unified queue. The front desk receives one neat ticket with the full context, protecting the operational team from the noise.
+
+## Transactional authority in PostgreSQL
+
+The second challenge was response collisions. The bot and the human should never speak at the same time.
+
+We implemented an authoritative state control in PostgreSQL. The state change (from AI to Human) is strict and transactional. When the human operator takes over the chat on the platform, the bot is transactionally "turned off" for that exact session. Control is managed through signed, version-aware events to prevent network latency from causing ghost replies.
+
+```typescript
+// Strict authority on state change (Handoff)
+async function executeHumanHandoff(sessionId: string, tenantId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const session = await tx.session.findUniqueOrThrow({ where: { id: sessionId }});
+    
+    if (session.controlledBy === 'HUMAN') {
+      return { status: 'already_handed_off' };
+    }
+
+    await tx.session.update({
+      where: { id: sessionId },
+      data: { controlledBy: 'HUMAN', handoffAt: new Date() }
+    });
+
+    // Send secure event to router
+    await enqueueHandoffEvent(tenantId, sessionId);
+    
+    return { status: 'success' };
+  });
+}
+```
+
+## The Multi-Tenant risk
+
+The most complex *gotcha* was data isolation (PHI). Chatwoot isn't natively designed to isolate patient databases between different clinics on a single shared instance without cross-contamination risk.
+
+We had to lock down the account topology and force the routing to respect strict isolation by `tenant_id` at the Webhook and router level. The AI must know exactly which clinic's inbox to send the ticket to, guaranteeing that data from Clinic A never crosses into the view of Clinic B.
+
+## Technology to connect you
+
+The best clinical automation software is the one that knows exactly when to step aside and let a human solve the issue.
+
+Automation isn't about eliminating humans. It's about bringing them in at the precise moment when empathy and clinical judgment are irreplaceable. If you build agents for healthcare, your fallback infrastructure is just as important as your AI model.
+
+## Next steps in recovery
+
+Next up in our backlog is perfecting the aggregated metrics per tenant, to measure exactly how much time passes between the AI handoff and the first human response.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

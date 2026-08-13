@@ -1,0 +1,87 @@
+---
+title: "Arquitectura de recuperación para bots clínicos en WhatsApp"
+description: "Cómo rediseñamos el bot-to-human handoff con PostgreSQL y colas deduplicadas para evitar que el paciente quede atrapado en un loop."
+date: 2026-08-13
+lang: "es"
+image: "/img/blog/whatsapp-recovery.png"
+tags: [Arquitectura, WhatsApp, Salud, PostgreSQL]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: [shuri-concurrency, agentes-ia-videos-guardrails]
+audience: "healthtech-founders | clinical-lab-directors | builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## El bot no entiende mi receta
+
+Ocurre todos los días. Un paciente intenta agendar un examen médico por WhatsApp, sube la foto de su orden médica, pero la imagen está borrosa. El bot responde: "No pude leer tu orden, por favor intenta de nuevo". El paciente, frustrado, vuelve a enviar la misma foto. El bot repite el mensaje.
+
+Ese paciente acaba de quedar atrapado en un loop. Y cuando un flujo automatizado en salud falla sin saber a quién pedir ayuda, la clínica no solo pierde una hora médica: pierde la confianza de esa persona.
+
+## El problema oculto del handoff
+
+La mayoría de las herramientas de automatización en salud fallan en lo básico. No saben qué hacer cuando la Inteligencia Artificial se confunde. Simplemente se estancan.
+
+Derivar a un humano (bot-to-human handoff) parece trivial en papel, pero en infraestructura clínica es complejo. Si el paciente envía 5 mensajes de frustración, ¿abres 5 tickets en el counter? Si un ejecutivo toma el chat, ¿cómo evitas que el bot siga respondiendo al mismo tiempo? ¿Cómo garantizas que el ejecutivo de la Clínica A no vea por error los datos de la Clínica B?
+
+En Examya nos dimos cuenta de que la fricción y la pérdida de pacientes ocurrían precisamente en este abismo.
+
+## La cola de rescate deduplicada
+
+Lo primero que abordamos fue el spam al equipo humano. Cuando la IA detecta múltiples intenciones fallidas o un umbral de errores consecutivos, enruta un único ticket de auxilio hacia Chatwoot. 
+
+Si el paciente sigue escribiendo quejas, la infraestructura deduplica esos eventos en una cola unificada. El counter recibe un solo ticket ordenado con el contexto completo, protegiendo al equipo operativo del ruido.
+
+## Autoridad transaccional en PostgreSQL
+
+El segundo desafío era el choque de respuestas. El bot y el humano nunca deben hablar al mismo tiempo.
+
+Implementamos un control de estado autoritativo en PostgreSQL. El cambio de estado (de IA a Humano) es transaccional y estricto. Cuando el operador humano toma el chat en la plataforma, el bot se "apaga" transaccionalmente para esa sesión exacta. El control se gestiona mediante eventos firmados (version-aware) para evitar latencias de red que causen respuestas fantasma.
+
+```typescript
+// Autoridad estricta en el cambio de estado (Handoff)
+async function executeHumanHandoff(sessionId: string, tenantId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const session = await tx.session.findUniqueOrThrow({ where: { id: sessionId }});
+    
+    if (session.controlledBy === 'HUMAN') {
+      return { status: 'already_handed_off' };
+    }
+
+    await tx.session.update({
+      where: { id: sessionId },
+      data: { controlledBy: 'HUMAN', handoffAt: new Date() }
+    });
+
+    // Enviar evento seguro al router
+    await enqueueHandoffEvent(tenantId, sessionId);
+    
+    return { status: 'success' };
+  });
+}
+```
+
+## El riesgo del Multi-Tenant
+
+El *gotcha* más complejo fue el aislamiento de los datos (PHI). Chatwoot no está diseñado nativamente para aislar bases de datos de pacientes entre distintas clínicas en una sola instancia compartida sin riesgo de cruce.
+
+Tuvimos que bloquear la topología de cuentas y obligar a que la derivación respete un aislamiento estricto por `tenant_id` a nivel del Webhook y el enrutador. La IA debe saber exactamente a qué inbox de qué clínica enviar el ticket, garantizando que los datos de la Clínica A jamás crucen a la vista de la Clínica B.
+
+## Tecnología para conectarte
+
+El mejor software de automatización clínica es el que sabe exactamente cuándo dar un paso al costado y dejar que un humano resuelva.
+
+La automatización no se trata de eliminar humanos. Se trata de integrarlos en el momento preciso en que la empatía y el criterio clínico son irremplazables. Si construyes agentes para salud, tu infraestructura de contingencia es tan importante como tu modelo de IA.
+
+## Próximos pasos en recuperación
+
+Lo siguiente en nuestro backlog es perfeccionar las métricas agregadas por tenant, para medir exactamente cuánto tiempo pasa entre el handoff de la IA y la primera respuesta humana.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
