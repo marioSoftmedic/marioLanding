@@ -1,0 +1,83 @@
+---
+title: "How we secure the Admission Gate and OCR for WhatsApp medical booking"
+description: "Receiving clinical payloads via WhatsApp exposes your API. Here is how we verify SHA-256 signatures in milliseconds and isolate OCR before business logic."
+date: 2026-08-14
+lang: "en"
+image: "/img/blog/whatsapp-ingress.png"
+tags: [architecture, examya, infrastructure]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: [whatsapp-recovery, fhirex-ley-21668]
+canonicalSlug: "2026-08-14-whatsapp-ingress"
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+## The problem with leaving the door open
+
+Receiving medical orders via WhatsApp sounds simple when you look at the official documentation. You create an endpoint, connect it to Meta's API, and start receiving messages. But there's a detail many overlook in the prototyping phase: the webhook must be public.
+
+Anyone with the URL could send you a fake payload. If your system processes every request straight into the database or clinical scheduling services, you are one step away from a DDoS attack or corrupting an entire clinic's schedule.
+
+In a critical system like Examya, business logic cannot be the first line of defense.
+
+## The Shield: Our Admission Gate
+
+To isolate the risk, we designed what we call the **Admission Gate**. It's an ultra-lightweight function at the edge of our infrastructure that does exactly one thing before even looking at the message content: validate the cryptographic signature.
+
+When Meta sends an event to our webhook, it includes an `X-Hub-Signature-256` header. This is an HMAC SHA-256 hash generated using the message payload and our app's secret.
+
+Our Admission Gate recalculates this hash on the fly. If our calculation doesn't perfectly match Meta's header, the payload dies right there with a `401 Unauthorized` status.
+
+```typescript
+// Conceptual Admission Gate snippet
+import * as crypto from 'crypto';
+
+export function verifyMetaSignature(payload: string, signatureHeader: string, appSecret: string): boolean {
+  if (!signatureHeader) return false;
+  
+  const expectedHash = crypto
+    .createHmac('sha256', appSecret)
+    .update(payload)
+    .digest('hex');
+    
+  const expectedSignature = `sha256=${expectedHash}`;
+  return crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSignature));
+}
+```
+
+The result? Zero impact on the database. Zero LLM processing cycles. Only authorized payloads pass through the door.
+
+## The Brain: OCR Engine Isolation
+
+Once the message is verified and we know the patient sent a photo of their medical order, the second risk enters: image processing.
+
+In legacy systems, human teams transcribe these prescriptions. We use an OCR (Optical Character Recognition) engine integrated into the flow. But isolating the payload is key.
+
+The OCR service takes the media URL (verified and temporary from Meta), downloads the image in memory, scans it, and extracts the clinical entities (test names, instructions). All this extraction happens before the `ShuriStateMachine` state machine even determines the next step.
+
+## From paper to structured data in milliseconds
+
+The true value of this architecture is not just security, it's speed.
+
+1. **Ingress:** Patient sends the prescription photo.
+2. **Validation:** The Admission Gate confirms the cryptographic signature in under 10ms.
+3. **Extraction:** The webhook downloads and passes the image to the OCR.
+4. **Response:** Shuri receives the clean data (e.g., "Lipid Profile, Fasting Glucose") and offers available slots automatically.
+
+At no point did we expose the scheduling logic or rely on manual transcription.
+
+## Next up: Scaling OCR to multiple branches
+
+The current isolation allows us to process hundreds of medical orders securely. The next step in our roadmap is enriching the post-OCR NLP engine to automatically map clinical synonyms and medical dialects specific to each region.
+
+Building in digital health isn't just about the AI you use, but how you protect it.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

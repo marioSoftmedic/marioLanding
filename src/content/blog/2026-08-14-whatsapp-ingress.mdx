@@ -1,0 +1,82 @@
+---
+title: "Cómo aseguramos el Admission Gate y OCR para agendar horas por WhatsApp"
+description: "Recibir payloads clínicos por WhatsApp expone la API. Así es como verificamos firmas SHA-256 en milisegundos y aislamos el OCR antes de la lógica de negocio."
+date: 2026-08-14
+lang: "es"
+image: "/img/blog/whatsapp-ingress.png"
+tags: [architecture, examya, infrastructure]
+draft: false
+series: "examya"
+seriesOrder: 15
+related: [whatsapp-recovery, fhirex-ley-21668]
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 3
+---
+
+## El problema de dejar la puerta abierta
+
+Recibir órdenes médicas por WhatsApp suena simple cuando miras la documentación oficial. Creas un endpoint, lo conectas a la API de Meta y empiezas a recibir mensajes. Pero hay un detalle que muchos pasan por alto en la fase de prototipado: el webhook debe ser público.
+
+Cualquiera con la URL podría enviarte un payload falso. Si tu sistema procesa cada petición directamente hacia la base de datos o hacia los servicios de agendamiento clínico, estás a un ataque de denegación de servicio (DDoS) o de corromper la agenda médica de toda una clínica. 
+
+En un sistema crítico como Examya, la lógica de negocio no puede ser la primera línea de defensa.
+
+## El Escudo: Nuestro Admission Gate
+
+Para aislar el riesgo, diseñamos lo que llamamos el **Admission Gate**. Es una función ultraliviana en el borde de nuestra infraestructura que hace exactamente una cosa antes de siquiera mirar el contenido del mensaje: validar la firma criptográfica.
+
+Cuando Meta envía un evento a nuestro webhook, incluye un header `X-Hub-Signature-256`. Este es un hash HMAC SHA-256 generado usando el payload del mensaje y el secret de nuestra aplicación. 
+
+Nuestro Admission Gate recalcula este hash al vuelo. Si nuestro cálculo no coincide perfectamente con el header de Meta, el payload muere ahí mismo con un status `401 Unauthorized`. 
+
+```typescript
+// Fragmento conceptual del Admission Gate
+import * as crypto from 'crypto';
+
+export function verifyMetaSignature(payload: string, signatureHeader: string, appSecret: string): boolean {
+  if (!signatureHeader) return false;
+  
+  const expectedHash = crypto
+    .createHmac('sha256', appSecret)
+    .update(payload)
+    .digest('hex');
+    
+  const expectedSignature = `sha256=${expectedHash}`;
+  return crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSignature));
+}
+```
+
+¿El resultado? Cero impacto en la base de datos. Cero ciclos de procesamiento del LLM. Solo procesamiento autorizado pasa la puerta.
+
+## El Cerebro: Aislamiento del Motor OCR
+
+Una vez que el mensaje está verificado y sabemos que el paciente envió la foto de su orden médica, entra el segundo riesgo: el procesamiento de la imagen.
+
+En sistemas legacy, los equipos humanos transcriben estas recetas. Nosotros usamos un motor OCR (Reconocimiento Óptico de Caracteres) integrado en el flujo. Pero aislar el payload es clave.
+
+El servicio OCR toma la URL del medio (verificada y temporal de Meta), descarga la imagen en memoria, la escanea y extrae las entidades clínicas (nombre de exámenes, indicaciones). Toda esta extracción ocurre antes de que la máquina de estados de `ShuriStateMachine` determine el siguiente paso.
+
+## De papel a datos estructurados en milisegundos
+
+El verdadero valor de esta arquitectura no es solo la seguridad, es la velocidad.
+
+1. **Ingress:** Paciente envía la foto de la receta.
+2. **Validación:** El Admission Gate confirma la firma criptográfica en menos de 10ms.
+3. **Extracción:** El webhook descarga y pasa la imagen al OCR.
+4. **Respuesta:** Shuri recibe los datos limpios (ej. "Perfil Lipídico, Glicemia") y ofrece las horas disponibles automáticamente.
+
+En ningún momento expusimos la lógica de agendamiento ni dependimos de transcripción manual. 
+
+## Next up: Escalando el OCR a múltiples sucursales
+
+El aislamiento actual nos permite procesar cientos de órdenes médicas de forma segura. El siguiente paso en nuestro roadmap es enriquecer el motor de NLP post-OCR para mapear automáticamente sinónimos clínicos y dialectos médicos específicos de cada región.
+
+Construir en salud digital no se trata solo de la IA que uses, sino de cómo la proteges.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
