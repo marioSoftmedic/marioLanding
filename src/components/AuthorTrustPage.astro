@@ -1,0 +1,161 @@
+---
+import { Image } from 'astro:assets';
+import Breadcrumbs from './Breadcrumbs.astro';
+import { EDITORIAL_ENTITY, type EditorialLocale } from '../data/editorial';
+
+const { lang } = Astro.props as { lang: EditorialLocale };
+const isEnglish = lang === 'en';
+const copy = isEnglish ? {
+	breadcrumb: 'Author and editorial policy',
+	home: 'Home',
+	location: 'Based in',
+	contact: 'Contact Mario',
+	correction: 'Report a correction',
+	experienceEyebrow: 'Verified experience',
+	experienceTitle: 'Experience behind the editorial work',
+	experienceIntro: 'A concise record of the operational and engineering context used in this publication. No patient data, confidential client details, or unsupported outcomes are included.',
+	methodEyebrow: 'Editorial trust',
+	methodTitle: 'How this content is produced',
+	correctionTitle: 'Corrections are part of the record',
+	correctionText: 'If you find a factual error, missing context, or an outdated source, report it directly. Material changes remain visible as dated corrections on the affected article.',
+	readingEyebrow: 'Continue reading',
+	readingTitle: 'Two places to start',
+} : {
+	breadcrumb: 'Autor y política editorial',
+	home: 'Inicio',
+	location: 'Desde',
+	contact: 'Contactar a Mario',
+	correction: 'Informar una corrección',
+	experienceEyebrow: 'Experiencia verificada',
+	experienceTitle: 'Experiencia detrás del trabajo editorial',
+	experienceIntro: 'Un registro conciso del contexto operativo y de ingeniería usado en esta publicación. No incluye datos de pacientes, detalles confidenciales de clientes ni resultados no respaldados.',
+	methodEyebrow: 'Confianza editorial',
+	methodTitle: 'Cómo se produce este contenido',
+	correctionTitle: 'Las correcciones forman parte del registro',
+	correctionText: 'Si encontrás un error factual, contexto faltante o una fuente desactualizada, podés informarlo directamente. Los cambios materiales permanecen visibles como correcciones fechadas en el artículo afectado.',
+	readingEyebrow: 'Seguir leyendo',
+	readingTitle: 'Dos lugares para empezar',
+};
+const breadcrumbs = [{ name: copy.home, path: isEnglish ? '/en/' : '/' }, { name: copy.breadcrumb, path: EDITORIAL_ENTITY.url[lang] }];
+const icons: Record<string, string> = {
+	linkedin: 'M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zm1.78 13.02H3.56V9h3.56z',
+	x: 'M18.24 2.25h3.31l-7.23 8.26 8.51 11.24h-6.66l-4.71-6.23-5.4 6.23H2.75l7.73-8.84-9.23-10.66h6.83l4.25 5.62zm-1.16 17.52h1.83L7.08 4.13H5.12z',
+	instagram: 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm5 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm5.5-3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z',
+	github: 'M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.23c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.49 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.82 1.1.82 2.22v3.3c0 .32.22.69.82.57A12 12 0 0 0 12 .5z',
+};
+---
+
+<article class="author-page">
+	<div class="author-shell">
+		<Breadcrumbs items={breadcrumbs} />
+
+		<header class="identity-hero">
+			<div class="identity-copy">
+				<p class="eyebrow">mariohealthbits.dev / {isEnglish ? 'author' : 'autor'}</p>
+				<h1>{EDITORIAL_ENTITY.name}</h1>
+				<p class="role">{EDITORIAL_ENTITY.role[lang]}</p>
+				<p class="location"><span aria-hidden="true">⌖</span> {copy.location} {EDITORIAL_ENTITY.location}</p>
+				<div class="actions">
+					<a class="btn-primary" href={EDITORIAL_ENTITY.actions.contact[lang]}>{copy.contact}</a>
+					<a class="btn-outline" href={EDITORIAL_ENTITY.actions.correction}>{copy.correction}</a>
+				</div>
+				<ul class="profiles" aria-label={isEnglish ? 'Verified public profiles' : 'Perfiles públicos verificados'}>
+					{EDITORIAL_ENTITY.profiles.map((profile) => <li><a href={profile.url} rel="me noopener noreferrer" target="_blank"><svg aria-hidden="true" viewBox="0 0 24 24"><path d={icons[profile.id]} /></svg><span>{profile.label}</span></a></li>)}
+				</ul>
+			</div>
+			<div class="portrait-frame">
+				<Image src={EDITORIAL_ENTITY.image} alt={isEnglish ? 'Portrait of Mario Inostroza' : 'Retrato de Mario Inostroza'} widths={[360, 560, 720]} sizes="(min-width: 900px) 38vw, 100vw" loading="eager" />
+				<span class="portrait-mark" aria-hidden="true">MI</span>
+			</div>
+		</header>
+
+		<section class="positioning" aria-label={isEnglish ? 'Editorial positioning' : 'Posicionamiento editorial'}>
+			<p>{EDITORIAL_ENTITY.positioning[lang]}</p>
+		</section>
+
+		<section class="section" aria-labelledby="experience-title">
+			<p class="eyebrow">{copy.experienceEyebrow}</p>
+			<div class="section-heading"><h2 id="experience-title">{copy.experienceTitle}</h2><p>{copy.experienceIntro}</p></div>
+			<ol class="experience-grid">
+				{EDITORIAL_ENTITY.experience.map((item, index) => <li class="experience-card">
+					<div class="experience-meta"><span>{String(index + 1).padStart(2, '0')}</span><span>{item.year === 'Ahora' && isEnglish ? 'Now' : item.year}</span></div>
+					<h3>{item.title[lang]}</h3><p>{item.description[lang]}</p><a href={item.link[lang]}>{item.linkLabel[lang]} <span aria-hidden="true">→</span></a>
+				</li>)}
+			</ol>
+		</section>
+
+		<section class="section trust-section" aria-labelledby="method-title">
+			<p class="eyebrow">{copy.methodEyebrow}</p>
+			<h2 id="method-title">{copy.methodTitle}</h2>
+			<ul class="trust-grid">
+				{EDITORIAL_ENTITY.policy.principles[lang].map((principle, index) => <li><span class="trust-number">0{index + 1}</span><h3>{principle.title}</h3><p>{principle.description}</p></li>)}
+			</ul>
+		</section>
+
+		<section class="correction-panel" aria-labelledby="correction-title">
+			<div><p class="eyebrow">{copy.correction}</p><h2 id="correction-title">{copy.correctionTitle}</h2><p>{copy.correctionText}</p></div>
+			<a class="btn-primary" href={EDITORIAL_ENTITY.actions.correction}>{copy.correction}</a>
+		</section>
+
+		<section class="section" aria-labelledby="reading-title">
+			<p class="eyebrow">{copy.readingEyebrow}</p><h2 id="reading-title">{copy.readingTitle}</h2>
+			<div class="reading-grid">{EDITORIAL_ENTITY.reading.map((item) => <a href={item.link[lang]}><span><strong>{item.title[lang]}</strong><small>{item.description[lang]}</small></span><span aria-hidden="true">↗</span></a>)}</div>
+		</section>
+	</div>
+</article>
+
+<style>
+	.author-page { padding: 3rem 1rem 1rem; }
+	.author-shell { width: min(72rem, 100%); margin-inline: auto; }
+	.eyebrow { margin: 0 0 .75rem; color: var(--accent-orange); font: 500 .72rem/1.4 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+	.identity-hero { display: grid; gap: 2rem; align-items: center; padding: 1rem 0 4rem; }
+	.identity-copy h1 { margin: 0; font-size: clamp(3.2rem, 13vw, 7.5rem); line-height: .88; letter-spacing: -.065em; }
+	.role { max-width: 42rem; margin: 1.5rem 0 .75rem; color: var(--text-primary); font: 500 clamp(1.15rem, 3vw, 1.65rem)/1.35 var(--font-heading); }
+	.location { color: var(--text-muted); font-size: .95rem; }
+	.location span { color: var(--accent-cyan); }
+	.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.75rem; }
+	.actions a, .correction-panel > a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: .75rem 1.1rem; border-radius: var(--radius-md); text-decoration: none; }
+	.profiles { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+	.profiles a { display: inline-flex; min-height: 44px; align-items: center; gap: .45rem; padding: .55rem .7rem; color: var(--text-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); text-decoration: none; transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease; }
+	.profiles a:hover { color: var(--text-primary); border-color: var(--border-strong); background: var(--bg-elevated); }
+	.profiles svg { width: 1rem; height: 1rem; fill: currentColor; }
+	.portrait-frame { position: relative; overflow: hidden; min-height: 22rem; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--bg-surface); }
+	.portrait-frame :global(img) { width: 100%; height: 100%; position: absolute; object-fit: cover; object-position: 58% center; filter: contrast(1.05); }
+	.portrait-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, var(--bg-deep), transparent 42%); opacity: .45; }
+	.portrait-mark { position: absolute; right: 1rem; bottom: .65rem; z-index: 1; color: var(--text-primary); font: 700 2rem var(--font-heading); }
+	.positioning { padding: 2rem 0; border-block: 1px solid var(--border-subtle); }
+	.positioning p { max-width: 62rem; margin: 0; color: var(--text-primary); font: 500 clamp(1.55rem, 4vw, 2.8rem)/1.2 var(--font-heading); letter-spacing: -.035em; }
+	.section { padding: 5rem 0 0; }
+	.section h2, .correction-panel h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1; }
+	.section-heading { display: grid; gap: 1rem; }
+	.section-heading p { max-width: 38rem; margin: 0; color: var(--text-secondary); line-height: 1.7; }
+	.experience-grid, .trust-grid { display: grid; gap: 1rem; margin: 2rem 0 0; padding: 0; list-style: none; }
+	.experience-card { min-height: 19rem; display: flex; flex-direction: column; padding: 1.4rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-elevated); }
+	.experience-meta { display: flex; justify-content: space-between; color: var(--text-faint); font: .72rem var(--font-mono); }
+	.experience-card h3 { margin: 3rem 0 .75rem; font-size: 1.35rem; }
+	.experience-card p { margin: 0; color: var(--text-secondary); line-height: 1.65; }
+	.experience-card a { margin-top: auto; padding-top: 1.5rem; color: var(--accent-cyan); font-weight: 600; text-decoration: none; }
+	.trust-section { padding-bottom: 5rem; }
+	.trust-grid li { padding: 1.3rem 0; border-top: 1px solid var(--border-default); }
+	.trust-number { color: var(--accent-orange); font: .72rem var(--font-mono); }
+	.trust-grid h3 { margin: 1.5rem 0 .65rem; font-size: 1.2rem; }
+	.trust-grid p { margin: 0; color: var(--text-secondary); line-height: 1.65; }
+	.correction-panel { display: grid; gap: 1.5rem; align-items: end; padding: clamp(1.5rem, 4vw, 3rem); border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated)); }
+	.correction-panel p:not(.eyebrow) { max-width: 45rem; margin: 1rem 0 0; color: var(--text-secondary); line-height: 1.7; }
+	.reading-grid { display: grid; gap: 1rem; margin-top: 2rem; }
+	.reading-grid > a { display: flex; justify-content: space-between; gap: 1rem; padding: 1.35rem; color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-elevated); text-decoration: none; transition: border-color 180ms ease, background-color 180ms ease; }
+	.reading-grid > a:hover { border-color: var(--border-strong); background: var(--bg-surface); }
+	.reading-grid strong, .reading-grid small { display: block; }
+	.reading-grid small { margin-top: .35rem; color: var(--text-muted); line-height: 1.5; }
+	@media (min-width: 48rem) {
+		.author-page { padding-inline: 1.5rem; }
+		.identity-hero { grid-template-columns: minmax(0, 1.15fr) minmax(18rem, .85fr); min-height: 38rem; }
+		.section-heading { grid-template-columns: 1fr 1fr; align-items: end; }
+		.experience-grid { grid-template-columns: repeat(3, 1fr); }
+		.trust-grid { grid-template-columns: repeat(2, 1fr); }
+		.reading-grid { grid-template-columns: repeat(2, 1fr); }
+		.correction-panel { grid-template-columns: 1fr auto; }
+	}
+	@media (min-width: 64rem) { .trust-grid { grid-template-columns: repeat(4, 1fr); } }
+	@media (prefers-reduced-motion: reduce) { .profiles a, .reading-grid > a { transition: none; } }
+</style>

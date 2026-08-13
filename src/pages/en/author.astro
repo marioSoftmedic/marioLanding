@@ -1,20 +1,13 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { EDITORIAL_ENTITY } from '../../data/editorial';
-import { buildCollectionPageSchema } from '../../lib/schema';
+import AuthorTrustPage from '../../components/AuthorTrustPage.astro';
+import { buildAuthorPageSchema } from '../../lib/schema';
+
+const title = 'Author and editorial policy — Mario Inostroza';
+const description = 'Identity, experience, editorial method, and corrections for mariohealthbits.dev.';
 const breadcrumbs = [{ name: 'Home', path: '/en/' }, { name: 'Author and editorial policy', path: '/en/author/' }];
-const schema = buildCollectionPageSchema({ name: 'Author and editorial policy — Mario Inostroza', description: 'Editorial identity, sourcing, and corrections for mariohealthbits.dev.', lang: 'en', path: '/en/author/', breadcrumbs });
+const schema = buildAuthorPageSchema({ name: title, description, lang: 'en', path: '/en/author/', breadcrumbs });
 ---
-<Base title="Author and editorial policy — Mario Inostroza" description="Editorial identity, sourcing, and corrections for mariohealthbits.dev." alternatePath="/autor/" schema={schema}>
-  <article class="py-24 px-4"><div class="max-w-3xl mx-auto prose-blog">
-    <nav aria-label="Breadcrumb"><a href="/en/">Home</a> / <span aria-current="page">Author and editorial policy</span></nav>
-    <h1>Mario Inostroza</h1>
-    <p><strong>{EDITORIAL_ENTITY.role.en}</strong></p>
-		<p>{EDITORIAL_ENTITY.profiles.map((profile) => <a href={profile.url} rel="me">{profile.label}</a>)}</p>
-    <p>This editorial work draws on laboratory operations at Biohealth in 2021 and production-agent architecture decisions for Examya and Cotocha. It does not publish patient or confidential information.</p>
-    <h2>Editorial and corrections policy</h2>
-    <p>Primary sources are preferred when available for legal, regulatory, or public-system claims. Content is reviewed quarterly and when a relevant source changes.</p>
-    <p>Report corrections through this site’s email or contact form. Material corrections are dated alongside the article’s updated date.</p>
-    <p>Content is educational and technical; it is not medical, legal, or regulatory advice.</p>
-  </div></article>
+<Base title={title} description={description} alternatePath="/autor/" schema={schema}>
+	<AuthorTrustPage lang="en" />
 </Base>
