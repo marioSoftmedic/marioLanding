@@ -22,6 +22,24 @@ const breadcrumbSchema = (items: BreadcrumbItem[]) => ({
 	})),
 });
 
+export function buildPersonSchema(lang: 'es' | 'en') {
+	const url = absoluteUrl(EDITORIAL_ENTITY.url[lang], siteUrl);
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'Person',
+		'@id': `${url}#person`,
+		name: EDITORIAL_ENTITY.name,
+		jobTitle: EDITORIAL_ENTITY.role[lang],
+		url,
+		homeLocation: {
+			'@type': 'Place',
+			name: EDITORIAL_ENTITY.location,
+			address: { '@type': 'PostalAddress', addressLocality: 'Puerto Natales', addressRegion: 'Patagonia', addressCountry: 'CL' },
+		},
+		sameAs: EDITORIAL_ENTITY.profiles.map((profile) => profile.url),
+	};
+}
+
 export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: any; lang: 'es' | 'en'; path: string; breadcrumbs: BreadcrumbItem[] }) {
 	const modifiedDate = post.data.updatedDate ?? post.data.date;
 	return [
@@ -31,7 +49,7 @@ export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: an
 			headline: post.data.title,
 			description: post.data.description,
 			image: post.data.image ? `${siteUrl}${post.data.image}` : `${siteUrl}/img/marioHealthBits.png`,
-			author: { '@type': 'Person', name: EDITORIAL_ENTITY.name, url: absoluteUrl(EDITORIAL_ENTITY.url[lang], siteUrl), jobTitle: EDITORIAL_ENTITY.role[lang], sameAs: EDITORIAL_ENTITY.profiles.map((profile) => profile.url) },
+			author: buildPersonSchema(lang),
 			publisher,
 			mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(path, siteUrl) },
 			datePublished: post.data.date.toISOString(),
@@ -42,6 +60,12 @@ export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: an
 		},
 		breadcrumbSchema(breadcrumbs),
 	];
+}
+
+export function buildAuthorPageSchema({ name, description, lang, path, breadcrumbs }: { name: string; description: string; lang: 'es' | 'en'; path: string; breadcrumbs: BreadcrumbItem[] }) {
+	const [page, breadcrumb] = buildCollectionPageSchema({ name, description, lang, path, breadcrumbs });
+	const person = buildPersonSchema(lang);
+	return [{ ...page, mainEntity: { '@id': person['@id'] } }, breadcrumb, person];
 }
 
 export function buildCollectionPageSchema({ name, description, lang, path, breadcrumbs, faqs = [] }: { name: string; description: string; lang: 'es' | 'en'; path: string; breadcrumbs: BreadcrumbItem[]; faqs?: { question: string; answer: string }[] }) {

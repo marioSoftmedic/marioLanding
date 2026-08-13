@@ -37,20 +37,29 @@ test('uses one snapshot for valuable, thin, empty, and duplicate-description pag
 });
 
 test('defines the approved bilingual author routes and editorial safeguards', async () => {
-	const [es, en, editorial] = await Promise.all([
+	const [es, en, editorial, component, schema] = await Promise.all([
 		readFile(new URL('../src/pages/autor.astro', import.meta.url), 'utf8'),
 		readFile(new URL('../src/pages/en/author.astro', import.meta.url), 'utf8'),
 		readFile(new URL('../src/data/editorial.ts', import.meta.url), 'utf8'),
+		readFile(new URL('../src/components/AuthorTrustPage.astro', import.meta.url), 'utf8'),
+		readFile(new URL('../src/lib/schema.ts', import.meta.url), 'utf8'),
 	]);
-	assert.match(es, /EDITORIAL_ENTITY\.role\.es/);
-	assert.match(en, /EDITORIAL_ENTITY\.role\.en/);
+	assert.match(es, /buildAuthorPageSchema/);
+	assert.match(en, /buildAuthorPageSchema/);
 	assert.match(editorial, /Tecnólogo Médico y builder de sistemas de salud e inteligencia artificial/);
-	assert.match(editorial, /Medical Technologist and builder of health and artificial intelligence systems/);
-	assert.match(editorial, /quarterly/);
-	assert.match(editorial, /educational/);
+	assert.match(editorial, /Medical Technologist and builder of health and artificial-intelligence systems/);
+	assert.match(editorial, /Puerto Natales, Patagonia, Chile/);
+	assert.match(editorial, /trimestralmente|quarterly/);
+	assert.match(editorial, /educativo|educational/);
 	assert.match(editorial, /https:\/\/x\.com\/marioHealthBits/);
-	assert.match(es, /EDITORIAL_ENTITY\.profiles/);
-	assert.match(en, /EDITORIAL_ENTITY\.profiles/);
+	for (const profile of ['linkedin.com/in/mario-inostroza-softmedic', 'instagram.com/mariohealthbits', 'github.com/marioSoftmedic']) assert.match(editorial, new RegExp(profile));
+	for (const marker of ['EDITORIAL_ENTITY.name', 'EDITORIAL_ENTITY.role[lang]', 'EDITORIAL_ENTITY.location', 'EDITORIAL_ENTITY.profiles', 'EDITORIAL_ENTITY.experience', 'EDITORIAL_ENTITY.policy.principles[lang]', 'EDITORIAL_ENTITY.reading']) assert.ok(component.includes(marker), `author component uses ${marker}`);
+	assert.match(component, /<h1>\{EDITORIAL_ENTITY\.name\}<\/h1>/);
+	assert.match(component, /Image src=\{EDITORIAL_ENTITY\.image\}/);
+	assert.match(schema, /buildPersonSchema/);
+	assert.match(schema, /'@id': `\$\{url\}#person`/);
+	assert.match(schema, /author: buildPersonSchema\(lang\)/);
+	assert.match(schema, /buildAuthorPageSchema/);
 });
 
 test('contains all four localized pillars with visible FAQs and required product links', async () => {
@@ -202,6 +211,15 @@ test('built pages keep visible and JSON-LD trust, FAQ, breadcrumb, author, and s
 		const html = readHtml(path);
 		assert.match(html, /application\/ld\+json/);
 		assert.match(html, /BreadcrumbList/);
+	}
+	for (const { path, personId, role } of [
+		{ path: 'autor/index.html', personId: 'https://mariohealthbits.dev/autor/#person', role: 'Tecnólogo Médico y builder de sistemas de salud e inteligencia artificial' },
+		{ path: 'en/author/index.html', personId: 'https://mariohealthbits.dev/en/author/#person', role: 'Medical Technologist and builder of health and artificial-intelligence systems' },
+	]) {
+		const html = readHtml(path);
+		assert.equal((html.match(/"@type":"Person"/g) ?? []).length, 1, `${path} has exactly one Person node`);
+		assert.match(html, new RegExp(`"@id":"${personId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+		assert.ok(html.includes(`"jobTitle":"${role}"`), `${path} has the visible localized role`);
 	}
 	for (const path of ['laboratorio-clinico-api/index.html', 'en/clinical-lab-api/index.html', 'agentes-ia-produccion/index.html', 'en/ai-agents-production/index.html']) {
 		const html = readHtml(path);
