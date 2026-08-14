@@ -26,6 +26,8 @@ Anyone with the URL could send you a fake payload. If your system processes ever
 
 In a critical system like Examya, business logic cannot be the first line of defense.
 
+<iframe src="/img/blog/whatsapp-ingress.html" width="100%" height="600px" style="border:none; border-radius: 8px;"></iframe>
+
 ## The Shield: Our Admission Gate
 
 To isolate the risk, we designed what we call the **Admission Gate**. It's an ultra-lightweight function at the edge of our infrastructure that does exactly one thing before even looking at the message content: validate the cryptographic signature.

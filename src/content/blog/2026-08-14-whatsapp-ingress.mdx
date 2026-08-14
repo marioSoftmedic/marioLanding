@@ -25,6 +25,8 @@ Cualquiera con la URL podría enviarte un payload falso. Si tu sistema procesa c
 
 En un sistema crítico como Examya, la lógica de negocio no puede ser la primera línea de defensa.
 
+<iframe src="/img/blog/whatsapp-ingress.html" width="100%" height="600px" style="border:none; border-radius: 8px;"></iframe>
+
 ## El Escudo: Nuestro Admission Gate
 
 Para aislar el riesgo, diseñamos lo que llamamos el **Admission Gate**. Es una función ultraliviana en el borde de nuestra infraestructura que hace exactamente una cosa antes de siquiera mirar el contenido del mensaje: validar la firma criptográfica.
