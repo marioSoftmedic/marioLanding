@@ -1,0 +1,142 @@
+---
+title: "La trampa de EMAXCONN: por qué tu bot de WhatsApp colapsa en ráfagas de tráfico"
+description: "Los webhooks concurrentes de WhatsApp pueden agotar el pool de base de datos en segundos. Así configuramos transaction pooling en Shuri para evitar caídas silenciosas."
+date: 2026-08-18
+lang: "es"
+image: "/img/blog/2026-08-18-la-trampa-de-emaxconn.png"
+tags: ["architecture", "whatsapp", "postgresql", "databases", "examya", "infrastructure"]
+draft: false
+series: "examya"
+seriesOrder: 17
+related: [2026-08-17-whatsapp-conversational-resilience, 2026-08-14-whatsapp-ingress]
+audience: "ctos | backend-engineers | tech-leads | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## El silencio más caro en producción
+
+Imagina este escenario: acabas de lanzar una campaña o un grupo de pacientes entra simultáneamente a cotizar exámenes médicos por WhatsApp.
+
+En tu dashboard de monitoreo todo parece verde. Sin embargo, en WhatsApp, los pacientes ven cómo sus mensajes quedan con un solo tick o dos ticks grises, pero el bot nunca responde. Ningún error 500 visible en la interfaz, ningún mensaje de alerta al usuario: solo un silencio sepulcral.
+
+Cuando revisas los logs de infraestructura en tu orquestador (Railway, Kubernetes o Docker), te encuentras con el temido mensaje:
+
+```text
+FATAL: remaining connection slots are reserved for non-replication superuser connections (EMAXCONN / 200 client limit)
+```
+
+En sistemas conversacionales de alta inmediatez como WhatsApp, **el agotamiento de conexiones a base de datos (Connection Pool Exhaustion) es la causa número uno de colapso silencioso**.
+
+<iframe src="/img/blog/2026-08-18-la-trampa-de-emaxconn.html" width="100%" height="560px" style="border:none; border-radius: 8px; margin-bottom: 2rem;"></iframe>
+
+## La anatomía del cuello de botella en WhatsApp
+
+A diferencia de una API REST tradicional donde el frontend controla los reintentos o el usuario refresca el navegador, los webhooks de WhatsApp operan bajo condiciones extremas de asincronía:
+
+1. **Ráfagas concurrentes (Message Bursts):** Un paciente no envía un solo bloque de texto. Envía un saludo, la foto de la orden médica, un mensaje aclaratorio y una consulta de precios en un lapso de 4 segundos. Cada mensaje dispara un webhook HTTP independiente en paralelo.
+2. **Multiplicación de queries por mensaje:** Cada webhook ejecuta múltiples operaciones a la base de datos:
+   - Identificación del usuario y recuperación de sesión (`getMainUserByPhone`).
+   - Búsqueda en catálogo y precios de convenio (`/exams/search`).
+   - Verificación de cupones y estado de orden de venta (`MedicalOrderSale`).
+   - Registro de trazas de auditoría y métricas de conversación.
+3. **Persistencia de sesión (Session-mode traps):** Si conectas tu ORM (Prisma, Drizzle, TypeORM) directamente a PostgreSQL o usas un pooler en modo sesión (puerto 5432), cada conexión física de base de datos queda secuestrada durante toda la ejecución de la función o ciclo de vida del cliente.
+
+Con solo 10 a 15 usuarios concurrentes interactuando a la vez, si tienes múltiples réplicas del servicio de agentes y del backend API, el número de conexiones simultáneas supera los límites de tu instancia de Postgres (usualmente 60 a 200 conexiones máximas en tiers estándar de Supabase, Neon o AWS RDS).
+
+```
+[Webhooks WhatsApp] ──> [5 Réplicas API / Agents]
+                              │ (10 conexiones c/u = 50)
+                              ▼
+                   [PostgreSQL (Límite 60)] ──> 💥 FATAL: EMAXCONN
+```
+
+## La estrategia de mitigación en 4 capas
+
+En Examya, tras auditar los cuellos de botella de producción en nuestro agente Shuri, implementamos una arquitectura de persistencia resiliente basada en 4 pilares:
+
+### 1. Transaction Pooling estricto (PgBouncer / Supavisor)
+
+Migramos todas las conexiones del runtime de producción desde el modo sesión (puerto 5432) al **modo transacción** (puerto 6543):
+
+```text
+# Cadena de conexión de Runtime (Transaction Pooler)
+DATABASE_URL="postgresql://user:pass@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=3&pool_timeout=10"
+
+# Cadena de conexión directa (Solo para migraciones y DDL)
+DIRECT_URL="postgresql://user:pass@aws-0-sa-east-1.supabase.com:5432/postgres"
+```
+
+**¿Por qué cambia todo?**
+En modo transacción, PgBouncer asigna una conexión física de PostgreSQL únicamente mientras se ejecuta una query o bloque transaccional (`BEGIN ... COMMIT`). En cuanto la query termina, la conexión física vuelve inmediatamente al pool para ser usada por otro webhook, en lugar de quedarse ociosa esperando a que el handler de Node.js termine de procesar el LLM.
+
+### 2. Acotamiento estricto de `connection_limit` y `pool_timeout`
+
+Un error común al usar ORMs como Prisma es asumir que el ORM sabe cuántas conexiones abrir. Por defecto, Prisma puede abrir hasta `num_cpus * 2 + 1` conexiones por proceso. Si tienes 4 contenedores en Railway, estás multiplicando innecesariamente la presión sobre el pooler.
+
+Configuramos parámetros explícitos en la URI de conexión:
+- `connection_limit=3` (a `5` máximo por réplica): Limita el pool interno del cliente Prisma.
+- `pool_timeout=10`: Si el pool está temporalmente saturado, el cliente espera un máximo de 10 segundos antes de fallar rápido (`fail-fast`), evitando que las solicitudes se acumulen en un deadlock de memoria.
+
+### 3. Patrón Singleton inmutable para el cliente de base de datos
+
+En arquitecturas modulares o serverless, es común que distintos módulos invoquen `new PrismaClient()`, creando pools duplicados dentro del mismo proceso.
+
+Garantizamos una única instancia viva mediante el patrón singleton global:
+
+```typescript
+// src/common/prisma/prisma.service.ts
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  async onModuleInit() {
+    await this.$connect();
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
+}
+```
+
+### 4. Aislamiento de Direct URL para migraciones
+
+Los poolers en modo transacción no soportan ciertas operaciones complejas como `CREATE INDEX CONCURRENTLY`, prepared statements no nombrados o ciertas operaciones de migración de esquemas.
+
+Separamos estrictamente la infraestructura:
+- **`DATABASE_URL`:** Apunta al pooler transaccional (puerto 6543) y es la única usada por las aplicaciones en producción (`examya-api` y `examya-agents`).
+- **`DIRECT_URL`:** Apunta directo a la base de datos (puerto 5432) y solo es consumida por scripts de CI/CD durante `prisma migrate deploy`.
+
+## Resultados y lecciones aprendidas
+
+Al aplicar estas medidas en producción:
+- **Eliminación total del error EMAXCONN:** La utilización de conexiones activas en PostgreSQL se redujo de más de 180 a un promedio estable de 15 a 25 conexiones concurrentes, incluso bajo ráfagas intensas de cotizaciones.
+- **Latencia de respuesta predecible:** El tiempo de respuesta de Shuri en WhatsApp se mantuvo por debajo de los 1.8 segundos por interacción.
+- **Headroom operativo:** El pool de base de datos ahora tiene más del 70% de capacidad disponible para escalar sin requerir un upgrade costoso de hardware de base de datos.
+
+## Conclusión
+
+Construir agentes conversacionales o bots transaccionales no es solo un desafío de prompts o modelos de lenguaje. Es, fundamentalmente, **un desafío de ingeniería de sistemas distribuidos y gestión eficiente de recursos**.
+
+Si tu bot interactúa con WhatsApp, no esperes a que una ráfaga de pacientes tumbe tu base de datos en silencio. Configura transaction pooling, acota tus límites de conexión y diseña para fallar rápido.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
