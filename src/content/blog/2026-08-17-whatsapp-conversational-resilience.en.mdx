@@ -1,0 +1,125 @@
+---
+title: "Conversational Resilience in Healthcare: Handling User Inquiries and OCR Fallbacks on WhatsApp"
+description: "Patients don't follow linear funnels. How we designed educational sub-intents and OCR circuit breakers in Shuri to prevent dropped quotes on WhatsApp."
+date: 2026-08-17
+lang: "en"
+image: "/img/blog/whatsapp-conversational-resilience.png"
+tags: ["architecture", "whatsapp", "examya", "resilience", "ocr"]
+draft: false
+series: "examya"
+seriesOrder: 16
+related: [whatsapp-ingress, whatsapp-recovery]
+canonicalSlug: "whatsapp-conversational-resilience"
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## Patients never follow the script
+
+In architecture diagrams, a WhatsApp medical quotation funnel looks like a clean pipeline: the patient greets, uploads their prescription, the engine quotes, and the patient confirms and pays.
+
+In production with real patients, that happy path accounts for less than 40% of interactions.
+
+A patient receives a quote with a lab code and asks: *“What is the 1803016 blood test for?”* or *“Do I need to fast before this test?”*. Another uploads a blurry photo taken under dim lighting in a clinic waiting room.
+
+If your state machine is rigid, an educational question resets the entire conversation back to the main menu (wiping the cart), while a blurry photo triggers an infinite loop of *“Please try uploading again”*. In both cases, the result is the same: immediate drop-off and user frustration.
+
+In healthcare, technical rigidity kills patient trust.
+
+<iframe src="/img/blog/whatsapp-conversational-resilience.html" width="100%" height="600px" style="border:none; border-radius: 8px; margin-bottom: 2rem;"></iframe>
+
+## The transactional state dilemma
+
+When building a transactional conversational assistant (like Shuri in Examya), two opposing requirements collide:
+
+1. **Transactional determinism:** You must guarantee that selected exams, pricing agreements, and cart items remain immutable during checkout.
+2. **Conversational flexibility:** The patient needs to pause, ask clarifying questions about their lab tests, and resume without friction.
+
+Treating every message with a stateless LLM loses transactional control. Using a rigid decision tree breaks down the moment a user steps off-script.
+
+## Our solution: Educational sub-intents and contextual branching
+
+To solve the primary mid-funnel drop-off, we refactored our intent router (`intent-router.ts`) to treat `exam_inquiry` as a non-destructive sub-task.
+
+```typescript
+// Simplified intent router snippet
+export async function routeShuriIntent(
+  incomingMessage: string,
+  sessionContext: ConversationContext
+): Promise<RoutingDecision> {
+  const currentStage = sessionContext.stage;
+
+  // If in an active quote or confirmation stage
+  if (currentStage === ConversationStage.QUOTING || currentStage === ConversationStage.AWAITING_CONFIRMATION) {
+    const isEducationalQuery = await detectExamInquiryIntent(incomingMessage);
+    
+    if (isEducationalQuery) {
+      return {
+        action: 'HANDLE_EDUCATIONAL_INQUIRY',
+        preserveState: true,
+        resumeStage: currentStage,
+      };
+    }
+  }
+
+  return evaluateStandardTransitions(incomingMessage, sessionContext);
+}
+```
+
+When a patient asks about a test during the quote flow:
+- The router detects the informational catalog query.
+- Shuri explains in clear, compassionate language what the test evaluates and basic fasting requirements.
+- **State is preserved:** The cart, medical codes, and pricing breakdown remain intact.
+- Shuri seamlessly prompts the next step: *“Would you like to continue confirming your order?”*.
+
+## Circuit breakers and graceful OCR degradation
+
+The second drop-off point happens when OCR cannot parse a handwritten or low-contrast medical prescription.
+
+Asking the patient to *“upload the photo again”* indefinitely guarantees they will abandon the chat.
+
+We implemented a strict retry circuit breaker (`ocr_retry_count >= 2`):
+
+1. **Attempt 1 (Parse Failure):** Shuri asks for a new photo with actionable tips (good lighting, flat placement, no glare).
+2. **Attempt 2 (Consecutive Failure):** The circuit breaker trips. OCR processing halts to prevent fatigue, unlocking two rescue branches:
+   - Guided manual text entry via assisted catalog search.
+   - Immediate human advisor handoff, sending a real-time alert to our operations Slack channel with the full session payload and raw image.
+
+```
+[Patient uploads blurry photo 2nd time]
+                  │
+                  ▼
+      [OCR Retry Threshold >= 2]
+                  │
+          ┌───────┴───────┐
+          ▼               ▼
+   [Manual Entry]   [Slack Handoff Alert]
+  (Assisted Search) (Advisor takes over)
+```
+
+## Production data and learnings
+
+After deploying these fixes in production:
+- We eliminated 100% of infinite OCR retry loops.
+- Patients asking educational questions successfully completed their medical orders without session restarts.
+- Handoff response times dropped significantly because advisors receive pre-packaged context directly in Slack.
+
+## Zoom out: what this means for HealthTech
+
+In digital healthcare, AI does not replace human empathy or clinical staff; it coordinates them.
+
+A resilient system isn't one that pretends to have 100% mathematical accuracy on every raw photo or sentence, but one that knows **when to educate**, **when to degrade gracefully**, and **when to hand the wheel to a human**.
+
+## What’s next
+
+We are currently refining automated fasting and pre-test restriction summaries so they are delivered as an interactive, downloadable card once the order is finalized.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

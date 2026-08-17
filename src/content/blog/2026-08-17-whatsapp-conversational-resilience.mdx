@@ -1,0 +1,124 @@
+---
+title: "Resiliencia conversacional en salud: cómo manejar dudas y fallos de OCR en WhatsApp"
+description: "Los pacientes no siguen flujos lineales. Así diseñamos sub-intents educativos y circuit breakers de OCR en Shuri para no perder cotizaciones en WhatsApp."
+date: 2026-08-17
+lang: "es"
+image: "/img/blog/whatsapp-conversational-resilience.png"
+tags: ["architecture", "whatsapp", "examya", "resilience", "ocr"]
+draft: false
+series: "examya"
+seriesOrder: 16
+related: [whatsapp-ingress, whatsapp-recovery]
+audience: "clinical-lab-directors | healthtech-founders | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## El paciente nunca sigue el libreto
+
+En los diagramas de arquitectura, un embudo de agendamiento por WhatsApp parece un pipeline perfecto: el usuario saluda, envía la orden médica, el sistema cotiza, el paciente confirma y paga. 
+
+Pero en producción con pacientes reales, ese camino feliz representa menos del 40% de las interacciones.
+
+Un paciente recibe una cotización con un código FONASA y pregunta: *«¿Para qué sirve el examen 1803016?»* o *«¿Tengo que ir en ayunas?»*. Otro sube una foto desenfocada tomada con poca luz en el mesón de urgencias.
+
+Si tu máquina de estados es rígida, ante la pregunta educativa el bot se reinicia al menú principal borrando la orden, o ante la foto borrosa entra en un bucle infinito de *«Por favor reintente»*. En ambos casos, el resultado es el mismo: abandono inmediato y frustración.
+
+En salud, la rigidez técnica destruye la experiencia del paciente.
+
+<iframe src="/img/blog/whatsapp-conversational-resilience.html" width="100%" height="600px" style="border:none; border-radius: 8px; margin-bottom: 2rem;"></iframe>
+
+## El dilema del estado transaccional
+
+Cuando construyes un asistente conversacional transaccional (como Shuri en Examya), conviven dos fuerzas opuestas:
+
+1. **Determinismo transaccional:** Necesitas garantizar que los exámenes seleccionados, los precios de convenio y el carrito de compra se mantengan inmutables durante el checkout.
+2. **Flexibilidad conversacional:** El paciente necesita pausar, hacer preguntas aclaratorias sobre sus análisis clínicos y retomar la compra sin fricción.
+
+Si tratas cada mensaje con un LLM sin memoria de estados, pierdes el control transaccional. Si usas un árbol de decisión rígido, cualquier pregunta fuera de guion rompe el flujo.
+
+## Nuestra solución: Sub-intents educativos y bifurcación contextual
+
+Para resolver la primera gran fuga de conversión, rediseñamos el enrutador de intenciones (`intent-router.ts`) introduciendo el intent `exam_inquiry` como una subtarea no destructiva.
+
+```typescript
+// Fragmento simplificado del enrutador de intenciones
+export async function routeShuriIntent(
+  incomingMessage: string,
+  sessionContext: ConversationContext
+): Promise<RoutingDecision> {
+  const currentStage = sessionContext.stage;
+
+  // Si estamos en medio de una cotización o confirmación activa
+  if (currentStage === ConversationStage.QUOTING || currentStage === ConversationStage.AWAITING_CONFIRMATION) {
+    const isEducationalQuery = await detectExamInquiryIntent(incomingMessage);
+    
+    if (isEducationalQuery) {
+      return {
+        action: 'HANDLE_EDUCATIONAL_INQUIRY',
+        preserveState: true,
+        resumeStage: currentStage,
+      };
+    }
+  }
+
+  return evaluateStandardTransitions(incomingMessage, sessionContext);
+}
+```
+
+Cuando el paciente pregunta por un examen en medio de la cotización:
+- El motor identifica la consulta informativa sobre el catálogo.
+- Shuri explica en lenguaje claro y empático qué evalúa el examen y las indicaciones básicas (ej. ayuno estándar).
+- **El estado de la orden no se resetea:** El carrito, los códigos FONASA y el desglose de precios permanecen intactos.
+- Al final de la respuesta, Shuri retoma el hilo de forma orgánica: *«¿Deseas que continuemos con la confirmación de tu orden?»*.
+
+## Circuit breakers y degradación elegante en OCR
+
+El segundo punto crítico de abandono ocurre cuando el OCR no puede extraer información confiable de una orden médica manuscrita o deteriorada.
+
+Pedirle al paciente que *«vuelva a subir la foto»* una y otra vez es la receta perfecta para que desinstale la conversación.
+
+Implementamos una política estricta de degradación con límite de reintentos (`ocr_retry_count >= 2`):
+
+1. **Intento 1 (Fallo de lectura):** Shuri solicita una nueva foto indicando recomendaciones concretas (buena iluminación, sin sombras, orden extendida plana).
+2. **Intento 2 (Fallo consecutivo):** El sistema activa un **circuit breaker**. Se detiene el procesamiento OCR para no frustrar al usuario y se despliega una bifurcación de rescate:
+   - Opción de ingresar el nombre de los exámenes manualmente mediante búsqueda asistida por texto.
+   - Derivación inmediata a un asesor humano, emitiendo una alerta en tiempo real a nuestro canal de Slack de operaciones con el contexto completo y la imagen original.
+
+```
+[Paciente sube foto borrosa 2da vez]
+              │
+              ▼
+    [OCR Retry Threshold >= 2]
+              │
+      ┌───────┴───────┐
+      ▼               ▼
+[Ingreso manual]   [Alerta Slack Handoff]
+(Búsqueda texto)   (Asesor toma el chat)
+```
+
+## Los datos y aprendizajes en producción
+
+Al desplegar estas correcciones en producción en Examya:
+- Eliminamos el 100% de los bucles infinitos de reintento de OCR.
+- Los pacientes que realizaron consultas pedagógicas sobre sus exámenes completaron su orden médica sin requerir reiniciar la sesión.
+- El tiempo de respuesta de handoff cuando una orden es ilegible bajó significativamente gracias a las alertas enriquecidas con el payload original.
+
+## Zoom out: qué significa esto para HealthTech
+
+En salud digital, la inteligencia artificial no reemplaza la empatía ni el soporte humano; los coordina. 
+
+Un sistema resiliente no es el que pretende tener 100% de precisión matemática en cada foto o texto, sino el que sabe **cuándo responder con pedagogía**, **cuándo degradar con elegancia** y **cuándo entregar el control a un humano**.
+
+## Lo que viene
+
+Estamos perfeccionando la síntesis de preparaciones previas (ayunos y restricciones) para que se entreguen como un resumen descargable interactivo una vez emitida la orden de venta.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
