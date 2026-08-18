@@ -1,0 +1,124 @@
+---
+title: "Por qué tu agente de salud necesita un Circuit Breaker de estado transaccional (y no solo memoria en RAM)"
+description: "Los reinicios de backend y fallas de webhook pueden causar amnesia o duplicación de órdenes en WhatsApp. Así implementamos persistencia transaccional e idempotencia en Shuri."
+date: 2026-08-19
+lang: es
+image: /img/blog/2026-08-19-whatsapp-recovery-persistence.png
+tags: [architecture, agents, whatsapp, postgresql, resilience, examya, backend]
+draft: false
+series: agentes
+seriesOrder: 10
+related: [2026-08-18-la-trampa-de-emaxconn, 2026-08-17-whatsapp-conversational-resilience]
+audience: "ctos | backend-engineers | tech-leads | builders"
+funnelStage: "awareness"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+## El costo de la amnesia en flujos clínicos
+
+En un chatbot de atención al cliente convencional (e-commerce o soporte), si un servidor se reinicia o se pierde un webhook, lo peor que suele ocurrir es que el usuario tenga que repetir su pregunta.
+
+En salud digital y flujos transaccionales médicos, el estándar es radicalmente distinto:
+
+1. **Órdenes duplicadas:** Si un webhook de confirmación de pago o cotización reintenta ciegamente tras un timeout, puede emitir dos órdenes médicas distintas para el mismo paciente.
+2. **Pérdida de contexto clínico:** Si el paciente ya envió la foto de su orden médica, validó sus datos y el agente se reinicia justo antes de generar el link de pago, forzarlo a "volver a enviar la foto desde el principio" destruye la tasa de conversión y quiebra la confianza.
+3. **Inconsistencia de estado:** Si el proceso en Node.js/NestJS colapsa a mitad de una transacción, la base de datos no puede quedar en un estado ambiguo donde el agente cree que cobró, pero la API médica no registró la orden.
+
+Guardar el estado conversacional únicamente en la memoria de trabajo del proceso o confiar ciegamente en que el LLM "recordará todo" desde el historial de mensajes de WhatsApp es una trampa arquitectónica.
+
+<iframe src="/img/blog/2026-08-19-whatsapp-recovery-persistence.html" width="100%" height="560px" style="border:none; border-radius: 8px; margin-bottom: 2rem;"></iframe>
+
+## Anatomía de un Circuit Breaker Transaccional
+
+Para resolver este desafío en **Shuri** (el agente médico de Examya), implementamos un patrón desacoplado de persistencia de recuperación que separa el ciclo de vida del mensaje entrante del ciclo de vida del estado transaccional.
+
+Este patrón se apoya en dos modelos relacionales estrictos y un conjunto de invariantes a nivel de base de datos:
+
+### 1. `WhatsappRecoveryItem`: Estado activo único por canal
+
+Cada conversación en un canal institucional tiene a lo sumo **un único item de recuperación en estado ACTIVO**.
+
+```prisma
+model WhatsappRecoveryItem {
+  id               String                 @id @default(cuid())
+  tenantId         String                 @map("tenant_id")
+  channelId        String                 @map("channel_id")
+  phoneNumber      String                 @map("phone_number")
+  status           WhatsappRecoveryStatus @default(ACTIVE)
+  currentStep      String                 @map("current_step")
+  snapshotData     Json                   @map("snapshot_data")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  evidences        WhatsappRecoveryEvidence[]
+
+  @@index([tenantId, channelId, phoneNumber, status])
+  @@map("whatsapp_recovery_item")
+}
+```
+
+Mediante un índice parcial único en PostgreSQL (`CREATE UNIQUE INDEX ... WHERE status = 'ACTIVE'`), garantizamos que ningún webhook concurrente pueda abrir dos flujos de recuperación en paralelo para el mismo paciente.
+
+### 2. `WhatsappRecoveryEvidence`: Inmutabilidad e idempotencia
+
+Cada cambio de paso o evidencia intermedia (ej. extracción OCR de códigos FONASA, RUT ingresado, confirmación de copago) se registra como una fila inmutable con un hash de idempotencia (`idempotency_key`):
+
+```prisma
+model WhatsappRecoveryEvidence {
+  id             String               @id @default(cuid())
+  recoveryItemId String               @map("recovery_item_id")
+  step           String
+  idempotencyKey String               @unique @map("idempotency_key")
+  payloadHash    String               @map("payload_hash")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  recoveryItem   WhatsappRecoveryItem @relation(fields: [recoveryItemId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_recovery_evidence")
+}
+```
+
+Si Meta reintenta el webhook debido a una demora de red (retries automáticos a los 5 y 15 segundos), el repositorio detecta la colisión de `idempotencyKey` a nivel de base de datos y descarta el procesamiento duplicado de inmediato, retornando HTTP 200 sin ejecutar nuevamente las llamadas costosas de OCR o LLM.
+
+---
+
+## Bloqueo de rollbacks no autorizados (`SQLSTATE 55000`)
+
+Uno de los mayores riesgos en arquitecturas de agentes autónomos es que un bug en la lógica conversacional intente retroceder una máquina de estados que ya alcanzó un punto de no retorno (por ejemplo, intentar volver a editar exámenes cuando la orden ya fue emitida y enviada a pasarela de pago).
+
+En lugar de confiar únicamente en validaciones de TypeScript a nivel de aplicación, forzamos la integridad mediante constraints y triggers en PostgreSQL:
+
+```sql
+-- Trigger para evitar transiciones ilegales o regresión de estados terminales
+CREATE OR REPLACE FUNCTION validate_recovery_transition()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.status IN ('COMPLETED', 'EXPIRED', 'DISCARDED') AND NEW.status = 'ACTIVE' THEN
+    RAISE EXCEPTION 'Illegal state transition from terminal state'
+      USING ERRCODE = '55000'; -- Object not in prerequisite state
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Cuando un proceso intenta forzar una transición prohibida, la base de datos arroja un `SQLSTATE 55000`. Esto actúa como un **fusible de seguridad (Circuit Breaker)**: el agente corta el flujo defectuoso, registra el incidente en el Audit Trail y deriva elegantemente a un operador humano sin corromper el registro clínico ni duplicar órdenes.
+
+---
+
+## Qué aprendimos construyendo resiliencia en salud
+
+1. **La memoria conversacional no reemplaza al ledger transaccional:** El contexto del LLM sirve para la empatía y la comprensión del lenguaje natural del paciente; la base de datos relacional con constraints estrictos es la única responsable de los números, el dinero y los exámenes médicos.
+2. **Aislamiento multi-tenant por diseño:** Los items de recuperación deben estar estrictamente acotados por `tenantId` y `channelId`. En WhatsApp multi-organización, mezclar estados entre clínicas es una brecha de privacidad inadmisible.
+3. **El estado terminal es sagrado:** Una orden médica emitida o un pago procesado no admiten rollback silencioso por parte de un agente. Si hay una disputa o error, el camino es una nueva transacción de compensación, no la mutación del historial.
+
+Construir agentes para salud digital no se trata de hacer que el bot suene inteligente; se trata de garantizar que, pase lo que pase en los servidores, **los datos del paciente y sus órdenes médicas permanezcan siempre consistentes y seguros**.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

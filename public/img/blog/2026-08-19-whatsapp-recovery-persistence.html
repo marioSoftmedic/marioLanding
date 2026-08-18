@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactional Recovery Circuit Breaker - Architecture Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1121;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --emerald: #10b981;
+      --cyan: #06b6d4;
+      --rose: #f43f5e;
+      --purple: #a855f7;
+      --amber: #f59e0b;
+      --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      overflow-x: auto;
+      letter-spacing: -0.01em;
+    }
+    .container {
+      width: 100%;
+      max-width: 1060px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--purple);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      position: relative;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .card.highlight {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.05);
+    }
+    .card.warning {
+      border-color: rgba(244, 63, 94, 0.4);
+      background: rgba(244, 63, 94, 0.05);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .badge-blue { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.2); color: var(--emerald); }
+    .badge-rose { background: rgba(244, 63, 94, 0.2); color: var(--rose); }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .code-box {
+      background: #060913;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-top: 10px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+    .code-keyword { color: var(--purple); font-weight: 600; }
+    .code-fn { color: var(--cyan); }
+    .code-str { color: var(--emerald); }
+    .code-err { color: var(--rose); font-weight: 700; }
+    .description {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .footer-bar {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="tag">Resiliencia Transaccional &bull; Shuri Architecture</div>
+      <h1 class="title">Circuit Breaker de Recuperación e Idempotencia en WhatsApp</h1>
+      <p class="subtitle">Desacoplamiento estricto entre eventos de mensajería y transacciones clínicas</p>
+    </div>
+
+    <div class="grid">
+      <!-- Step 1 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="badge badge-blue">1</div>
+          <div class="card-title">Webhook Ingress</div>
+        </div>
+        <p class="description">Meta dispara webhooks en paralelo o reintentos automáticos tras micro-latencias.</p>
+        <div class="code-box">
+<span class="code-keyword">POST</span> /webhook/whatsapp
+{
+  <span class="code-fn">"id"</span>: <span class="code-str">"wamid.HBgL..."</span>,
+  <span class="code-fn">"phone"</span>: <span class="code-str">"56939327977"</span>,
+  <span class="code-fn">"type"</span>: <span class="code-str">"image_order"</span>
+}</div>
+        <p class="description"><strong>Riesgo:</strong> Reintentos concurrentes sin control abren flujos duplicados en RAM.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="card highlight">
+        <div class="card-header">
+          <div class="badge badge-emerald">2</div>
+          <div class="card-title">Recovery Persistence</div>
+        </div>
+        <p class="description">Aislamiento por tenant/canal y unicidad parcial activa en PostgreSQL.</p>
+        <div class="code-box">
+<span class="code-keyword">CREATE UNIQUE INDEX</span> ON
+  whatsapp_recovery_item
+  (tenant_id, channel_id, phone)
+<span class="code-keyword">WHERE</span> status = <span class="code-str">'ACTIVE'</span>;</div>
+        <p class="description"><strong>Garantía:</strong> Máximo un flujo activo por paciente. Idempotencia en evidencias intermedias.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="card warning">
+        <div class="card-header">
+          <div class="badge badge-rose">3</div>
+          <div class="card-title">Circuit Breaker (DB)</div>
+        </div>
+        <p class="description">Bloqueo de mutación o rollback indebido de órdenes terminales.</p>
+        <div class="code-box">
+<span class="code-keyword">IF</span> status = <span class="code-str">'COMPLETED'</span> <span class="code-keyword">THEN</span>
+  <span class="code-keyword">RAISE EXCEPTION</span>
+    <span class="code-err">'ILLEGAL_ROLLBACK'</span>
+    <span class="code-keyword">USING ERRCODE</span> = <span class="code-str">'55000'</span>;
+<span class="code-keyword">END IF</span>;</div>
+        <p class="description"><strong>Fusible:</strong> Corta ejecuciones erradas y escala a humano sin corromper el registro clínico.</p>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <div class="status-pill">
+        <div class="dot"></div>
+        <span>Invariantes Validadas en Producción (PostgreSQL + Prisma)</span>
+      </div>
+      <div>mariohealthbits.dev &bull; Serie Agentes #10</div>
+    </div>
+  </div>
+</body>
+</html>
