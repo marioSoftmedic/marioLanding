@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-08-01T12:00:08.218456",
+  "generated_at": "2026-08-18T18:00:12.252994",
   "source": "engram-unified",
   "note": "Memorias unificadas Mac (Claude Code/Cowork) + VPS (Cotocha)",
-  "total_memories": 8916,
+  "total_memories": 10490,
   "projects": {
-    "examya": 6253,
-    "personal": 2006,
-    "marioLanding": 115,
-    "estepa": 520,
+    "examya": 6773,
+    "personal": 2120,
+    "marioLanding": 225,
+    "estepa": 1350,
     "blog": 22
   },
   "observations": [
