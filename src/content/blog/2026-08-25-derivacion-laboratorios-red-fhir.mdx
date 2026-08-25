@@ -1,0 +1,145 @@
+---
+title: "Derivación de exámenes en red: por qué rutear no es reenviar un JSON"
+description: "El 90% de los LIS legacy rompe el linaje clínico al derivar muestras. Explicamos cómo orquestar la derivación en red usando FHIR R4 Task y ServiceRequest."
+date: 2026-08-25
+lang: "es"
+image: "/img/blog/derivacion-laboratorios-red-fhir.png"
+tags: [interoperability, fhir, clinical-labs, ley-21668, digital-health, architecture, b2b, compliance]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 21
+related: [2026-08-21-ai-transparency-on-fhir-aitof, 2026-08-04-interoperabilidad-semantica-vs-sintactica]
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 4
+---
+
+Un paciente llega a las 7:30 AM a una clínica en regiones para realizarse una batería de exámenes de rutina y un panel tiroideo especializado. En la toma de muestra le extraen dos tubos: el hemograma y la bioquímica se procesan en el laboratorio local esa misma mañana, pero la muestra para el perfil hormonal debe enviarse a un laboratorio de referencia en Santiago.
+
+Aquí es donde comienza la falla silenciosa.
+
+En la mayoría de los prestadores en Chile, el sistema LIS (Laboratory Information System) local no "deriva" la orden electrónica de forma continua: imprime un comprobante térmico o exporta una planilla manual, y al llegar al centro de referencia, un operador vuelve a digitar los datos del paciente y genera un código de orden completamente nuevo. Cuando el informe final está listo dos días después, regresa como un PDF adjunto por correo o un archivo plano descargado de un portal web.
+
+Para el médico tratante y para la ficha clínica, esa derivación fue una caja negra. La cadena de custodia digital se rompió en el momento en que la muestra salió por la puerta.
+
+## La trampa de creer que interoperar es reenviar un payload
+
+Con la entrada en vigencia de la Ley 21.668 (interoperabilidad obligatoria de fichas clínicas y exámenes) y las exigencias de la Ley 21.719 sobre gobernanza de datos personales y consentimiento ARCO-P, muchas instituciones intentaron modernizar este flujo creando webhooks rápidos o enviando un JSON REST punto a punto.
+
+El problema es que un webhook no resuelve el estado de una muestra biológica.
+
+Reenviar un objeto JSON arbitrario entre dos servidores no garantiza tres cosas fundamentales en salud:
+1. **Identidad persistente de la orden:** si el laboratorio de referencia renombra la prestación o crea su propio ID interno sin preservar el identificador del prestador emisor, el resultado queda huérfano.
+2. **Seguimiento del estado de la prestación:** el prestador emisor necesita saber si la muestra fue rechazada por hemólisis, si está en proceso o si requiere re-toma, sin tener que llamar por teléfono.
+3. **Consentimiento y base legal:** la transferencia del dato de salud sensible debe registrar explícitamente el origen de la autorización del paciente sin exponer historiales clínicos no relacionados.
+
+Cuando intentas parchar este flujo con APIs propietarias ad-hoc, cada convenio entre dos clínicas requiere escribir un conector desde cero.
+
+## Datos reales: el costo de descalzar la red
+
+En la arquitectura de Examya nos tocó abordar este problema directamente al conectar redes de laboratorios clínicos y centros de toma de muestras (Issue #1697). 
+
+Cuando tienes múltiples proveedores de derivación para distintos paneles (por ejemplo, derivar biología molecular a un prestador A y toxicología a un prestador B), detectamos tres cuellos de botella críticos:
+- **Dispersión arancelaria:** un mismo examen FONASA (ej. código 0301045) puede tener nomenclaturas internas distintas en cada LIS, obligando a normalizar la prestación antes de emitir la solicitud.
+- **Pérdida de la muestra en tránsito:** el 12% de las incidencias operacionales en laboratorios medianos provienen de muestras recibidas sin orden electrónica pre-asociada en el LIS de destino.
+- **Retrabajo de re-digitación:** digitalizar manualmente una orden derivada toma entre 2 y 4 minutos por paciente, introduciendo un margen de error de digitación evitable en identificadores y RUT.
+
+## La arquitectura estándar: el patrón FHIR Task + ServiceRequest
+
+En el estándar HL7 FHIR R4, la derivación entre prestadores no se modela como un simple "POST de datos", sino mediante la orquestación coordinada de cuatro recursos clínicos bien definidos:
+
+```text
+Prestador Emisor (Clínica A)                     Laboratorio de Referencia (Lab B)
+      │                                                         │
+      │── 1. ServiceRequest (Intención clínica + identifier) ──>│
+      │── 2. Specimen (Tubo, código de barra, hora toma) ──────>│
+      │── 3. Task (status: requested, intent: order) ──────────>│
+      │                                                         │ (Valida muestra)
+      │<── 4. Task (status: accepted / in-progress) ────────────│
+      │                                                         │ (Procesa análisis)
+      │<── 5. DiagnosticReport + Observation[] (basedOn: SR) ───│
+      │<── 6. Task (status: completed) ─────────────────────────│
+```
+
+### 1. `ServiceRequest`: La intención clínica inmutable
+Representa la solicitud médica original. Lleva el identificador raíz del prestador de origen (`identifier.system` y `identifier.value`), el paciente (`subject`) y el código estandarizado (LOINC o FONASA). Este recurso nunca cambia su identidad fundamental a lo largo de la red.
+
+### 2. `Specimen`: La cadena de custodia física
+Describe el espécimen biológico extraído: tipo de tubo, aditivo, fecha/hora exacta de recolección y temperatura de transporte. Si el tubo se coagula o sufre daño en el traslado, el reporte de no conformidad se vincula a este recurso.
+
+### 3. `Task`: La máquina de estados del flujo de trabajo
+Este es el componente que los desarrolladores suelen olvidar. Mientras que el `ServiceRequest` dice *qué examen se necesita*, el recurso `Task` gestiona *quién ejecuta la tarea y en qué etapa va*:
+- `requested`: La orden fue enviada al laboratorio de referencia.
+- `accepted`: El laboratorio de referencia recibió la muestra y confirmó su viabilidad analítica.
+- `in-progress`: La muestra está montada en el autoanalizador.
+- `completed`: El resultado fue validado y emitido.
+- `rejected`: La muestra fue rechazada (con codificación del motivo).
+
+### 4. `DiagnosticReport` con vínculo `basedOn`
+Cuando el laboratorio de referencia emite el resultado, el informe técnico hace referencia explícita al `ServiceRequest` de origen mediante el atributo `DiagnosticReport.basedOn`. Esto permite que el LIS emisor consuma el resultado y lo inserte directamente en la ficha clínica del paciente sin intervención humana.
+
+```typescript
+// Ejemplo de Task FHIR para coordinar la derivación entre prestadores
+interface ClinicalReferralTask {
+  resourceType: "Task";
+  id: "task-derivacion-2026-0825";
+  status: "in-progress";
+  intent: "order";
+  focus: {
+    reference: "ServiceRequest/sr-fonasa-0301045";
+    identifier: {
+      system: "https://clinica-origen.cl/orders",
+      value: "ORD-2026-88912"
+    }
+  };
+  for: {
+    reference: "Patient/patient-rut-12345678-9";
+  };
+  requester: {
+    reference: "Organization/clinica-origen-id";
+  };
+  owner: {
+    reference: "Organization/laboratorio-referencia-id";
+  };
+  input: [
+    {
+      type: { text: "Specimen" },
+      valueReference: { reference: "Specimen/tubo-suero-barcode-9941" }
+    }
+  ];
+}
+```
+
+## El gotcha: aislar reglas de enrutamiento y no mutar la orden raíz
+
+El error más común al implementar este flujo es permitir que el laboratorio de referencia mute el `ServiceRequest` original. 
+
+Si el prestador de destino modifica el código arancelario, divide los exámenes o altera el ID de la orden para adaptarlo a su base de datos local, la conciliación automática en el prestador emisor colapsa.
+
+La regla de oro que aplicamos en nuestro módulo de interoperabilidad es:
+- El `ServiceRequest` de origen es de solo lectura para el receptor.
+- Cada laboratorio en la red define sus reglas de derivación de manera desacoplada (redes activas, prestador por defecto según categoría de examen y fallback por indisponibilidad).
+- Toda acción operativa local del receptor vive en su propio recurso `Task` secundario.
+
+Esto asegura que si una clínica trabaja con tres laboratorios de referencia distintos, el flujo de cara al médico y al paciente sea exactamente el mismo.
+
+## Por qué esto redefine la competencia en salud digital
+
+Hacia 2027, las clínicas y laboratorios clínicos en Chile no competirán únicamente por la cercanía de sus sucursales físicas o el tiempo de espera en sala. Competirán por su capacidad de integrarse a redes asistenciales de forma transparente.
+
+Un prestador que tarda 48 horas en procesar una derivación porque depende de llamadas y PDFs manuales pierde terreno frente a una red donde el resultado derivado viaja como dato estructurado FHIR en minutos tras la validación bioquímica.
+
+La interoperabilidad real no consiste en conectar todo con todo de forma improvisada, sino en estructurar cada transacción con estándares que protejan la integridad del dato clínico y la seguridad del paciente.
+
+## El siguiente paso en la red
+
+En Examya continuamos afinando la capa de enrutamiento y adaptadores ligeros para LIS legacy a través de Fhirex, permitiendo que laboratorios privados y centros de salud operen con estándares FHIR R4 nativos sin necesidad de reemplazar su software de gestión actual.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
