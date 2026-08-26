@@ -1,0 +1,185 @@
+---
+title: "Behavioral Sandbox for AI Agents: How to Isolate Side Effects Without Mocking Intelligence"
+description: "Why deterministic mocks destroy institutional trust and running production risks side effects. The Behavioral Sandbox pattern in healthcare."
+date: 2026-08-26
+lang: "en"
+image: "/img/blog/2026-08-26-sandbox-comportamiento-agentes-ia.png"
+tags: [ai, agents, architecture, testing, backend, digital-health, examya]
+draft: false
+series: "agentes"
+seriesOrder: 24
+related: ["2026-08-19-whatsapp-recovery-persistence", "2026-07-24-gatekeeper-deterministico-orquestacion-agentes"]
+canonicalSlug: "2026-08-26-sandbox-comportamiento-agentes-ia"
+audience: "ctos | ai-architects | software-engineers | healthcare-builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "agentes-ia"
+newsletterPriority: 1
+---
+
+## The Healthcare Sandbox Dilemma: Fake Echoes vs. Production Disaster
+
+When introducing a clinical or medical operations AI agent to healthcare institutions (clinics, diagnostic laboratories, or hospital networks), technical and clinical teams always issue the same initial requirement: *"We want to test the agent's behavior in a safe environment before directing patient traffic to it"*.
+
+Faced with this demand, development teams often fall into one of two extreme architectural traps:
+
+1. **The Deterministic Mock Trap:** To eliminate all risk, teams build a superficial sandbox that returns hardcoded responses or fixes static intents. The failure is immediate: the institution tests real edge cases (complex medical orders, ambiguous fasting guidelines, FONASA copay queries) and the system responds like a rigid chatbot from ten years ago. The test fails to evaluate the reasoning capabilities of the LLM Engine or the precision of the institutional vector knowledge base (RAG).
+2. **The Unchecked Staging Agent Trap:** At the other extreme, teams connect the real `ProductionAgent` directly to the testing interface. Even with test credentials, the agent executes its entire operational lifecycle: acquiring distributed locks in Redis, creating medical order records in the PostgreSQL database on Supabase, scheduling deferred cron reminders, and firing messaging webhooks to WhatsApp or payment gateways such as Mercado Pago. A single misconfiguration in staging can notify a real patient or corrupt global operational state.
+
+At Examya, while building and auditing the testing environment for our clinical agent Shuri, we faced this exact crossroad. The answer was neither choosing blind mocks nor accepting operational risk, but implementing a formal architectural pattern: the **Behavioral Sandbox**.
+
+---
+
+## What Is a Behavioral Sandbox?
+
+A *Behavioral Sandbox* is an execution environment where the agent's cognitive core (system prompts, intent routing, semantic retrieval from the vector store, and response generation) operates identically to production, while **all external side effects are strictly isolated at the outbound adapter boundary**.
+
+```
+                         ┌──────────────────────────────────────────────┐
+                         │              REAL COGNITIVE CORE             │
+                         │                                              │
+  Sandbox Input ────────►│  Intent Router ──► RAG (Vector Store) ──► LLM│
+                         │                                              │
+                         └──────────────────────┬───────────────────────┘
+                                                │ Actions / Side-Effects
+                         ┌──────────────────────▼───────────────────────┐
+                         │          RUNTIME BOUNDARY (ADAPTERS)         │
+                         ├──────────────────────────────┬───────────────┤
+                         │        Live Production       │    Sandbox    │
+                         ├──────────────────────────────┼───────────────┤
+                         │ • WhatsApp Live API          │ • NullSink    │
+                         │ • Mercado Pago / Webhooks    │ • MockPayment │
+                         │ • Redis Distributed Locks    │ • InMemoryLock│
+                         │ • DB Medical Orders (Live)   │ • EphemeralTx │
+                         └──────────────────────────────┴───────────────┘
+```
+
+Unlike a conventional mock, a Behavioral Sandbox:
+- Executes full production prompts.
+- Performs real semantic queries against the clinical and institutional document vector store.
+- Evaluates structured validation schemas.
+- Produces the exact conversational reasoning that an end user would experience.
+
+However, zero external state mutations escape the isolation boundary.
+
+---
+
+## Hexagonal Architecture (Ports and Adapters) for AI Agents
+
+For an agent to support this level of isolation without polluting business logic with messy `if (isSandbox) { ... }` conditionals, the architecture must rely strictly on ports and adapters.
+
+The agent orchestrator never interacts directly with infrastructure libraries such as Redis or messaging SDKs. Instead, it consumes abstract interfaces (ports):
+
+```typescript
+// Outbound messaging port
+export interface OutboundMessengerPort {
+  sendMessage(recipientId: string, text: string): Promise<void>;
+  sendInteractiveButtons(recipientId: string, options: string[]): Promise<void>;
+}
+
+// Order persistence port
+export interface OrderPersistencePort {
+  saveDraftOrder(orderData: DraftOrderInput): Promise<string>;
+  commitTransaction(orderId: string): Promise<void>;
+}
+
+// Concurrency control port
+export interface DistributedLockPort {
+  acquireLock(resourceKey: string, ttlSeconds: number): Promise<boolean>;
+  releaseLock(resourceKey: string): Promise<void>;
+}
+```
+
+During application bootstrap, an `AgentRuntimeFactory` resolves which concrete adapters to inject based on the execution context.
+
+---
+
+## Implementing Isolated Sinks (`NullSink` and `InMemory`)
+
+In the Institutional Sandbox environment, live adapters are swapped for ephemeral in-memory adapters and capture sinks:
+
+```typescript
+export class SandboxMessengerAdapter implements OutboundMessengerPort {
+  private capturedMessages: Array<{ recipientId: string; text: string; timestamp: Date }> = [];
+
+  async sendMessage(recipientId: string, text: string): Promise<void> {
+    // Does not call external WhatsApp API
+    // Captures the message in memory for inspection in the sandbox UI
+    this.capturedMessages.push({
+      recipientId,
+      text,
+      timestamp: new Date()
+    });
+  }
+
+  async sendInteractiveButtons(recipientId: string, options: string[]): Promise<void> {
+    this.capturedMessages.push({
+      recipientId,
+      text: `[Buttons: ${options.join(' | ')}]`,
+      timestamp: new Date()
+    });
+  }
+
+  getAuditLog() {
+    return [...this.capturedMessages];
+  }
+}
+```
+
+For concurrency and session locks:
+
+```typescript
+export class InMemoryLockAdapter implements DistributedLockPort {
+  private activeLocks = new Set<string>();
+
+  async acquireLock(resourceKey: string, ttlSeconds: number): Promise<boolean> {
+    if (this.activeLocks.has(resourceKey)) {
+      return false; // Simulates real concurrency contention
+    }
+    this.activeLocks.add(resourceKey);
+    return true;
+  }
+
+  async releaseLock(resourceKey: string): Promise<void> {
+    this.activeLocks.delete(resourceKey);
+  }
+}
+```
+
+---
+
+## Three Lessons Learned from Isolating Healthcare Agents
+
+While implementing this pattern in the Examya backend with NestJS and PostgreSQL on Supabase, we established three core principles:
+
+### 1. Declared tools are not runtime security gates
+A common mistake is assuming that the tool definitions provided to the LLM prevent side effects. If an internal handler implicitly invokes `redisClient.set()` or `db.medicalOrder.create()` during message parsing, the agent will mutate state even if it never explicitly calls an external tool. Isolation must live at the dependency injection container level, not merely in the prompt definition.
+
+### 2. Auditing intercepted side effects is the highest-value feature
+When medical directors and compliance auditors evaluate the sandbox, they do not just read the generated text: they want to inspect what actions the agent *would have executed* in production. A well-designed Behavioral Sandbox exposes an audit telemetry tab showing:
+- `Detected Intent`: Clinical Lab Exam Quote.
+- `Queried RAG Chunks`: FONASA 2026 Fee Schedule.
+- `Simulated Effect (Intercepted)`: Medical order creation with temporary ID (not saved to real table).
+- `Simulated Message (Intercepted)`: Confirmation notification sent to test recipient.
+
+### 3. Contract verification must run across both execution modes
+Your automated tests in NestJS must run the same conversational evaluation suite (measuring semantic consistency) against both production adapters and sandbox sinks. If a prompt update degrades entity extraction in the sandbox, it will fail production identically.
+
+---
+
+## Conclusion
+
+Testing AI agents in regulated sectors like healthcare cannot rely on shallow scripted responses or reckless live execution.
+
+The **Behavioral Sandbox** enables institutions to test real intelligence, stress-test clinical accuracy, and audit every automated decision, while keeping live databases, payment processors, and communication channels completely protected.
+
+---
+
+## Let's Connect
+
+If you are designing autonomous agents for mission-critical environments or evaluating safe architectures for digital health, let's talk:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

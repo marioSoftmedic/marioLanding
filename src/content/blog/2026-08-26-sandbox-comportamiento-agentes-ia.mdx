@@ -1,0 +1,184 @@
+---
+title: "Sandbox de comportamiento para agentes de IA: cómo aislar efectos secundarios sin falsear el razonamiento"
+description: "Por qué los mocks determinísticos destruyen la confianza institucional y ejecutar producción arriesga efectos secundarios. Patrón Behavioral Sandbox en salud."
+date: 2026-08-26
+lang: "es"
+image: "/img/blog/2026-08-26-sandbox-comportamiento-agentes-ia.png"
+tags: [ai, agents, architecture, testing, backend, digital-health, examya]
+draft: false
+series: "agentes"
+seriesOrder: 24
+related: ["2026-08-19-whatsapp-recovery-persistence", "2026-07-24-gatekeeper-deterministico-orquestacion-agentes"]
+audience: "ctos | ai-architects | software-engineers | healthcare-builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "agentes-ia"
+newsletterPriority: 1
+---
+
+## El dilema del sandbox en salud: el eco falso vs. el desastre en producción
+
+Cuando presentas un agente de IA clínica o de operaciones médicas a una institución de salud (clínicas, laboratorios o redes hospitalarias), el primer requerimiento de los equipos técnicos y clínicos siempre es el mismo: *"Queremos probar el comportamiento del agente en un entorno seguro antes de habilitar el tráfico de pacientes"*.
+
+Ante esta solicitud, la mayoría de los equipos de desarrollo caen en una de dos trampas arquitectónicas extremas:
+
+1. **La trampa del Mock Determinístico:** Para evitar cualquier riesgo, se construye un sandbox superficial que devuelve respuestas predefinidas o fija intents estáticos. El problema es inmediato: la institución prueba casos de borde reales (órdenes médicas complejas, ambigüedades en preparación de exámenes, preguntas de copago FONASA) y el sistema responde como un chatbot rígido de hace diez años. La prueba no evalúa la capacidad de razonamiento del LLM Engine ni la precisión de la base de conocimiento vectorial (RAG).
+2. **La trampa del Agente Desbocado en Staging:** En el otro extremo, se conecta el agente de producción real (`ProductionAgent`) directamente a la interfaz de pruebas. Aunque se usen credenciales de prueba, el agente ejecuta su ciclo completo: escribe bloqueos de concurrencia en Redis, crea registros de órdenes en la base de datos PostgreSQL en Supabase, programa recordatorios diferidos en el cron y dispara webhooks de mensajería hacia WhatsApp o pasarelas de pago como Mercado Pago. Un error de configuración en staging puede terminar notificando a un paciente real o corrompiendo el estado global.
+
+En Examya, al construir y auditar el entorno de pruebas para nuestro agente clínico Shuri, nos enfrentamos exactamente a esta encrucijada. La solución no fue elegir entre un mock ciego o el riesgo operacional, sino implementar un patrón arquitectónico formal: el **Behavioral Sandbox (Sandbox de Comportamiento)**.
+
+---
+
+## Qué es un Behavioral Sandbox
+
+Un *Behavioral Sandbox* es un entorno de ejecución donde el núcleo cognitivo del agente (prompts, ruteo de intenciones, recuperación semántica en base vectorial y generación de respuestas) opera de manera idéntica al entorno de producción, pero **la totalidad de sus efectos secundarios hacia el mundo exterior quedan aislados a nivel de adaptadores de salida**.
+
+```
+                         ┌──────────────────────────────────────────────┐
+                         │              CORE COGNITIVO REAL             │
+                         │                                              │
+  Entrada del Sandbox ──►│  Intent Router ──► RAG (Vector Store) ──► LLM│
+                         │                                              │
+                         └──────────────────────┬───────────────────────┘
+                                                │ Acciones / Side-Effects
+                         ┌──────────────────────▼───────────────────────┐
+                         │          RUNTIME BOUNDARY (ADAPTERS)         │
+                         ├──────────────────────────────┬───────────────┤
+                         │        Producción Real       │    Sandbox    │
+                         ├──────────────────────────────┼───────────────┤
+                         │ • WhatsApp Live API          │ • NullSink    │
+                         │ • Mercado Pago / Webhooks    │ • MockPayment │
+                         │ • Redis Distributed Locks    │ • InMemoryLock│
+                         │ • DB Medical Orders (Live)   │ • EphemeralTx │
+                         └──────────────────────────────┴───────────────┘
+```
+
+A diferencia de un mock convencional, el Behavioral Sandbox:
+- Ejecuta los prompts de producción completos.
+- Realiza consultas semánticas reales contra la base de datos de documentos clínicos e institucionales.
+- Evalúa los esquemas estructurados de validación.
+- Produce el razonamiento conversacional exacto que vería un usuario final.
+
+Sin embargo, ninguna mutación externa escapa de la frontera de aislamiento.
+
+---
+
+## Arquitectura de Puertos y Adaptadores (Hexagonal) para Agentes
+
+Para que un agente soporte este nivel de aislamiento sin ensuciar la lógica de negocio con condicionales del tipo `if (isSandbox) { ... }`, la arquitectura debe basarse estrictamente en el desacoplamiento de puertos y adaptadores.
+
+El orquestador del agente no debe interactuar directamente con librerías de infraestructura como Redis o SDKs de mensajería. En su lugar, consume interfaces abstractas (puertos):
+
+```typescript
+// Puerto de mensajería saliente
+export interface OutboundMessengerPort {
+  sendMessage(recipientId: string, text: string): Promise<void>;
+  sendInteractiveButtons(recipientId: string, options: string[]): Promise<void>;
+}
+
+// Puerto de persistencia de órdenes
+export interface OrderPersistencePort {
+  saveDraftOrder(orderData: DraftOrderInput): Promise<string>;
+  commitTransaction(orderId: string): Promise<void>;
+}
+
+// Puerto de control de concurrencia
+export interface DistributedLockPort {
+  acquireLock(resourceKey: string, ttlSeconds: number): Promise<boolean>;
+  releaseLock(resourceKey: string): Promise<void>;
+}
+```
+
+En tiempo de inicialización, una fábrica de dependencias (`AgentRuntimeFactory`) resuelve qué adaptadores inyectar según el contexto de ejecución.
+
+---
+
+## Implementación de Sumideros Aislados (`NullSink` y `InMemory`)
+
+En el entorno de Sandbox Institucional, los adaptadores reales son reemplazados por adaptadores efímeros y sumideros de captura (*sinks*):
+
+```typescript
+export class SandboxMessengerAdapter implements OutboundMessengerPort {
+  private capturedMessages: Array<{ recipientId: string; text: string; timestamp: Date }> = [];
+
+  async sendMessage(recipientId: string, text: string): Promise<void> {
+    // No invoca la API externa de WhatsApp
+    // Registra el mensaje en memoria para inspección en la UI del sandbox
+    this.capturedMessages.push({
+      recipientId,
+      text,
+      timestamp: new Date()
+    });
+  }
+
+  async sendInteractiveButtons(recipientId: string, options: string[]): Promise<void> {
+    this.capturedMessages.push({
+      recipientId,
+      text: `[Buttons: ${options.join(' | ')}]`,
+      timestamp: new Date()
+    });
+  }
+
+  getAuditLog() {
+    return [...this.capturedMessages];
+  }
+}
+```
+
+Para el control de concurrencia y estado de sesión:
+
+```typescript
+export class InMemoryLockAdapter implements DistributedLockPort {
+  private activeLocks = new Set<string>();
+
+  async acquireLock(resourceKey: string, ttlSeconds: number): Promise<boolean> {
+    if (this.activeLocks.has(resourceKey)) {
+      return false; // Simula contención real de concurrencia
+    }
+    this.activeLocks.add(resourceKey);
+    return true;
+  }
+
+  async releaseLock(resourceKey: string): Promise<void> {
+    this.activeLocks.delete(resourceKey);
+  }
+}
+```
+
+---
+
+## Tres lecciones aprendidas al aislar agentes en salud
+
+Al implementar este patrón en el backend de Examya con NestJS y PostgreSQL en Supabase, descubrimos tres principios críticos:
+
+### 1. Las capacidades no son compuertas de runtime
+Un error recurrente es asumir que el array de herramientas (`tools`) configurado en el LLM previene efectos secundarios. Si un handler interno ejecuta un `redisClient.set()` o un `db.medicalOrder.create()` de forma implícita durante el procesamiento del mensaje, el agente mutará estado aunque no haya invocado una herramienta externa de escritura. El aislamiento debe existir en el contenedor de inyección de dependencias, no solo en la definición del prompt.
+
+### 2. La auditoría de efectos prevenidos es el mejor entregable de valor
+Cuando los directores médicos o auditores prueban el sandbox, no solo quieren ver el texto generado: quieren ver qué acciones *habría ejecutado* el agente en producción. Un Behavioral Sandbox bien diseñado expone una pestaña de telemetría que muestra:
+- `Intención detectada`: Cotización de Examen Clínico.
+- `RAG Chunks consultados`: Catálogo arancelario FONASA 2026.
+- `Efecto simulado (Interceptado)`: Intento de emisión de orden médica con ID temporal (no persistida en tabla real).
+- `Mensaje simulado (Interceptado)`: Notificación de confirmación dirigida a número de prueba.
+
+### 3. La verificación de contratos debe correr sobre ambos modos
+Tus tests automatizados en NestJS deben ejecutar la misma suite de evaluación conversacional (usando evaluadores de consistencia semántica) tanto contra el adaptador de producción como contra los adaptadores de sandbox. Si un cambio en el prompt rompe la extracción de entidades en el sandbox, romperá producción exactamente igual.
+
+---
+
+## Conclusión
+
+Probar agentes de inteligencia artificial en industrias reguladas como la salud no puede depender de respuestas simuladas ni de la audacia de tocar sistemas vivos.
+
+El **Behavioral Sandbox** permite a las instituciones interactuar con la inteligencia real del sistema, poner a prueba su robustez médica y auditar cada decisión, manteniendo las bases de datos, pasarelas de pago y canales de comunicación blindados ante cualquier efecto secundario imprevisto.
+
+---
+
+## Conectemos
+
+Si estás diseñando agentes autónomos para entornos críticos o evaluando arquitecturas seguras para salud digital, hablemos:
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
