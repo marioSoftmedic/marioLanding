@@ -1,0 +1,189 @@
+---
+title: "La trampa del Rate Limit en memoria: por qué escalar réplicas rompe tus cuotas en salud"
+description: "Al escalar réplicas en Node.js, un Map en RAM multiplica tu cuota por N y satura la base de datos. Cómo lo resolvimos con Redis y Lua atómico."
+date: 2026-08-31
+lang: "es"
+image: "/img/blog/la-trampa-del-rate-limit-en-memoria-replicas.png"
+tags: [backend, architecture, whatsapp, databases, examya, infrastructure]
+draft: false
+series: "examya"
+seriesOrder: 19
+related: [2026-08-18-la-trampa-de-emaxconn, 2026-08-19-whatsapp-recovery-persistence]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+Cuando construyes un backend clínico que recibe cientos de órdenes médicas por WhatsApp, asumes que proteger tus endpoints contra ráfagas es un problema resuelto. Creas un `Guard` o un middleware con un `Map` en memoria, defines una cuota razonable (por ejemplo, 5 solicitudes cada 10 segundos por teléfono o IP) y los tests unitarios pasan en verde.
+
+Todo funciona de maravilla en local y en el primer despliegue con una sola instancia.
+
+El problema revienta el día que el tráfico sube, Railway o Kubernetes levantan 4 o 6 réplicas para balancear la carga, y descubres que el bot sigue aceptando avalanchas que saturan el pool de conexiones de la base de datos (`FATAL EMAXCONN`).
+
+El rate limiter no estaba roto. Estaba aislado en la memoria de cada contenedor.
+
+## La ilusión del estado local en sistemas distribuidos
+
+En un servidor monolítico tradicional de una sola instancia, guardar el conteo de peticiones en un `Map<string, { count: number, resetAt: number }>` dentro de la RAM del proceso de Node.js es rápido y no requiere infraestructura adicional.
+
+Pero en el momento en que escalas horizontalmente a $N$ réplicas detrás de un balanceador de carga (round-robin o least connections), cada réplica tiene su propio espacio de memoria completamente ciego al resto:
+
+```
+                      [ Peticiones entrantes de WhatsApp ]
+                                       │
+                             [ Load Balancer ]
+                         ┌─────────────┼─────────────┐
+                         ▼             ▼             ▼
+                   [ Réplica 1 ] [ Réplica 2 ] [ Réplica 3 ]
+                    RAM Map: 5/5  RAM Map: 5/5  RAM Map: 5/5
+                         │             │             │
+                         └─────────────┼─────────────┘
+                                       ▼
+                   [ Base de Datos / LIS / OCR Engine ]
+                        Peticiones reales admitidas: 15
+```
+
+Si tu cuota configurada es de 5 peticiones por ventana de tiempo y tienes 3 réplicas, un cliente agresivo o un webhook desalineado puede enviar 15 peticiones antes de ser bloqueado. Si escalas a 6 réplicas, la cuota efectiva salta a 30.
+
+En salud digital esto es crítico: los webhooks de mensajería (Meta WhatsApp Cloud API) envían reintentos automáticos si tu servidor tarda unos milisegundos más en responder durante picos de OCR. Sin un límite coordinado, esos reintentos se reparten entre las distintas réplicas, multiplicando las consultas pesadas y agotando los pools de PgBouncer.
+
+## El costo real: de cuotas eludidas al colapso de conexiones
+
+En Examya nos topamos con este comportamiento en la Issue #1519. Teníamos rutas protegidas por un `RateLimitGuard` decorado, pero observamos que durante ráfagas de usuarios cotizando exámenes en paralelo, la cuota configurada no frenaba la saturación aguas abajo.
+
+Cada réplica procesaba su porción del tráfico en memoria, permitiendo que la suma global sobrecargara el resolvedor de precios FONASA y las transacciones de creación de órdenes.
+
+El síntoma no era un error 429 para el usuario abusivo; el síntoma era que usuarios legítimos recibían un error 500 porque la base de datos alcanzaba su límite de conexiones simultáneas.
+
+## La arquitectura: Ventana fija atómica con Redis y Lua
+
+Para coordinar la admisión entre múltiples réplicas sin introducir condiciones de carrera (*race conditions*), la verificación y el incremento del contador deben ocurrir en una única operación indivisible.
+
+Si haces un `GET` a Redis para leer el contador, evalúas en Node.js si superó el límite, y luego haces un `INCR`, dos peticiones simultáneas en réplicas distintas leerán el mismo valor previo y ambas serán admitidas.
+
+La solución limpia y determinística es encapsular la lógica en un script Lua ejecutado directamente en Redis:
+
+```lua
+-- Clave compuesta: ratelimit:{hash}:{timestamp_ventana}
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local current = redis.call('INCR', key)
+
+if current == 1 then
+    redis.call('EXPIRE', key, ttl)
+end
+
+if current > limit then
+    local pttl = redis.call('TTL', key)
+    return {0, current, pttl} -- [0 = denegado, total_intentos, segundos_restantes]
+else
+    return {1, current, ttl}   -- [1 = admitido, conteo_actual, ttl]
+end
+```
+
+Al ejecutarse de forma atómica en el motor de Redis:
+1. `INCR` incrementa el contador de inmediato.
+2. Si es la primera petición de la ventana (`current == 1`), se fija el tiempo de expiración (`EXPIRE`).
+3. Si el contador supera el límite, se devuelve el tiempo exacto restante de la ventana para enviarlo al cliente.
+
+## La implementación en el Guard de NestJS
+
+En el `RateLimitGuard`, reemplazamos el `Map` interno por una consulta al script Lua usando claves versionadas basadas en el SHA-256 del identificador (IP o teléfono normalizado) y el endpoint:
+
+```typescript
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { RedisService } from '../redis/redis.service';
+import { createHash } from 'crypto';
+
+@Injectable()
+export class DistributedRateLimitGuard implements CanActivate {
+  constructor(private readonly redis: RedisService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest();
+    const identifier = req.headers['x-forwarded-for'] || req.ip || req.user?.phone || 'anonymous';
+    const route = req.route?.path || req.url;
+    
+    // Hash determinístico para evitar claves infinitas en Redis
+    const keyHash = createHash('sha256').update(`${identifier}:${route}`).digest('hex');
+    const windowKey = `rl:v1:${keyHash}`;
+    const limit = 5;
+    const windowSeconds = 10;
+
+    try {
+      const [allowed, count, ttl] = await this.redis.evalLua(
+        LUA_RATE_LIMIT_SCRIPT,
+        [windowKey],
+        [limit, windowSeconds],
+        { timeoutMs: 500 }
+      );
+
+      if (allowed === 0) {
+        const response = context.switchToHttp().getResponse();
+        response.setHeader('Retry-After', ttl > 0 ? ttl : 1);
+        response.setHeader('X-RateLimit-Limit', limit);
+        response.setHeader('X-RateLimit-Remaining', 0);
+        
+        throw new HttpException({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: 'Demasiadas solicitudes. Intenta nuevamente en unos segundos.',
+          retryAfter: ttl
+        }, HttpStatus.TOO_MANY_REQUESTS);
+      }
+
+      return true;
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      
+      // Fail-closed por seguridad en endpoints clínicos transaccionales
+      throw new HttpException(
+        'Servicio temporalmente no disponible (seguridad de tasa)',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+  }
+}
+```
+
+## El trade-off: Fail-Open vs. Fail-Closed en salud
+
+Un debate clásico en infraestructura es qué hacer si Redis se cae o no responde en el tiempo límite (definimos un timeout estricto de 500 ms):
+
+* **Fail-Open (Permitir todo):** Prioriza la disponibilidad inmediata. Si Redis falla, las peticiones pasan sin límite.
+* **Fail-Closed (Bloquear con 503):** Prioriza la estabilidad de la base de datos y la integridad de los datos.
+
+En e-commerce general, muchos optan por fail-open para no perder carritos. En salud digital y procesamiento de recetas médicas, optamos deliberadamente por **Fail-Closed** en las rutas transaccionales.
+
+Si Redis está caído y abrimos la compuerta, una ráfaga tumbará Postgres en segundos, afectando a los pacientes que ya estaban pagando o recibiendo resultados críticos. Un error 503 controlado con reintento es infinitamente mejor que una base de datos corrupta o colapsada.
+
+## Los resultados en pruebas de estrés
+
+Para verificar que el guard distribuido realmente cortaba la evasión de cuotas, montamos un harness de pruebas con 6 solicitudes concurrentes simuladas contra 3 réplicas distintas apuntando al mismo Redis:
+
+* **Peticiones 1 y 2:** Admitidas (`HTTP 200`, contador = 1 y 2).
+* **Peticiones 3, 4, 5 y 6:** Rechazadas de inmediato con `HTTP 429 Too Many Requests`.
+* **Cabecera `Retry-After: 1`:** Enviada en las 4 respuestas rechazadas.
+* **Recuperación:** Al expirar el segundo de ventana, el contador volvió a cero y la siguiente petición pasó limpiamente.
+
+Con apenas 397 líneas de código cambiadas y aprovechando el módulo de Redis que ya teníamos en la arquitectura, eliminamos por completo las fugas de cuotas por escalado.
+
+## Lo que aprendimos
+
+Escalar horizontalmente una aplicación en Node.js es trivial con plataformas modernas; lo difícil es auditar qué suposiciones de tu código asumían que existía una sola memoria RAM.
+
+1. **El estado en memoria no escala:** Si una variable decide si una petición pasa o no, esa variable debe ser compartida y atómica.
+2. **Los webhooks son implacables:** Las plataformas de mensajería no esperan; si tus réplicas no coordinan sus límites, se auto-bombardean.
+3. **El protocolo HTTP importa:** Enviar `Retry-After` le da a los clientes y colas asíncronas la señal exacta de cuándo reintentar, evitando reintentos en bucle ciego.
+
+En el siguiente paso del roadmap estamos llevando esta misma coordinación a los límites dinámicos por tipo de examen (para proteger endpoints de OCR pesado sin afectar cotizaciones simples de texto).
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

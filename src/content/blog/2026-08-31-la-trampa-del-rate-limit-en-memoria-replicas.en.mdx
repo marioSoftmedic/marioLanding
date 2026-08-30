@@ -1,0 +1,190 @@
+---
+title: "The In-Memory Rate Limit Trap: Why Scaling API Replicas Breaks Your Clinical Quotas"
+description: "When scaling replicas in Node.js, an in-memory Map multiplies your quota by N, overwhelming your database. How we fixed it with Redis and atomic Lua."
+date: 2026-08-31
+lang: "en"
+image: "/img/blog/la-trampa-del-rate-limit-en-memoria-replicas.png"
+tags: [backend, architecture, whatsapp, databases, examya, infrastructure]
+draft: false
+series: "examya"
+seriesOrder: 19
+related: [2026-08-18-la-trampa-de-emaxconn, 2026-08-19-whatsapp-recovery-persistence]
+canonicalSlug: "2026-08-31-la-trampa-del-rate-limit-en-memoria-replicas"
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "lis-whatsapp-guide"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+When you build a clinical backend processing medical lab orders via WhatsApp, protecting your endpoints against traffic spikes feels like a solved problem. You create a guard or middleware with an in-memory `Map`, define a reasonable quota (say, 5 requests per 10 seconds per IP or phone number), and your unit tests pass cleanly.
+
+Everything works smoothly on local environments and in your initial single-instance deployment.
+
+The trouble begins the moment traffic surges, Railway or Kubernetes spins up 4 or 6 replicas to balance the load, and you discover the bot is still accepting avalanches of requests that crash your database connection pool (`FATAL EMAXCONN`).
+
+The rate limiter was not broken. It was simply isolated inside the RAM of each container.
+
+## The Illusion of Local State in Distributed Systems
+
+On a traditional single-instance monolithic server, tracking request counts in a `Map<string, { count: number, resetAt: number }>` within the Node.js process RAM is fast and requires zero additional infrastructure.
+
+However, the second you scale horizontally to $N$ replicas behind a load balancer (round-robin or least connections), each replica maintains its own memory space, completely blind to the others:
+
+```
+                      [ Incoming WhatsApp Requests ]
+                                     │
+                           [ Load Balancer ]
+                       ┌─────────────┼─────────────┐
+                       ▼             ▼             ▼
+                 [ Replica 1 ] [ Replica 2 ] [ Replica 3 ]
+                  RAM Map: 5/5  RAM Map: 5/5  RAM Map: 5/5
+                       │             │             │
+                       └─────────────┼─────────────┘
+                                     ▼
+                 [ Database / LIS / OCR Engine ]
+                      Actual admitted requests: 15
+```
+
+If your configured quota is 5 requests per time window and you run 3 replicas, an aggressive client or an unaligned webhook can fire 15 requests before getting blocked. Scale to 6 replicas, and your effective quota jumps to 30.
+
+In digital healthcare, this is critical: messaging webhooks (Meta WhatsApp Cloud API) automatically retry if your server takes a few milliseconds longer to respond during OCR spikes. Without coordinated admission, those retries scatter across distinct replicas, multiplying heavy database lookups and exhausting PgBouncer pools.
+
+## The Real Cost: From Quota Bypasses to Connection Pool Exhaustion
+
+At Examya, we hit this behavior in Issue #1519. We had endpoints protected by a decorated `RateLimitGuard`, but observed that during bursts of patients quoting exams concurrently, the configured quota failed to curb downstream load.
+
+Each replica processed its slice of traffic in memory, allowing the aggregate volume to overload the FONASA price resolver and order creation transactions.
+
+The visible symptom was not a clean HTTP 429 response for the bursty sender; the symptom was that legitimate users received HTTP 500 errors because PostgreSQL ran out of available connections.
+
+## The Architecture: Atomic Fixed Windows with Redis and Lua
+
+To coordinate admission across multiple replicas without introducing race conditions, checking and incrementing the counter must happen in a single, indivisible operation.
+
+If you perform a `GET` to Redis to read the counter, evaluate in Node.js whether it exceeded the limit, and then execute `INCR`, two simultaneous requests arriving at different replicas will read the same previous value and both will be admitted.
+
+The clean, deterministic solution is encapsulating the logic inside a Lua script executed directly within Redis:
+
+```lua
+-- Composite key: ratelimit:{hash}:{window_timestamp}
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local current = redis.call('INCR', key)
+
+if current == 1 then
+    redis.call('EXPIRE', key, ttl)
+end
+
+if current > limit then
+    local pttl = redis.call('TTL', key)
+    return {0, current, pttl} -- [0 = denied, total_attempts, seconds_remaining]
+else
+    return {1, current, ttl}   -- [1 = allowed, current_count, ttl]
+end
+```
+
+By executing atomically inside the Redis engine:
+1. `INCR` increments the counter immediately.
+2. If it is the first request of the window (`current == 1`), the expiration time (`EXPIRE`) is locked in.
+3. If the counter exceeds the quota, it returns the exact remaining TTL so the client knows when to retry.
+
+## Implementing the Distributed Guard in NestJS
+
+Inside `RateLimitGuard`, we replaced the internal `Map` with a call to the Lua script using versioned keys based on the SHA-256 hash of the identifier (IP or normalized phone number) and the endpoint route:
+
+```typescript
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { RedisService } from '../redis/redis.service';
+import { createHash } from 'crypto';
+
+@Injectable()
+export class DistributedRateLimitGuard implements CanActivate {
+  constructor(private readonly redis: RedisService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest();
+    const identifier = req.headers['x-forwarded-for'] || req.ip || req.user?.phone || 'anonymous';
+    const route = req.route?.path || req.url;
+    
+    // Deterministic hash to prevent unbounded key lengths in Redis
+    const keyHash = createHash('sha256').update(`${identifier}:${route}`).digest('hex');
+    const windowKey = `rl:v1:${keyHash}`;
+    const limit = 5;
+    const windowSeconds = 10;
+
+    try {
+      const [allowed, count, ttl] = await this.redis.evalLua(
+        LUA_RATE_LIMIT_SCRIPT,
+        [windowKey],
+        [limit, windowSeconds],
+        { timeoutMs: 500 }
+      );
+
+      if (allowed === 0) {
+        const response = context.switchToHttp().getResponse();
+        response.setHeader('Retry-After', ttl > 0 ? ttl : 1);
+        response.setHeader('X-RateLimit-Limit', limit);
+        response.setHeader('X-RateLimit-Remaining', 0);
+        
+        throw new HttpException({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: 'Too many requests. Please try again in a few seconds.',
+          retryAfter: ttl
+        }, HttpStatus.TOO_MANY_REQUESTS);
+      }
+
+      return true;
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      
+      // Fail-closed for transactional clinical safety
+      throw new HttpException(
+        'Service temporarily unavailable (rate safety)',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+  }
+}
+```
+
+## The Trade-off: Fail-Open vs. Fail-Closed in Healthcare
+
+A standard infrastructure dilemma is what to do when Redis becomes unreachable or times out (we enforce a strict 500 ms limit):
+
+* **Fail-Open (Allow everything):** Prioritizes immediate availability. If Redis fails, all requests pass unhindered.
+* **Fail-Closed (Reject with 503):** Prioritizes database stability and transactional data integrity.
+
+In generic e-commerce, teams frequently choose fail-open to avoid losing checkout carts. In digital healthcare and medical order routing, we deliberately chose **Fail-Closed** on transactional paths.
+
+If Redis is down and we open the floodgates, an incoming burst will crash PostgreSQL in seconds, impacting patients already in the middle of paying or receiving critical lab results. A controlled HTTP 503 error with an immediate retry window is vastly superior to a corrupted or unresponsive database.
+
+## Stress Test Verification Results
+
+To confirm that the distributed guard completely eliminated quota bypasses, we configured a test harness simulating 6 concurrent requests fired against 3 separate replicas sharing the same Redis instance:
+
+* **Requests 1 and 2:** Admitted (`HTTP 200`, count = 1 and 2).
+* **Requests 3, 4, 5, and 6:** Rejected immediately with `HTTP 429 Too Many Requests`.
+* **Header `Retry-After: 1`:** Included in all 4 rejected responses.
+* **Recovery:** As the 1-second window expired, the counter reset to zero and the next request passed cleanly.
+
+With just 397 lines of code changed and reusing our existing Redis module, we permanently closed quota leaks caused by horizontal scaling.
+
+## Lessons Learned
+
+Scaling a Node.js backend horizontally is straightforward with modern cloud platforms; the real challenge is auditing what assumptions in your codebase presumed a single shared RAM:
+
+1. **In-memory state does not scale:** If a variable decides whether a request passes, that variable must be shared and atomic across all instances.
+2. **Webhooks are relentless:** Messaging platforms do not wait; if your replicas do not coordinate their limits, they will overwhelm your infrastructure.
+3. **HTTP protocols matter:** Returning `Retry-After` gives upstream clients and asynchronous queues the exact signal they need to back off intelligently.
+
+Next on our roadmap: extending dynamic rate limits per examination type to protect heavy OCR processing while keeping text-only quotes instant.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
