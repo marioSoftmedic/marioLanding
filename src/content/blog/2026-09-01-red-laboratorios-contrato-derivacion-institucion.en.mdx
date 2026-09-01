@@ -1,0 +1,53 @@
+---
+title: "A lab network is not a list: the institutional routing contract"
+description: "Why separating the FHIR catalog from the institutional network and the resolver API structures routing precedence in B2B healthcare."
+date: 2026-09-01
+lang: "en"
+image: "/img/blog/red-laboratorios-contrato-derivacion-institucion.png"
+tags: [Architecture, Interoperability, Clinical Labs]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 22
+related: []
+canonicalSlug: "2026-09-01-red-laboratorios-contrato-derivacion-institucion"
+audience: "clinical-lab-directors | healthtech-founders | builders | healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "clinical-labs-as-api"
+newsletterPriority: 3
+---
+
+## The flat list mistake
+
+Assuming that building a laboratory referral network is just about putting together a list of providers is a common initial approach. However, when a clinical center needs to route an exam, a flat structure can be insufficient. Existing in a global catalog does not mean you have an active commercial agreement for a specific channel.
+
+Before automating a referral, the fundamental question is: what object actually represents the provider, who owns the active network, and what component holds the final routing authority?
+
+## The catalog is not the network
+
+It is common to observe models that mix these concepts up. Sometimes they treat the `Laboratory` entity as the canonical institutional client and assume the global catalog is the active network. Pricing, FHIR connectivity, and commercial agreements end up tightly coupled directly into the routing logic.
+
+In our recent design, we separated this at the root. We explicitly defined that the `Laboratory` is strictly the provider (the FHIR endpoint), not the canonical institutional client. The institutional network operates on a completely different layer, cleanly separated from the catalog.
+
+## The authority of the resolver
+
+Separating the catalog, the network ownership, and the resolver explicitly defines who holds authority in the system. To govern this, we designed a resolver API that enforces strict precedence: it first evaluates the channel, then the organization, and finally the global rules.
+
+All of this operates behind a feature flag. If the precedence logic fails or no exact match is found, the fallback includes routing to manual review, applying global rules, or reverting to the legacy system, depending on the contract.
+
+## Persistence is not execution
+
+We implemented PR #1697 with 450 local tests to validate this routing cascade and its fallback. The exam rules (`examRules`) are documented, and their persistence works in our local environment.
+
+However, there is an important gotcha: rule persistence alone does not prove total governance of the flow in runtime. The design makes the decision explicit, but it does not replace operational verification. The production smoke test is still pending.
+
+## Architecture that decides, not magic
+
+Having a clear architecture does not magically guarantee you will always route to the "best" laboratory, nor does it ensure superior performance in production. The goal of this design is to make the decision tree traceable within the architecture. When a referral falls back to manual review, the documented model allows identifying the precedence layer evaluated.
+
+The design is documented and tested locally. The next step is to activate the feature flag in production and validate the smoke test with real traffic.
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

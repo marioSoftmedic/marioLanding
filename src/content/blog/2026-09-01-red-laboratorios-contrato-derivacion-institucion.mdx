@@ -1,0 +1,52 @@
+---
+title: "Una red de laboratorios no es una lista: el contrato de derivación por institución"
+description: "Por qué separar el catálogo FHIR de la red institucional y la API resolver estructura la precedencia al derivar exámenes."
+date: 2026-09-01
+lang: "es"
+image: "/img/blog/red-laboratorios-contrato-derivacion-institucion.png"
+tags: [Arquitectura, Interoperabilidad, Laboratorios Clínicos]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 22
+related: []
+audience: "clinical-lab-directors | healthtech-founders | builders | healthcare-executives"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "clinical-labs-as-api"
+newsletterPriority: 3
+---
+
+## El error de la lista plana
+
+Asumir que construir una red de derivación de laboratorios consiste simplemente en armar una lista de proveedores es un enfoque inicial común. Sin embargo, cuando un centro clínico necesita enrutar un examen, una estructura plana resulta insuficiente. Existir en un catálogo global no significa tener un acuerdo comercial activo para un canal específico. 
+
+Antes de automatizar una derivación, la pregunta de fondo es: ¿qué objeto representa realmente al proveedor, quién es el dueño de la red habilitada y qué componente tiene la autoridad final para decidir el enrutamiento?
+
+## El catálogo no es la red
+
+Es frecuente observar modelos que mezclan estos conceptos. En ocasiones tratan a la entidad `Laboratory` como si fuera el cliente institucional canónico y asumen que el catálogo global es la red activa. Los precios, la conectividad FHIR y los acuerdos comerciales terminan acoplados directamente en la lógica de ruteo.
+
+En nuestro diseño más reciente, separamos esto de raíz. Definimos explícitamente que el `Laboratory` es estrictamente el proveedor (el endpoint FHIR), no el cliente institucional. La red institucional opera en una capa distinta, totalmente separada del catálogo.
+
+## La autoridad del resolver
+
+Separar el catálogo, la propiedad de la red y el resolver explicita quién tiene la autoridad en el sistema. Para gobernar esto, diseñamos una API resolver que aplica una precedencia estricta: primero evalúa el canal, luego la organización y finalmente las reglas globales. 
+
+Todo esto opera detrás de un feature flag. Si la lógica de precedencia falla o no encuentra un match exacto, el fallback incluye derivar a revisión manual, aplicar reglas globales o volver al sistema legacy, dependiendo de lo que dicte el contrato.
+
+## Persistir no es ejecutar
+
+Implementamos el PR #1697 con 450 tests locales para validar esta cascada de ruteo y el fallback. Las reglas de examen (`examRules`) quedaron documentadas y su persistencia funciona en nuestro entorno local. 
+
+Sin embargo, hay un gotcha importante: la persistencia de las reglas no prueba por sí sola el gobierno total del flujo en runtime. El diseño explicita la decisión, pero no reemplaza la verificación operativa. El smoke test en producción aún está pendiente.
+
+## Arquitectura que decide, no magia
+
+Tener una arquitectura clara no garantiza mágicamente que siempre derivarás al "mejor" laboratorio ni asegura desempeño superior en producción. El objetivo de este diseño es hacer que el árbol de decisiones quede trazado en la arquitectura. Cuando una derivación cae en revisión manual, el modelo documentado permite identificar la capa de precedencia evaluada.
+
+El diseño ya está documentado y probado localmente. El siguiente paso es activar el feature flag en producción y validar el smoke test con tráfico real. 
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
