@@ -16,6 +16,7 @@ export const ui = {
 		"footer.made-with": "Hecho con Astro",
 		// Hero
 		"hero.available": "Disponible para proyectos",
+		"hero.tagline": "Construyo infraestructura inteligente digital",
 		"hero.location": "desde Puerto Natales, Patagonia",
 		"hero.cta-projects": "Ver proyectos",
 		"hero.cta-contact": "Contactar",
@@ -119,6 +120,7 @@ export const ui = {
 		"footer.made-with": "Built with Astro",
 		// Hero
 		"hero.available": "Available for projects",
+		"hero.tagline": "Building intelligent digital infrastructure",
 		"hero.location": "from Puerto Natales, Patagonia",
 		"hero.cta-projects": "View projects",
 		"hero.cta-contact": "Contact me",

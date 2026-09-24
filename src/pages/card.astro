@@ -1,10 +1,12 @@
 ---
 import QRCode from 'qrcode';
+import { Image } from 'astro:assets';
+import heroImage from '../assets/images/marioHealthBits4.png';
 
 // src/pages/card.astro
 // Tarjeta Digital Mobile-First para Mario Inostroza M.
 const title = "Mario Inostroza M. | Tarjeta de Contacto";
-const description = "Tecnólogo Médico · Emprendedor · AI Systems & Deep Tech Architect. Fundador de Examya, Velerio y DeepTech. Patagonia, Chile.";
+const description = "Tecnólogo Médico · Emprendedor · AI Systems & Deep Tech Architect. Construyo infraestructura inteligente digital. Fundador de Examya, Velerio y DeepTech. Patagonia, Chile.";
 const vcfUrl = "/mario-inostroza.vcf";
 const cardUrl = "https://mariohealthbits.dev/card/";
 
@@ -97,19 +99,37 @@ const qrSvg = await QRCode.toString(cardUrl, {
       }
 
       .avatar {
-        width: 84px;
-        height: 84px;
+        width: 96px;
+        height: 96px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
-        border: 2px solid var(--accent);
+        padding: 3px;
+        background: linear-gradient(160deg, #f97316, #06b6d4);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 26px;
-        font-weight: 700;
-        font-family: var(--font-mono);
-        color: var(--accent);
-        box-shadow: 0 0 24px var(--accent-glow);
+        box-shadow:
+          0 0 35px -5px rgba(249, 115, 22, 0.4),
+          0 0 35px -5px rgba(6, 182, 212, 0.35),
+          0 12px 24px -8px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .avatar:hover {
+        transform: scale(1.04);
+        box-shadow:
+          0 0 45px -2px rgba(249, 115, 22, 0.5),
+          0 0 45px -2px rgba(6, 182, 212, 0.45),
+          0 16px 30px -8px rgba(0, 0, 0, 0.8);
+      }
+
+      .avatar-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: center 12%;
+        display: block;
       }
 
       .status-pill {
@@ -161,6 +181,19 @@ const qrSvg = await QRCode.toString(cardUrl, {
         font-weight: 600;
         margin-bottom: 6px;
         text-align: center;
+      }
+
+      .person-tagline {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #38bdf8;
+        background: linear-gradient(135deg, #38bdf8 0%, #a5f3fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+        line-height: 1.35;
       }
 
       .ecosystem-badge {
@@ -398,7 +431,16 @@ const qrSvg = await QRCode.toString(cardUrl, {
   <body>
     <main class="card-container">
       <div class="avatar-wrap">
-        <div class="avatar">MI</div>
+        <div class="avatar">
+          <Image
+            src={heroImage}
+            alt="Mario Inostroza M."
+            width={192}
+            height={192}
+            class="avatar-img"
+            loading="eager"
+          />
+        </div>
       </div>
 
       <div class="status-pill">
@@ -409,6 +451,7 @@ const qrSvg = await QRCode.toString(cardUrl, {
       <h1 class="person-name">Mario Inostroza M.</h1>
       <div class="person-subtitle-italic">Tecnólogo Médico · Emprendedor</div>
       <div class="person-title">AI Systems & Deep Tech Architect</div>
+      <div class="person-tagline">«Construyo infraestructura inteligente digital»</div>
       <div class="ecosystem-badge">
         Examya (Salud) · Velerio (Turismo) · DeepTech (Comercio)
       </div>
@@ -438,16 +481,16 @@ const qrSvg = await QRCode.toString(cardUrl, {
           <span class="tile-val">mario.inostroza.m...</span>
         </a>
 
-        <a href="https://www.linkedin.com/in/marioinostrozam" class="link-tile" target="_blank" rel="noopener">
+        <a href="https://www.linkedin.com/in/mario-inostroza-softmedic/" class="link-tile" target="_blank" rel="noopener">
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
           <span class="tile-label">LinkedIn</span>
-          <span class="tile-val">marioinostrozam</span>
+          <span class="tile-val">in/mario-inostroza</span>
         </a>
 
-        <a href="https://instagram.com/mario.inostroza.m" class="link-tile" target="_blank" rel="noopener">
+        <a href="https://instagram.com/mariohealthbits" class="link-tile" target="_blank" rel="noopener">
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
           <span class="tile-label">Instagram</span>
-          <span class="tile-val">@mario.inostroza.m</span>
+          <span class="tile-val">@mariohealthbits</span>
         </a>
 
         <a href="https://youtube.com/@mario.inostroza.m" class="link-tile" target="_blank" rel="noopener">
