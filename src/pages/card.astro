@@ -1,9 +1,22 @@
 ---
+import QRCode from 'qrcode';
+
 // src/pages/card.astro
 // Tarjeta Digital Mobile-First para Mario Inostroza M.
 const title = "Mario Inostroza M. | Tarjeta de Contacto";
 const description = "Tecnólogo Médico · Emprendedor · AI Systems & Deep Tech Architect. Fundador de Examya, Velerio y DeepTech. Patagonia, Chile.";
 const vcfUrl = "/mario-inostroza.vcf";
+const cardUrl = "https://mariohealthbits.dev/card/";
+
+// Generado de forma estática en tiempo de build (SVG puro embebido, cero dependencias en cliente)
+const qrSvg = await QRCode.toString(cardUrl, {
+  type: 'svg',
+  margin: 1,
+  color: {
+    dark: '#000000',
+    light: '#ffffff',
+  },
+});
 ---
 
 <!doctype html>
@@ -352,8 +365,17 @@ const vcfUrl = "/mario-inostroza.vcf";
         height: 200px;
         background: #ffffff;
         border-radius: 12px;
-        padding: 10px;
+        padding: 8px;
         margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .qr-code-img svg {
+        width: 100%;
+        height: 100%;
+        display: block;
       }
 
       .qr-code-img img, .qr-code-img canvas {
@@ -462,35 +484,26 @@ const vcfUrl = "/mario-inostroza.vcf";
     <!-- Modal con QR -->
     <div class="qr-modal" id="qr-modal">
       <div class="qr-modal-box">
-        <div class="qr-code-img" id="qr-target"></div>
+        <div class="qr-code-img" set:html={qrSvg}></div>
         <p style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">mariohealthbits.dev/card</p>
         <p style="font-size: 11px; color: var(--text-muted);">Escanear para abrir esta tarjeta o guardar contacto.</p>
-        <button class="btn-close-modal" id="close-qr-btn">Cerrar</button>
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+          <a href="/img/card-qr.png" download="mario-inostroza-qr.png" style="background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-full); font-size: 12px; text-decoration: none; display: inline-flex; align-items: center;">
+            Descargar QR
+          </a>
+          <button class="btn-close-modal" id="close-qr-btn">Cerrar</button>
+        </div>
       </div>
     </div>
 
-    <!-- Script para QR en vivo en el modal -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Script ligero para abrir/cerrar modal (sin dependencias externas) -->
     <script is:inline>
       const modal = document.getElementById("qr-modal");
       const openBtn = document.getElementById("open-qr-btn");
       const closeBtn = document.getElementById("close-qr-btn");
-      const qrTarget = document.getElementById("qr-target");
-      let qrRendered = false;
 
       openBtn?.addEventListener("click", () => {
         modal.classList.add("active");
-        if (!qrRendered && typeof QRCode !== "undefined") {
-          new QRCode(qrTarget, {
-            text: window.location.href,
-            width: 180,
-            height: 180,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
-          });
-          qrRendered = true;
-        }
       });
 
       closeBtn?.addEventListener("click", () => {
