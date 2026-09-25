@@ -47,13 +47,15 @@ These rules exist because production deploys failed. The automated guard is `scr
 1. **Every EN post MUST have `canonicalSlug` in its frontmatter.**
    `src/pages/en/blog/[slug].astro` routes via `post.data.canonicalSlug ?? post.id.replace(/\.en\.(md|mdx)$/, '')`. Astro's fallback from `post.id` does not always produce the expected URL, so EN posts without an explicit `canonicalSlug` 404 in production. **This is not a style preference — it breaks the live site.**
 
+   **Regla para posts nuevos:** El valor de `canonicalSlug` debe estar traducido al inglés (ej: `2026-09-28-my-english-slug`). Esto genera la URL limpia `/en/blog/2026-09-28-my-english-slug/` para lectores angloparlantes y SEO internacional. Los posts antiguos ya indexados mantienen su slug para preservar enlaces existentes.
+
    Required frontmatter example for `2026-04-17-my-post.en.mdx`:
    ```yaml
    ---
    title: "..."
    date: 2026-04-17
    lang: "en"
-   canonicalSlug: "2026-04-17-my-post"   # <-- MANDATORY for EN posts
+   canonicalSlug: "2026-04-17-my-english-slug"   # <-- MANDATORY for EN posts (translated to English for new posts)
    description: "..."
    tags: [...]
    image: "/img/blog/..."
