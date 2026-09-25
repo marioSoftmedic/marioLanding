@@ -1,0 +1,152 @@
+---
+title: "Por qué abandonamos los frameworks de agentes autónomos por máquinas de estado determinísticas en salud"
+description: "Por qué cambiar LangChain y ReAct por una Finite State Machine (FSM) tipada salvó a Examya del caos transaccional en WhatsApp."
+date: 2026-09-25
+lang: "es"
+image: "/img/blog/por-que-abandonamos-frameworks-agentes-maquinas-estado-fsm.png"
+tags: [ai, agents, architecture, examya, production]
+draft: false
+series: "agentes"
+seriesOrder: 26
+related: ["2026-07-24-gatekeeper-deterministico-orquestacion-agentes", "2026-07-26-intent-router-zod-mismatch"]
+audience: "ctos | ai-engineers | backend-architects | healthtech-founders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "examya"
+newsletterPriority: 3
+---
+
+## Hook: El día que un agente autónomo cotizó tres veces la misma orden
+
+En las demos de Twitter y en los benchmarks de laboratorio, los "agentes autónomos" basados en bucles ReAct (*Reason + Act*) se ven mágicos. Le pasas un objetivo en lenguaje natural, le inyectas cinco herramientas (`search_catalog`, `parse_prescription`, `calculate_fonasa`, `create_payment_link`, `send_whatsapp`) y el modelo razona solo qué hacer a cada paso.
+
+Nosotros caímos en esa trampa cuando empezamos a construir **Examya**.
+
+Pensamos que la flexibilidad de un framework como LangChain o CrewAI nos permitiría manejar cualquier interacción caótica de un paciente por WhatsApp. Hasta que llegó producción.
+
+Un viernes a las 11:30 AM, una paciente nos envió una foto borrosa de una orden médica con tres exámenes de sangre. El LLM interpretó que no estaba seguro de dos códigos FONASA, invocó la herramienta de búsqueda en catálogo con parámetros ambiguos, entró en un bucle reflexivo de corrección interna, y mientras tanto, la paciente mandó un mensaje de texto diciendo: *"Disculpa, ¿me avisas si se lee bien?"*.
+
+Ese segundo mensaje desarmó el historial de contexto del agente. El LLM reevaluó todo el hilo desde cero, disparó dos llamadas concurrentes a la herramienta de cotización, generó dos links de pago distintos con diferencias de $4.500 CLP por alucinación de aranceles, y terminó enviando tres mensajes contradictorios en menos de 4 segundos.
+
+Ese día entendimos una verdad incómoda de ingeniería: **en flujos transaccionales y de salud, la autonomía probabilística en el flujo de control no es una ventaja; es una negligencia.**
+
+---
+
+## La anatomía del desastre: Por qué fallan los frameworks de agentes en WhatsApp
+
+Los frameworks populares de agentes fueron diseñados bajo tres suposiciones que son falsas en el mundo real:
+
+1. **Asumen que la interacción es sincrónica y ordenada (Turn-based):** En WhatsApp, los usuarios no esperan a que el agente termine de "pensar". Envían tres audios, una foto, corrigen un dato y mandan un signo de interrogación en una ventana de 15 segundos. Un agente ReAct en bucle abierto colapsa ante eventos fuera de secuencia.
+2. **Confunden razonamiento de datos con control de flujo:** Dejar que un modelo de lenguaje decida qué paso del proceso de negocio viene después es equivalente a reemplazar tu enrutador HTTP con un generador de números aleatorios ponderado.
+3. **Carencia de límites determinísticos de reversión:** Cuando una herramienta falla a mitad de una cadena autónoma (ej: timeout en el LIS de la clínica), el agente intenta "reparar" la falla conversacionalmente en vez de ejecutar un rollback atómico a nivel de base de datos.
+
+En un SaaS de productividad, si un agente alucina una respuesta o tarda 25 segundos en un bucle, no pasa nada grave. En salud, si cobras de más, si agendas un examen sin validar el ayuno o si confirmas una orden médica inventando códigos, estás violando normativas regulatorias y destruyendo la confianza clínica.
+
+---
+
+## La solución de arquitectura: FSM en el tronco, LLM en las hojas
+
+Decidimos tirar a la basura el bucle autónomo y rediseñar el motor conversacional de Shuri bajo un principio estricto:
+
+> **El LLM opera exclusivamente en las hojas del árbol (extracción y generación). El tronco de control es una Máquina de Estados Finitos (FSM) 100% determinística.**
+
+```
+                     EVENTO WHATSAPP ENTRANTE
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │    Redis Concurrency Lock     │  (Evita race conditions)
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │   Finite State Machine (FSM)  │  (Define estados válidos)
+               │     Estado actual: QUOTING    │
+               └───────────────┬───────────────┘
+                               │
+           ┌───────────────────┴───────────────────┐
+           ▼                                       ▼
+ ┌───────────────────┐                   ┌───────────────────┐
+ │   LLM Worker 1    │                   │   LLM Worker 2    │
+ │ (OCR / Zod Schema)│                   │(Generación Mensaje)│
+ └───────────────────┘                   └───────────────────┘
+   Extrae datos tipados                    Redacta en tono empático
+   SIN poder decidir el                    SIN cambiar el estado
+   siguiente estado                        del sistema
+```
+
+### ¿Cómo funciona en código?
+
+Cada sesión de WhatsApp tiene un estado transaccional persistido en PostgreSQL (`INITIAL`, `ORDER_RECEIVED`, `EXTRACTING_EXAMS`, `CONFIRMING_QUOTATION`, `PAYMENT_PENDING`, `COMPLETED`).
+
+Ningún mensaje de usuario puede saltarse un estado sin satisfacer las guardas de transición. El LLM es invocado únicamente para realizar tareas puras de transformación:
+
+```typescript
+// ShuriStateMachine: Control de flujo determinístico
+export interface ConversationState {
+  currentStage: 'INITIAL' | 'ORDER_RECEIVED' | 'QUOTING' | 'PAYMENT_PENDING';
+  extractedData?: MedicalOrderSchema;
+}
+
+export async function handleIncomingMessage(
+  session: Session,
+  message: WhatsAppMessage
+): Promise<void> {
+  const currentState = session.state;
+
+  switch (currentState.currentStage) {
+    case 'ORDER_RECEIVED':
+      // El LLM solo extrae datos contra un esquema Zod estricto
+      const extracted = await extractMedicalOrderWithZod(message.mediaUrl);
+      
+      if (!extracted.isValid) {
+        // La FSM decide la transición, no el modelo
+        await transitionTo(session, 'MANUAL_REVIEW_REQUIRED');
+        return;
+      }
+      
+      // Transición controlada por lógica de negocio
+      await transitionTo(session, 'QUOTING', { data: extracted.order });
+      break;
+
+    case 'QUOTING':
+      // Llamada pura a la base de datos de aranceles (sin LLM intermediario)
+      const quote = await calculateFonasaPricing(session.data.exams);
+      await sendDeterministicQuotation(session, quote);
+      await transitionTo(session, 'PAYMENT_PENDING');
+      break;
+
+    default:
+      await handleFallbackState(session);
+  }
+}
+```
+
+---
+
+## Los tres beneficios inmediatos que vimos en producción
+
+### 1. Latencia y costos reducidos en un 68%
+Un agente ReAct autónomo ejecuta en promedio 3 a 5 llamadas al LLM por interacción (Planificar → Pensar → Acción → Observar → Responder). Con una FSM, sabemos de antemano si necesitamos llamar al modelo o si simplemente debemos responder un mensaje estático o consultar la base de datos directamente. Pasamos de 12 segundos a menos de 2.2 segundos por respuesta.
+
+### 2. Idempotencia real ante ráfagas de mensajes
+Cuando un paciente manda 4 fotos seguidas, la FSM adquiere un lock distribuido en Redis basado en el número de teléfono. La primera foto transiciona el estado a `ORDER_PROCESSING`. Las siguientes 3 fotos se anexan como adjuntos al mismo ticket en la base de datos sin disparar 4 hilos de agentes autónomos compitiendo entre sí.
+
+### 3. Trazabilidad y Compliance (Ley 21.719)
+Si un paciente o un auditor de una clínica pregunta: *"¿Por qué se cotizó este examen con este arancel?"*, no tenemos que inspeccionar un log crudo de "pensamientos" del LLM. Tenemos una tabla relacional con transiciones de estado auditables:
+* `2026-09-25 11:30:02` — Evento: `IMAGE_RECEIVED` → Estado: `ORDER_RECEIVED`
+* `2026-09-25 11:30:04` — Evento: `OCR_PARSED` (Confidence: 0.96) → Estado: `QUOTING`
+* `2026-09-25 11:30:05` — Evento: `PRICING_CALCULATED` (FONASA Nivel 3) → Estado: `PAYMENT_PENDING`
+
+---
+
+## Lecciones para builders de IA aplicada
+
+Si estás construyendo software con modelos de lenguaje para industrias serias (salud, fintech, logística, legal):
+
+1. **Desconfía de los frameworks que prometen "autonomía total":** La autonomía sin barreras es divertida en un prototipo de fin de semana, pero inmanejable en producción.
+2. **Utiliza esquemas de validación estricta (Zod, Pydantic) en cada salida del modelo:** Si el LLM no puede entregar un JSON válido contra tu esquema en el primer intento, el sistema debe caer en un fallback determinístico, no en una improvisación conversacional.
+3. **El estado de tu aplicación vive en tu base de datos, no en el contexto del prompt:** El prompt es volátil; el estado relacional es tu única garantía de supervivencia ante reinicios, caídas de red o fallas de proveedores.
+
+La verdadera sofisticación en ingeniería de IA no está en dejar que el modelo haga todo, sino en diseñar los rieles exactos para que el modelo haga lo que mejor sabe hacer: comprender lenguaje y extraer significado, mientras tu código gobierna las consecuencias.
