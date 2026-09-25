@@ -9,7 +9,7 @@ The Obsidian vault is the source of truth for the blog. Claude NEVER creates blo
 ### Full protocol (follow in order, every time)
 
 **Before writing any post:**
-1. Read `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/_INDEX.md`
+1. Read `/Users/marioinostroza/Projects/obsidian-vault/Proyectos/05_Blog/_INDEX.md`
    - Check "Temas cubiertos" — never duplicate a covered topic
    - Check "Temas disponibles" — use these as candidates
 
@@ -27,9 +27,9 @@ The Obsidian vault is the source of truth for the blog. Claude NEVER creates blo
 10. Update `_INDEX.md`: move from "Borradores pendientes" to "Publicados"
 11. Commit and push both repos
 
-**Vault paths (local iCloud):**
+**Vault paths:**
 ```
-~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Proyectos/05_Blog/
+/Users/marioinostroza/Projects/obsidian-vault/Proyectos/05_Blog/
   _INDEX.md          ← source of truth, always keep in sync
   _template.md       ← base for every new post
   borradores/        ← drafts (draft: true)
