@@ -1,7 +1,0 @@
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_beat_1.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_silence.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_beat_2.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_silence.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_beat_3.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_silence.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/short_beat_4.wav'

@@ -1,5 +1,0 @@
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/explainer_bloque_1.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/explainer_bloque_2.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/explainer_bloque_3.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/explainer_bloque_4.wav'
-file '/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/explainer_bloque_5.wav'
