@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1080, height=1920, initial-scale=1.0">
+  <title>Short 9:16 - Una red de laboratorios no es una lista</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&family=Space+Grotesk:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      background-color: #020617;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #f8fafc;
+      position: relative;
+      user-select: none;
+    }
+
+    .bg-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1920px;
+      background: 
+        radial-gradient(circle at 50% 15%, rgba(6, 182, 212, 0.18) 0%, transparent 55%),
+        radial-gradient(circle at 20% 55%, rgba(244, 63, 94, 0.16) 0%, transparent 50%),
+        radial-gradient(circle at 80% 85%, rgba(16, 185, 129, 0.18) 0%, transparent 55%),
+        linear-gradient(180deg, #020617 0%, #080e1e 40%, #030712 100%);
+      z-index: 0;
+    }
+
+    .bg-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1920px;
+      background-image: 
+        linear-gradient(to right, rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+      background-size: 48px 48px;
+      z-index: 1;
+      opacity: 0.65;
+    }
+
+    .short-container {
+      position: relative;
+      width: 1080px;
+      height: 1920px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 120px 64px 160px 64px;
+    }
+
+    .short-header {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .header-pill-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge-series {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 22px;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1.5px solid rgba(6, 182, 212, 0.4);
+      color: #22d3ee;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .badge-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 14px #10b981;
+    }
+
+    .brand-tag {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+
+    .brand-tag span {
+      color: #38bdf8;
+    }
+
+    .timeline-bar {
+      display: flex;
+      gap: 12px;
+      height: 10px;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 9999px;
+      padding: 2px;
+    }
+
+    .t-seg {
+      flex: 1;
+      height: 100%;
+      background: rgba(51, 65, 85, 0.6);
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .t-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #06b6d4, #10b981);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.8);
+      border-radius: 9999px;
+    }
+
+    .main-hook-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      min-height: 110px;
+    }
+
+    .main-hook-title .highlight-red {
+      color: #fb7185;
+      text-shadow: 0 0 30px rgba(244, 63, 94, 0.4);
+    }
+
+    .main-hook-title .highlight-cyan {
+      color: #38bdf8;
+      text-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+    }
+
+    .stage-center {
+      position: relative;
+      height: 1240px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .beat-card {
+      width: 100%;
+      border-radius: 36px;
+      padding: 52px;
+      display: none;
+      flex-direction: column;
+      gap: 32px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8);
+    }
+
+    .beat-card.active {
+      display: flex !important;
+    }
+
+    .card-beat1 {
+      background: linear-gradient(145deg, rgba(136, 19, 55, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 3px solid rgba(244, 63, 94, 0.6);
+      box-shadow: 0 0 70px rgba(244, 63, 94, 0.3);
+    }
+
+    .sub-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      width: fit-content;
+    }
+
+    .badge-rose {
+      background: rgba(244, 63, 94, 0.2);
+      border: 1.5px solid rgba(244, 63, 94, 0.5);
+      color: #fda4af;
+    }
+
+    .badge-emerald {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1.5px solid rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+
+    .badge-cyan {
+      background: rgba(6, 182, 212, 0.2);
+      border: 1.5px solid rgba(6, 182, 212, 0.5);
+      color: #38bdf8;
+    }
+
+    .b1-headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 54px;
+      font-weight: 900;
+      line-height: 1.15;
+      color: #ffffff;
+    }
+
+    .b1-alert-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 2px solid rgba(244, 63, 94, 0.5);
+      border-radius: 28px;
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .b1-alert-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 34px;
+      font-weight: 800;
+      color: #fb7185;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .b1-alert-desc {
+      font-size: 26px;
+      color: #e2e8f0;
+      line-height: 1.45;
+    }
+
+    .card-beat2 {
+      background: rgba(15, 23, 42, 0.96);
+      border: 3px solid rgba(148, 163, 184, 0.3);
+      padding: 48px;
+      gap: 32px;
+    }
+
+    .metric-row-box {
+      border-radius: 28px;
+      padding: 36px 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .box-green {
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.5) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 2.5px solid #10b981;
+      box-shadow: 0 0 50px rgba(16, 185, 129, 0.4);
+    }
+
+    .box-red {
+      background: linear-gradient(135deg, rgba(136, 19, 55, 0.5) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 2.5px solid #f43f5e;
+      box-shadow: 0 0 50px rgba(244, 63, 94, 0.45);
+    }
+
+    .metric-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 480px;
+    }
+
+    .metric-role {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .metric-detail {
+      font-size: 22px;
+      color: #cbd5e1;
+    }
+
+    .giant-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .gn-green { color: #34d399; text-shadow: 0 0 35px rgba(52, 211, 153, 0.6); }
+    .gn-red { color: #fb7185; text-shadow: 0 0 35px rgba(251, 113, 133, 0.6); }
+
+    .ratio-badge {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 14px 28px;
+      border-radius: 9999px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1.5px solid rgba(244, 63, 94, 0.4);
+      color: #fda4af;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .card-beat3 {
+      background: linear-gradient(145deg, rgba(8, 47, 73, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 3px solid rgba(6, 182, 212, 0.6);
+      box-shadow: 0 0 70px rgba(6, 182, 212, 0.3);
+    }
+
+    .b3-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 52px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .fsm-steps-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .fsm-step-card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid rgba(56, 189, 248, 0.4);
+      border-radius: 24px;
+      padding: 26px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .step-icon-box {
+      font-size: 40px;
+    }
+
+    .step-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .step-h {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    .step-d {
+      font-size: 22px;
+      color: #cbd5e1;
+    }
+
+    .card-beat4 {
+      background: linear-gradient(145deg, rgba(6, 78, 59, 0.45) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 3px solid rgba(16, 185, 129, 0.6);
+      box-shadow: 0 0 70px rgba(16, 185, 129, 0.35);
+      align-items: center;
+      text-align: center;
+    }
+
+    .b4-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 24px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1.5px solid rgba(16, 185, 129, 0.5);
+      color: #34d399;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .b4-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 56px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.15;
+    }
+
+    .b4-giant-metric {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .b4-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 130px;
+      font-weight: 900;
+      color: #34d399;
+      text-shadow: 0 0 50px rgba(52, 211, 153, 0.7);
+      line-height: 1;
+    }
+
+    .b4-caption {
+      font-size: 26px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .b4-stats-pill-row {
+      display: flex;
+      gap: 18px;
+    }
+
+    .b4-stat-chip {
+      padding: 12px 24px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .short-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-top: 1px solid rgba(51, 65, 85, 0.6);
+      padding-top: 32px;
+    }
+
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .footer-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 30px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .footer-url span {
+      color: #22d3ee;
+    }
+
+    .footer-author {
+      font-size: 20px;
+      color: #94a3b8;
+    }
+
+    .footer-logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: #10b981;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-canvas"></div>
+  <div class="bg-grid"></div>
+
+  <div class="short-container">
+    
+    <header class="short-header">
+      <div class="header-pill-row">
+        <div class="badge-series">
+          <span class="badge-dot"></span>
+          EXAMYA ARCHITECTURE · SHORT
+        </div>
+        <div class="brand-tag">EXAMYA <span>/</span> FHIREX</div>
+      </div>
+
+      <div class="timeline-bar">
+        <div class="t-seg" style="flex: 1;"><div class="t-fill" id="tFill1"></div></div>
+        <div class="t-seg" style="flex: 1;"><div class="t-fill" id="tFill2"></div></div>
+        <div class="t-seg" style="flex: 1;"><div class="t-fill" id="tFill3"></div></div>
+        <div class="t-seg" style="flex: 1;"><div class="t-fill" id="tFill4"></div></div>
+      </div>
+
+      <h1 class="main-hook-title" id="mainHeader">
+        Una red de laboratorios <span class="highlight-red">NO es una lista</span>
+      </h1>
+    </header>
+
+    <main class="stage-center">
+      
+      <!-- BEAT 1: LA FALACIA DEL CATÁLOGO PLANO -->
+      <div class="beat-card card-beat1 active" id="cardBeat1">
+        <div class="sub-badge badge-rose">
+          <span>⚠️</span> DEUDA TÉCNICA · B2B HEALTH
+        </div>
+        <h2 class="b1-headline">
+          Tener prestadores en una base de datos no es tener una red.
+        </h2>
+        <div class="b1-alert-box">
+          <div class="b1-alert-title">
+            <span>🛑</span> El error del acoplamiento
+          </div>
+          <p class="b1-alert-desc">
+            Existir en el catálogo técnico FHIR no significa tener un convenio comercial activo ni una ruta operativa para un canal específico.
+          </p>
+        </div>
+      </div>
+
+      <!-- BEAT 2: DESACOPLE EN 3 CAPAS -->
+      <div class="beat-card card-beat2" id="cardBeat2">
+        <div class="sub-badge badge-cyan">
+          <span>🏛️</span> ARQUITECTURA EN 3 CAPAS
+        </div>
+
+        <div class="metric-row-box box-green">
+          <div class="metric-info">
+            <div class="metric-role">1. Catálogo Global</div>
+            <div class="metric-detail">Endpoints FHIR R4 y capacidades técnicas del prestador.</div>
+          </div>
+          <div class="giant-number gn-green">FHIR</div>
+        </div>
+
+        <div class="ratio-badge">
+          ⚡ DESACOPLE ESTRICTO DE RESPONSABILIDADES
+        </div>
+
+        <div class="metric-row-box box-red">
+          <div class="metric-info">
+            <div class="metric-role">2. Red Institucional</div>
+            <div class="metric-detail">Convenios, prioridades y reglas por examen (examRules).</div>
+          </div>
+          <div class="giant-number gn-red">RED</div>
+        </div>
+      </div>
+
+      <!-- BEAT 3: LA API RESOLVER Y PRECEDENCIA -->
+      <div class="beat-card card-beat3" id="cardBeat3">
+        <div class="sub-badge badge-cyan">
+          <span>⚙️</span> MOTOR RESOLVER CON AUTORIDAD
+        </div>
+        <h2 class="b3-title">
+          Precedencia estricta y fallbacks
+        </h2>
+        <div class="fsm-steps-column">
+          <div class="fsm-step-card active-step">
+            <div class="step-icon-box">1️⃣</div>
+            <div class="step-text">
+              <span class="step-h">Regla de Canal</span>
+              <span class="step-d">Prioridad operativa por canal de atención</span>
+            </div>
+          </div>
+          <div class="fsm-step-card active-step">
+            <div class="step-icon-box">2️⃣</div>
+            <div class="step-text">
+              <span class="step-h">Regla de Organización</span>
+              <span class="step-d">Categoría analítica y aranceles pactados</span>
+            </div>
+          </div>
+          <div class="fsm-step-card active-step">
+            <div class="step-icon-box">3️⃣</div>
+            <div class="step-text">
+              <span class="step-h">Fallback a Revisión Manual</span>
+              <span class="step-d">Excepciones auditables sin fallas 500</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BEAT 4: VALIDACIÓN CON 450 TESTS -->
+      <div class="beat-card card-beat4" id="cardBeat4">
+        <div class="b4-badge">
+          🛡️ RIGOR DE INGENIERÍA
+        </div>
+        <h2 class="b4-title">
+          Validado antes de desplegar
+        </h2>
+        
+        <div class="b4-giant-metric">
+          <span class="b4-number">450</span>
+          <span class="b4-caption">Tests Locales de Lógica de Ruteo</span>
+        </div>
+
+        <div class="b4-stats-pill-row">
+          <div class="b4-stat-chip">3 Capas</div>
+          <div class="b4-stat-chip">0 Cajas Negras</div>
+          <div class="b4-stat-chip">FHIR R4</div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="short-footer">
+      <div class="footer-left">
+        <div class="footer-url">mariohealthbits<span>.dev</span></div>
+        <div class="footer-author">Mario Inostroza | GDE & Architect</div>
+      </div>
+      <div class="footer-logo">FHIREX / EXAMYA</div>
+    </footer>
+
+  </div>
+
+  <script>
+    const BEATS = [
+      { id: 1, start: 0.000, end: 6.000, dur: 6.000 },
+      { id: 2, start: 6.000, end: 14.000, dur: 8.000 },
+      { id: 3, start: 14.000, end: 21.000, dur: 7.000 },
+      { id: 4, start: 21.000, end: 28.000, dur: 7.000 }
+    ];
+    const TOTAL_DURATION = 28.000;
+
+    const cards = [
+      document.getElementById('cardBeat1'),
+      document.getElementById('cardBeat2'),
+      document.getElementById('cardBeat3'),
+      document.getElementById('cardBeat4')
+    ];
+
+    const fills = [
+      document.getElementById('tFill1'),
+      document.getElementById('tFill2'),
+      document.getElementById('tFill3'),
+      document.getElementById('tFill4')
+    ];
+
+    const mainHeader = document.getElementById('mainHeader');
+
+    window.setPlaybackTime = function(t) {
+      const time = Math.max(0, Math.min(t, TOTAL_DURATION));
+
+      let activeIdx = 0;
+      for (let i = 0; i < BEATS.length; i++) {
+        if (time >= BEATS[i].start && (time < BEATS[i].end || i === BEATS.length - 1)) {
+          activeIdx = i;
+          break;
+        }
+      }
+
+      for (let i = 0; i < cards.length; i++) {
+        if (i === activeIdx) {
+          cards[i].classList.add('active');
+        } else {
+          cards[i].classList.remove('active');
+        }
+      }
+
+      if (activeIdx === 0) {
+        mainHeader.innerHTML = 'Una red de laboratorios <span class="highlight-red">NO es una lista</span>';
+      } else if (activeIdx === 1) {
+        mainHeader.innerHTML = 'Desacople en <span class="highlight-cyan">3 Capas</span>';
+      } else if (activeIdx === 2) {
+        mainHeader.innerHTML = 'Precedencia y <span class="highlight-cyan">Fallbacks</span>';
+      } else {
+        mainHeader.innerHTML = '<span class="highlight-cyan">450 Tests</span> Locales Validados';
+      }
+
+      for (let i = 0; i < BEATS.length; i++) {
+        const b = BEATS[i];
+        if (time < b.start) {
+          fills[i].style.width = '0%';
+        } else if (time >= b.end) {
+          fills[i].style.width = '100%';
+        } else {
+          const pct = ((time - b.start) / b.dur) * 100;
+          fills[i].style.width = pct + '%';
+        }
+      }
+    };
+  </script>
+</body>
+</html>

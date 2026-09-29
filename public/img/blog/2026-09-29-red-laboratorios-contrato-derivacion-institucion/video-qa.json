@@ -1,0 +1,129 @@
+{
+  "schema": "architecture-videos-qa",
+  "version": "1.0.0",
+  "status": "verified",
+  "slug": "2026-09-29-red-laboratorios-contrato-derivacion-institucion",
+  "generatedAt": "2026-09-29T19:55:37.251Z",
+  "voiceId": "476db489",
+  "artifacts": {
+    "explainer1080p": {
+      "path": "EXPLAINER-MARIO-1080P.mp4",
+      "absolutePath": "/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/EXPLAINER-MARIO-1080P.mp4",
+      "sha256": "433a21aff89d2b7f30a5b22c99737feac67af686fcb5bb5d5e0931886c51f304",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 96.768,
+      "fps": 30,
+      "videoCodec": "h264",
+      "pixelFormat": "yuvj420p",
+      "audioCodec": "aac",
+      "audioSampleRate": 48000,
+      "audioChannels": 1,
+      "bitRate": 656121
+    },
+    "short9x16": {
+      "path": "EXPLAINER-SHORT-9X16.mp4",
+      "absolutePath": "/Users/marioinostroza/repos/marioLanding_blog/public/img/blog/2026-09-29-red-laboratorios-contrato-derivacion-institucion/EXPLAINER-SHORT-9X16.mp4",
+      "sha256": "4979f648a9c7e3cf717535c4bec9187c599af903db55ad02b6d242df2f902a0d",
+      "width": 1080,
+      "height": 1920,
+      "durationSeconds": 29.76,
+      "fps": 30,
+      "videoCodec": "h264",
+      "pixelFormat": "yuvj420p",
+      "audioCodec": "aac",
+      "audioSampleRate": 48000,
+      "audioChannels": 1,
+      "bitRate": 451671
+    },
+    "audioMasters": {
+      "explainer": {
+        "path": "audio_explainer_master.wav",
+        "sha256": "2f66c2159473f29fccf3de016977bde658cfb6a478920d3c95332d2bc73d9189",
+        "durationSeconds": 96.768,
+        "loudnessTarget": -16
+      },
+      "short": {
+        "path": "short_audio_master.wav",
+        "sha256": "d469e80cb883f1bc0e8af035c27d42515631bb94a401d4a4f634998234a15726",
+        "durationSeconds": 29.76,
+        "loudnessTarget": -16
+      }
+    }
+  },
+  "timings": {
+    "explainer": {
+      "stages": [
+        {
+          "id": 1,
+          "name": "El colapso del catálogo plano",
+          "start": 0,
+          "end": 20.976,
+          "dur": 20.976
+        },
+        {
+          "id": 2,
+          "name": "Separación de Catálogo y Red Institucional",
+          "start": 20.976,
+          "end": 40.944,
+          "dur": 19.968
+        },
+        {
+          "id": 3,
+          "name": "La API Resolver y la precedencia",
+          "start": 40.944,
+          "end": 61.704,
+          "dur": 20.76
+        },
+        {
+          "id": 4,
+          "name": "Persistencia y validación con 450 tests",
+          "start": 61.704,
+          "end": 82.872,
+          "dur": 21.168
+        },
+        {
+          "id": 5,
+          "name": "Conclusión y llamado a la acción",
+          "start": 82.872,
+          "end": 96.768,
+          "dur": 13.896
+        }
+      ],
+      "totalDuration": 96.768
+    },
+    "short": {
+      "beats": [
+        {
+          "id": 1,
+          "start": 0,
+          "end": 5.184,
+          "dur": 5.184,
+          "text": "Una red de laboratorios clínicos no es una lista plana de proveedores."
+        },
+        {
+          "id": 2,
+          "start": 5.364,
+          "end": 15.588,
+          "dur": 10.224,
+          "text": "Desacoplamos la arquitectura en tres capas: catálogo de endpoints, red institucional por canal y un motor resolver con tres niveles de precedencia."
+        },
+        {
+          "id": 3,
+          "start": 15.768,
+          "end": 22.992,
+          "dur": 7.224,
+          "text": "Si un convenio no aplica, la API Resolver activa fallbacks hacia revisión manual o reglas globales."
+        },
+        {
+          "id": 4,
+          "start": 23.172,
+          "end": 30.3,
+          "dur": 7.128,
+          "text": "Validado con 450 tests locales. Conozca el diseño completo en el enlace de la descripción."
+        }
+      ],
+      "totalDuration": 29.76
+    }
+  }
+}

@@ -1,0 +1,231 @@
+---
+title: "Una red de laboratorios no es una lista: el contrato de derivación por institución"
+description: "Modelar una red de laboratorios como un array plano colapsa ante convenios reales. Diseñamos contratos de derivación desacoplados en salud B2B."
+date: 2026-09-29
+lang: "es"
+image: "/img/blog/red-laboratorios-contrato-derivacion-institucion.png"
+tags: [interoperability, fhir, clinical-labs, architecture, b2b]
+draft: false
+series: "interoperabilidad-chile"
+seriesOrder: 22
+related: [2026-08-25-derivacion-laboratorios-red-fhir, 2026-07-30-duenos-conexiones]
+audience: "clinical-lab-directors"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "interoperability-checklist"
+newsletterTopic: "interoperability"
+newsletterPriority: 3
+---
+
+Cuando un equipo de ingeniería comienza a digitalizar la derivación de exámenes entre centros médicos y laboratorios clínicos, el primer instinto suele ser modelar la red como una lista simple: una tabla en base de datos con nombres de laboratorios, credenciales API y una bandera que indica si están activos o no.
+
+En el papel parece suficiente: llega una orden médica, el sistema consulta el arreglo de proveedores disponibles y despacha la solicitud al primer endpoint que responda.
+
+Sin embargo, ese modelo colapsa apenas entra en operación el segundo cliente institucional.
+
+En salud B2B, una red de laboratorios no es un directorio público ni un marketplace de servicios genéricos. Cada clínica, centro médico o canal corporativo opera con acuerdos comerciales específicos, aranceles pactados, proveedores preferentes según especialidad analítica y protocolos estrictos de contingencia. 
+
+Tratar la red asistencial como una lista plana destruye la trazabilidad y traslada la complejidad del negocio a parches dentro del código.
+
+## La trampa del modelo acoplado
+
+El error estructural más común en arquitecturas de salud digital es concentrar cuatro responsabilidades distintas en un único registro denominado `Laboratory`:
+
+1. **El catálogo de proveedores:** qué es el laboratorio, dónde está ubicado, qué protocolos técnicos soporta (FHIR, REST, HL7 v2, SFTP) y cuáles son sus capacidades analíticas.
+2. **La membresía institucional:** qué instituciones o canales tienen autorización para derivarle muestras y bajo qué reglas de prioridad.
+3. **La autoridad de ruteo:** qué componente del sistema tiene la facultad de decidir hacia qué proveedor viaja una orden específica.
+4. **El acuerdo comercial:** qué arancel aplica, qué plazos de entrega rigen y cuáles son las condiciones contractuales pactadas.
+
+```text
+Modelo acoplado (antipatrón):
+┌─────────────────────────────────────────────────────────────┐
+│ Objeto Laboratory                                           │
+│ ─────────────────────────────────────────────────────────── │
+│ - ID / Nombre / Endpoints técnicos                         │
+│ - Institución cliente vinculada (FK rígida)                 │
+│ - Lista de precios y aranceles                             │
+│ - Reglas de derivación hardcodeadas                         │
+│ - Lógica de fallback dispersa en controladores             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Cuando estas responsabilidades se mezclan, surgen problemas inmediatos:
+- Si un laboratorio de referencia atiende a diez clínicas distintas, se duplica el registro diez veces o se introducen banderas booleanas cruzadas que vuelven impredecible el comportamiento del sistema.
+- Si un agente conversacional o una interfaz de admisión necesita rutear una orden, termina tomando decisiones de negocio para las que no tiene contexto ni autoridad.
+- Si un proveedor suspende temporalmente el procesamiento de un panel molecular, la desactivación manual puede romper el flujo de instituciones que no tenían alternativa configurada.
+
+## Separar catálogo, red y autoridad de ruteo
+
+Para resolver este desafío en la arquitectura de Examya y Fhirex, desacoplamos formalmente las fronteras de dominio. Un laboratorio (`Laboratory`) es modelado estrictamente como un proveedor de servicios con capacidades técnicas, mientras que la red de derivación vive en una entidad dedicada por institución.
+
+Definimos cuatro capas con responsabilidades explícitas:
+
+```text
+Arquitectura desacoplada:
+
+1. Catálogo Global          ┌────────────────────────────────────────┐
+                            │ Laboratory (Proveedor / Endpoints)    │
+                            └────────────────────────────────────────┘
+                                               ▲
+                                               │ asignado a
+2. Red Institucional        ┌──────────────────┴─────────────────────┐
+                            │ InstitutionLabNetwork                  │
+                            │ (Institución + Proveedores + examRules)│
+                            └────────────────────────────────────────┘
+                                               ▲
+                                               │ evaluado por
+3. Resolver de Ruteo        ┌──────────────────┴─────────────────────┐
+                            │ LabRoutingResolver                     │
+                            │ (Precedencia: Canal > Institución > FB)│
+                            └────────────────────────────────────────┘
+                                               ▲
+                                               │ consulta
+4. Flujo Clínico / Admisión ┌──────────────────┴─────────────────────┐
+                            │ Orden Médica / ServiceRequest          │
+                            └────────────────────────────────────────┘
+```
+
+### 1. El catálogo global (`Laboratory`)
+Representa al laboratorio como entidad proveedora. Contiene identificadores institucionales, configuración de endpoints técnicos (servidor FHIR R4, credenciales seguras), tipos de servicio admitidos y estado operativo global. No contiene información de precios por cliente ni reglas de ruteo institucional.
+
+### 2. La red institucional (`InstitutionLabNetwork`)
+Representa el contrato operativo entre una institución (o canal de atención) y los laboratorios que componen su red autorizada. Cada entrada de la red (`InstitutionLabProvider`) define:
+- Prioridad de derivación dentro de la institución.
+- Estado de habilitación (`isActive`).
+- Reglas específicas por examen o categoría analítica (`examRules`), como derivar biología molecular al prestador A y química clínica al prestador B.
+
+### 3. El motor de resolución (`LabRoutingResolver`)
+Es la única autoridad autorizada para determinar el destino de una orden médica. Evalúa la solicitud aplicando una jerarquía de precedencia determinística:
+1. Regla explícita por canal de atención (si existe una condición operativa prioritaria).
+2. Regla institucional por categoría de examen o código de prestación.
+3. Proveedor institucional por defecto según prioridad configurada.
+4. Estrategia de contingencia o derivación a cola de revisión manual.
+
+## El contrato de derivación en código
+
+Para asegurar que los agentes de admisión y los servicios de ingesta no tomen decisiones arbitrarias, el contrato entre la institución y sus prestadores se expresa en estructuras de datos inmutables y tipadas:
+
+```typescript
+// Contrato de configuración de proveedor en red institucional
+export interface InstitutionLabProvider {
+  id: string;
+  institutionId: string;
+  laboratoryId: string;
+  priority: number;
+  isActive: boolean;
+  examRules?: {
+    allowedCategories?: string[];    // ej. ["molecular", "toxicology"]
+    excludedExamCodes?: string[];    // ej. ["0301045"]
+    directRoutingCodes?: string[];   // códigos con derivación exclusiva
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Contrato de resolución de ruteo
+export interface RoutingResolutionRequest {
+  institutionId: string;
+  channelId?: string;
+  examCodes: string[];
+  serviceCategory?: string;
+  urgencyLevel?: "routine" | "urgent" | "stat";
+}
+
+export interface RoutingResolutionResult {
+  status: "resolved" | "manual_review_required" | "no_provider_available";
+  selectedLaboratoryId?: string;
+  matchedRuleType?: "channel_override" | "exam_rule" | "institution_default" | "fallback";
+  reason: string;
+  routingAuditId: string;
+}
+```
+
+Al formalizar este contrato, el componente de admisión no necesita saber cómo está configurada la base de datos ni qué convenios existen. Solo invoca al resolver con el contexto de la orden y recibe una decisión auditable.
+
+```typescript
+// Resolver con precedencia estricta y auditoría
+export class LabRoutingResolver {
+  async resolveDestination(
+    request: RoutingResolutionRequest,
+    network: InstitutionLabProvider[]
+  ): Promise<RoutingResolutionResult> {
+    const activeProviders = network
+      .filter((p) => p.isActive)
+      .sort((a, b) => a.priority - b.priority);
+
+    if (activeProviders.length === 0) {
+      return {
+        status: "no_provider_available",
+        reason: "No existen proveedores activos en la red institucional configurada.",
+        routingAuditId: crypto.randomUUID(),
+      };
+    }
+
+    // 1. Evaluación de reglas específicas por código o categoría
+    for (const provider of activeProviders) {
+      if (provider.examRules?.allowedCategories?.includes(request.serviceCategory ?? "")) {
+        return {
+          status: "resolved",
+          selectedLaboratoryId: provider.laboratoryId,
+          matchedRuleType: "exam_rule",
+          reason: `Coincidencia por categoría analítica: ${request.serviceCategory}`,
+          routingAuditId: crypto.randomUUID(),
+        };
+      }
+    }
+
+    // 2. Asignación al proveedor por defecto según prioridad
+    const defaultProvider = activeProviders[0];
+    return {
+      status: "resolved",
+      selectedLaboratoryId: defaultProvider.laboratoryId,
+      matchedRuleType: "institution_default",
+      reason: `Asignación a proveedor por defecto (prioridad ${defaultProvider.priority})`,
+      routingAuditId: crypto.randomUUID(),
+    };
+  }
+}
+```
+
+## Los gotchas de la trinchera
+
+Diseñar una arquitectura desacoplada en el editor de código es el primer paso; hacerla convivir con la realidad operativa de los centros de salud plantea fricciones que no aparecen en los diagramas iniciales.
+
+### 1. Persistencia no es ejecución en runtime
+Un error recurrente es asumir que, porque una regla está persistida en la base de datos (por ejemplo, `examRules` estructuradas en PostgreSQL), el sistema automáticamente gobierna todo el tráfico en tiempo real. En entornos en producción, los resolvers suelen desplegarse detrás de banderas de funcionalidad (*feature flags*) o convivir temporalmente con flujos heredados. Documentar la persistencia de una regla no equivale a garantizar su adopción universal.
+
+### 2. El contrato de contingencia no puede ser implícito
+Cuando una orden no encuentra un laboratorio de destino porque el examen es infrecuente o porque los proveedores activos están saturados, el sistema no puede retornar un error genérico 500 ni fallar en silencio. El contrato debe definir explícitamente el mecanismo de contingencia:
+- ¿Se deriva la solicitud a una bandeja de revisión manual para tecnólogos médicos?
+- ¿Se rechaza la orden con una codificación clínica comprensible para el médico emisor?
+- ¿Existe un proveedor secundario configurado como respaldo?
+
+Si el comportamiento ante contingencias no está especificado en el contrato, los operadores humanos terminan resolviendo excepciones por canales informales, perdiendo la trazabilidad digital.
+
+### 3. Las pruebas locales no sustituyen la validación en terreno
+Durante el desarrollo de este módulo implementamos una suite de 450 pruebas automatizadas locales (37 en la capa web y 413 en los componentes de Shuri), verificando aislamiento de red, precedencia de reglas, borrado suave (*soft-delete*) y manejo de excepciones.
+
+Estas pruebas demuestran que la lógica algorítmica es robusta y coherente con las especificaciones. Sin embargo, no sustituyen la verificación de humo (*smoke testing*) ni la telemetría operativa en los servidores reales de cada prestador. La validación técnica local es un prerrequisito indispensable, pero la gobernanza en salud se consolida en la ejecución diaria.
+
+## La gobernanza de redes en el ecosistema chileno
+
+En Chile, el avance de la Ley 21.668 sobre interoperabilidad de fichas clínicas y la Ley 21.719 sobre protección de datos personales exige que las instituciones de salud mantengan un control estricto sobre dónde residen los datos de sus pacientes y quién tiene autorización para procesarlos.
+
+Una clínica no puede delegar la custodia de sus órdenes médicas a un algoritmo de caja negra que derive muestras según criterios comerciales opacos. Los convenios de derivación, la custodia de las muestras y la responsabilidad clínica exigen contratos transparentes y auditables.
+
+Cuando el software de salud respeta estas fronteras:
+- Los laboratorios clínicos de referencia pueden integrarse como nodos especializados sin obligar a la clínica emisora a cambiar su sistema de gestión.
+- Las instituciones de salud mantienen el control de sus acuerdos comerciales y sus prioridades operativas.
+- Los pacientes reciben sus resultados con la misma certeza técnica, independiente de si el análisis se ejecutó en la sucursal local o en un centro de alta complejidad.
+
+## El siguiente paso en la infraestructura
+
+Continuamos profundizando el desacople entre las redes institucionales, los modelos de acuerdos comerciales (*Agreements*) y la orquestación de recursos clínicos bajo el estándar HL7 FHIR R4. 
+
+El objetivo es permitir que cualquier prestador pueda conectar y gobernar su red de derivación con reglas explícitas, trazabilidad completa y total transparencia técnica.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

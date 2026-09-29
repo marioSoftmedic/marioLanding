@@ -1,0 +1,75 @@
+{
+  "explainer": {
+    "stages": [
+      {
+        "id": 1,
+        "name": "El colapso del catálogo plano",
+        "start": 0,
+        "end": 20.976,
+        "dur": 20.976
+      },
+      {
+        "id": 2,
+        "name": "Separación de Catálogo y Red Institucional",
+        "start": 20.976,
+        "end": 40.944,
+        "dur": 19.968
+      },
+      {
+        "id": 3,
+        "name": "La API Resolver y la precedencia",
+        "start": 40.944,
+        "end": 61.704,
+        "dur": 20.76
+      },
+      {
+        "id": 4,
+        "name": "Persistencia y validación con 450 tests",
+        "start": 61.704,
+        "end": 82.872,
+        "dur": 21.168
+      },
+      {
+        "id": 5,
+        "name": "Conclusión y llamado a la acción",
+        "start": 82.872,
+        "end": 96.768,
+        "dur": 13.896
+      }
+    ],
+    "totalDuration": 96.768
+  },
+  "short": {
+    "beats": [
+      {
+        "id": 1,
+        "start": 0,
+        "end": 5.184,
+        "dur": 5.184,
+        "text": "Una red de laboratorios clínicos no es una lista plana de proveedores."
+      },
+      {
+        "id": 2,
+        "start": 5.364,
+        "end": 15.588,
+        "dur": 10.224,
+        "text": "Desacoplamos la arquitectura en tres capas: catálogo de endpoints, red institucional por canal y un motor resolver con tres niveles de precedencia."
+      },
+      {
+        "id": 3,
+        "start": 15.768,
+        "end": 22.992,
+        "dur": 7.224,
+        "text": "Si un convenio no aplica, la API Resolver activa fallbacks hacia revisión manual o reglas globales."
+      },
+      {
+        "id": 4,
+        "start": 23.172,
+        "end": 30.3,
+        "dur": 7.128,
+        "text": "Validado con 450 tests locales. Conozca el diseño completo en el enlace de la descripción."
+      }
+    ],
+    "totalDuration": 29.76
+  }
+}
