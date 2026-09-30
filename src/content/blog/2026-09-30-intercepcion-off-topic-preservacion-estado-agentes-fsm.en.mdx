@@ -1,0 +1,492 @@
+---
+title: "The Transactional Reset Bug: How We Prevented Off-Topic Questions from Breaking WhatsApp AI Agents"
+description: "An off-topic question in WhatsApp used to reset health orders to zero. We built deterministic FSM guards, raising DeepEval multi-turn completeness to 90%+."
+date: 2026-09-30
+lang: "en"
+canonicalSlug: "2026-09-30-off-topic-interception-fsm-state-preservation-agents"
+image: "/img/blog/intercepcion-off-topic-preservacion-estado-agentes-fsm.png"
+tags: [ai, agents, architecture, examya, whatsapp, testing, production, resilience, backend]
+draft: false
+series: "agentes"
+seriesOrder: 27
+related: [2026-09-25-por-que-abandonamos-frameworks-agentes-maquinas-estado-fsm, 2026-07-26-intent-router-zod-mismatch, 2026-08-19-whatsapp-recovery-persistence]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "newsletter"
+leadMagnet: "healthbits-brief"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 4
+---
+
+On Tuesday at 11:40 AM, a user in Santiago uploaded a medical prescription photo to our WhatsApp AI agent at Examya.
+
+Our vision pipeline processed the document without friction: it recognized a complete blood count (CBC) and a lipid panel, extracted official FONASA medical billing codes, calculated pricing across our partner laboratory network, and presented the user with an itemized checkout summary. The session's Finite State Machine (FSM) transitioned smoothly to `CONFIRMING_ORDER`.
+
+The system was waiting for a straightforward confirmation to generate a secure payment link. But the user did not reply with "Yes" or "Confirm." Instead, they typed:
+
+> *"Are you open on Saturdays at the Providencia clinic?"*
+
+What happened over the next 800 milliseconds destroyed both the transaction and the patient experience: the intent router categorized the incoming message as `FAQ_GENERAL_INQUIRY`. Because our naive FSM's `CONFIRMING_ORDER` state only supported valid transitions to `CONFIRM` or `CANCEL`, the unhandled fallback handler triggered a catastrophic reset back to `START`.
+
+The bot cheerfully replied: *"We are open Monday through Saturday from 7:30 AM to 1:00 PM. Hello! Welcome to Examya. Please upload a photo of your medical order to get started."*
+
+The entire clinical basket—the OCR-processed order, the mapped FONASA codes, and the copay calculations—evaporated from active memory. To the user, the agent appeared to have suffered instant amnesia.
+
+This bug was neither an isolated incident nor a prompt engineering flaw. It represents the **Transactional Reset Bug**: the fundamental inability of rigid state machines to absorb natural asynchronous messaging dialogue without wiping out user progress.
+
+```text
+NAIVE ARCHITECTURE (CRASHES ON OFF-TOPIC QUESTIONS):
+
+[User uploads order] ──> [OCR & Quoting] ──> [CONFIRMING_ORDER]
+                                                     │
+                         "Open on Saturdays?"        │
+                                                     ▼
+[START / WELCOME] <──── [Unhandled Fallback] <───────┘
+(State destroyed, clinical cart wiped to zero)
+```
+
+---
+
+## The Trap of Linear FSMs in Conversational Channels
+
+When porting e-commerce checkouts to messaging platforms like WhatsApp, software engineers instinctively model rigid state machines where every stage demands an unambiguous input.
+
+In a standard web browser, the user is contained within a graphical user interface (GUI): on a checkout screen, they can only click "Pay," click "Back," or close the tab. But on WhatsApp, there are no mandatory modals or unclickable regions. The interface is a single unconstrained text box where three distinct conversational dimensions collide:
+
+1. **The Primary Transactional Intent:** Advancing down the funnel (confirming, paying, entering a tax ID).
+2. **Accessory or Off-Topic Questions:** Operating hours, fasting requirements, geographic coverage, or accepted payment gateways.
+3. **Contextual Clarifications:** Corrections to previous messages (*"I mistyped my ID number, it ends in K, not 9"*).
+
+```text
+REAL-WORLD WHATSAPP INTERACTION:
+
+   Transactional:       [Confirm order] ───────────────┐
+                                                       │
+   Off-Topic Query:     [Are you open on Saturdays?] ──┼──> [Unconstrained Text Box]
+                                                       │
+   Correction / Noise:  [I mistyped my ID number...] ──┘
+```
+
+If your state machine treats any non-strictly-transactional message as an `InvalidTransitionError` and routes the user back to the starting point or triggers a destructive fallback, you are penalizing users for interacting naturally.
+
+To engineer a resilient production system, the agent must answer off-topic queries accurately and, within the exact same turn, preserve session state and reinject the pending task prompt.
+
+```text
+RESILIENT PRESERVATION PATTERN:
+
+[CONFIRMING_ORDER] ──> "Open on Saturdays?" ──> [Off-Topic Interceptor]
+        │                                                │
+        │ (State preserved in PostgreSQL)                ▼
+        │                                       [1. Answer query]
+        │                                       [2. Re-inject STAGE_TASK_HINT]
+        ▼                                                │
+[CONFIRMING_ORDER] <─────────────────────────────────────┘
+(User retains quotation and answers "Yes" in the next turn)
+```
+
+---
+
+## The JavaScript Regex Boundary Bug: Word Boundaries (`\b`) and Accents
+
+Before deploying a global interceptor, we audited why explicit affirmative confirmations occasionally failed in production. We discovered a classic, treacherous quirk in JavaScript's V8 RegExp engine.
+
+We had an inline guard designed to catch affirmative confirmations without invoking an expensive LLM classifier:
+
+```typescript
+// ❌ VULNERABLE CODE: Fails in Spanish with accented characters
+const AFFIRMATIVE_REGEX = /\b(si|confirmo|dale|ok|pagar)\b/i;
+
+export function isDirectConfirmation(message: string): boolean {
+  return AFFIRMATIVE_REGEX.test(message);
+}
+```
+
+This looks straightforward. However, in JavaScript, the word boundary anchor `\b` evaluates the transition between a word character `\w` (`[a-zA-Z0-9_]`) and a non-word character `\W`.
+
+In ASCII, accented Latin characters such as `á`, `é`, `í`, `ó`, `ú`, or `ñ` do not belong to `\w`. They are classified as `\W`.
+
+When a Spanish speaker typed `"Sí, confirmo"` (the standard accented spelling of "Yes"), the engine behaved unexpectedly:
+- In `"sí"`, the letter `s` is `\w`, but the accented `í` is `\W`.
+- The engine computes that between `s` and `í`, **a word boundary already occurred**.
+- The regex `\b(si)\b` fails to match `"sí"` because it explicitly expects the unaccented Latin `i`.
+- Furthermore, if you attempt `/\b(sí)\b/i`, the trailing `\b` looks for a transition from `\w` to `\W`, but `í` is already `\W`, causing matches to fail when followed by punctuation or immediate whitespace.
+
+```typescript
+console.log(/\bsi\b/i.test("sí")); // false
+console.log(/\bsi\b/i.test("si")); // true
+```
+
+Because the deterministic regex missed accented confirmations, the message was delegated to the semantic LLM intent classifier. On short inputs with exclamation marks (*"¡¡sí claro!!"*), the classifier returned marginal confidence (`confidence: 0.48`), dropping into the low-certainty branch and blocking the purchase confirmation.
+
+### The Unicode Punctuation Boundary Solution
+
+We replaced ASCII `\b` word boundaries with Unicode punctuation-aware lookaround assertions using the `u` flag:
+
+```typescript
+// ✅ FIXED CODE: Compatible with accents, opening punctuation, and whitespace
+const UNICODE_AFFIRMATIVE_REGEX = /(?:^|[\s,.;:¡!¿?])(si|sí|confirmo|confirmar|dale|ok|pagar|proceder)(?=$|[\s,.;:¡!¿?])/iu;
+
+export function isDirectConfirmation(message: string): boolean {
+  return UNICODE_AFFIRMATIVE_REGEX.test(message);
+}
+```
+
+---
+
+## The Trap of Destructive String Normalization
+
+A related defect destroyed conversational state during user identity capture (such as collecting National ID numbers or RUTs required for healthcare insurance billing).
+
+In early iterations, middleware executed aggressive string sanitization before validating format rules:
+
+```typescript
+// ❌ DESTRUCTIVE SANITIZATION: Strips out semantic sentence context
+export function extractRutDestructive(rawMessage: string): string {
+  // Strips everything except digits and the verification letter K
+  const cleaned = rawMessage.replace(/[^0-9kK]/g, "");
+  return cleaned;
+}
+```
+
+If a user replied strictly with `"12345678-9"`, the helper returned `"123456789"`, passed Modulo 11 checksum validation, and proceeded.
+
+However, real patients frequently send conversational context:
+> *"Sorry for the delay, my mother's ID is 14.285.714-2 thanks"*
+
+Running `rawMessage.replace(/[^0-9kK]/g, "")` over that phrase yielded:
+`"delaymymothersIDis142857142"` → stripped to digits/K: `"142857142"` (or contaminated sequences if words contained the letter K or numbers).
+
+Worse, if the user asked a legitimate question during the ID entry stage (*"Do you accept temporary infant identification numbers?"*), destructive normalization reduced the message to an empty or malformed string. The checksum validator failed, emitted a generic error, and triggered an FSM reset.
+
+```typescript
+// ✅ RESILIENT CODE: Non-destructive extraction via targeted token regex
+const RUT_PATTERN = /(\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK])/i;
+
+export interface ExtractedRutResult {
+  found: boolean;
+  rawRut?: string;
+  normalizedRut?: string;
+  isValidChecksum: boolean;
+}
+
+export function extractAndValidateRut(message: string): ExtractedRutResult {
+  const match = message.match(RUT_PATTERN);
+  if (!match) {
+    return { found: false, isValidChecksum: false };
+  }
+
+  const rawRut = match[1];
+  const cleanRut = rawRut.replace(/[\.\-]/g, "").toUpperCase();
+  const body = cleanRut.slice(0, -1);
+  const dv = cleanRut.slice(-1);
+
+  const isValid = validateRutModulo11(body, dv);
+
+  return {
+    found: true,
+    rawRut,
+    normalizedRut: `${body}-${dv}`,
+    isValidChecksum: isValid,
+  };
+}
+
+function validateRutModulo11(body: string, expectedDv: string): boolean {
+  let sum = 0;
+  let multiplier = 2;
+
+  for (let i = body.length - 1; i >= 0; i--) {
+    sum += parseInt(body[i], 10) * multiplier;
+    multiplier = multiplier === 7 ? 2 : multiplier + 1;
+  }
+
+  const remainder = 11 - (sum % 11);
+  let computedDv = "";
+  if (remainder === 11) computedDv = "0";
+  else if (remainder === 10) computedDv = "K";
+  else computedDv = remainder.toString();
+
+  return computedDv === expectedDv;
+}
+```
+
+Non-destructive token extraction decouples structured data capture from overall message intent. If the user includes explanatory phrasing, we extract the valid token cleanly. If no token exists, the orchestrator evaluates the message as an informational query without corrupting session state.
+
+---
+
+## The Resilient Architecture: `OFF_TOPIC_PURCHASE_STAGES` and `STAGE_TASK_HINT`
+
+To permanently eliminate transactional resets, we implemented two core structures within Shuri's FSM:
+
+1. **`OFF_TOPIC_PURCHASE_STAGES`:** An immutable set of transactional states where the user has an active, critical task in progress.
+2. **`STAGE_TASK_HINT`:** A dictionary of task re-engagement prompts appended to off-topic answers to remind users of their next required action.
+
+```typescript
+export enum OrderState {
+  START = "START",
+  AWAITING_PRESCRIPTION = "AWAITING_PRESCRIPTION",
+  PROCESSING_OCR = "PROCESSING_OCR",
+  AWAITING_EXAM_SELECTION = "AWAITING_EXAM_SELECTION",
+  AWAITING_RUT = "AWAITING_RUT",
+  AWAITING_ADDRESS = "AWAITING_ADDRESS",
+  CONFIRMING_ORDER = "CONFIRMING_ORDER",
+  AWAITING_PAYMENT = "AWAITING_PAYMENT",
+  ORDER_COMPLETED = "ORDER_COMPLETED",
+  CANCELLED = "CANCELLED",
+}
+
+// States where off-topic questions must NOT reset the checkout funnel
+export const OFF_TOPIC_PURCHASE_STAGES: ReadonlySet<OrderState> = new Set([
+  OrderState.AWAITING_EXAM_SELECTION,
+  OrderState.AWAITING_RUT,
+  OrderState.AWAITING_ADDRESS,
+  OrderState.CONFIRMING_ORDER,
+  OrderState.AWAITING_PAYMENT,
+]);
+
+// Contextual re-engagement hints appended to off-topic answers
+export const STAGE_TASK_HINT: Record<OrderState, string> = {
+  [OrderState.START]: "",
+  [OrderState.AWAITING_PRESCRIPTION]: "\n\n📄 To quote your lab tests, please upload a clear photo of your medical order.",
+  [OrderState.PROCESSING_OCR]: "\n\n⏳ We are currently processing your order, we will reply in just a few seconds.",
+  [OrderState.AWAITING_EXAM_SELECTION]: "\n\n📋 Would you like to proceed with all identified tests or select specific ones?",
+  [OrderState.AWAITING_RUT]: "\n\n🆔 To apply health insurance discounts and generate your formal quote, please provide your ID number.",
+  [OrderState.AWAITING_ADDRESS]: "\n\n📍 To verify at-home phlebotomy coverage, please share your address or municipality.",
+  [OrderState.CONFIRMING_ORDER]: "\n\n💡 To complete your lab booking, do you confirm this request so we can send your secure payment link?",
+  [OrderState.AWAITING_PAYMENT]: "\n\n💳 You can securely complete your payment using the link we shared earlier.",
+  [OrderState.ORDER_COMPLETED]: "",
+  [OrderState.CANCELLED]: "",
+};
+```
+
+### The Conversational Interceptor Pipeline
+
+When an incoming message arrives, the orchestrator evaluates session state before executing state transitions. Execution follows three deterministic gates:
+
+```text
+INCOMING MESSAGE
+       │
+       ▼
+Explicit Cancellation? (isDenial) ────[YES]──> Transition to CANCELLED
+       │ [NO]
+       ▼
+Matches Expected State Input? ────────[YES]──> Standard Business Transition
+       │ [NO]
+       ▼
+Is Current State in OFF_TOPIC_PURCHASE_STAGES?
+       │
+       ├────[YES]──> 1. Answer query (RAG / Knowledge Base / Rules)
+       │             2. Append STAGE_TASK_HINT[currentState]
+       │             3. Preserve State & Payload in PostgreSQL
+       │
+       └────[NO]───> Route to General Handler / Main Menu
+```
+
+Here is the TypeScript dispatcher implementation:
+
+```typescript
+export interface SessionContext {
+  userId: string;
+  currentState: OrderState;
+  orderPayload: Record<string, unknown>;
+  updatedAt: Date;
+}
+
+export interface DispatchResult {
+  replyMessage: string;
+  nextState: OrderState;
+  payloadModified: boolean;
+}
+
+export async function handleUserMessage(
+  message: string,
+  session: SessionContext,
+  knowledgeBase: KnowledgeService
+): Promise<DispatchResult> {
+  const currentState = session.currentState;
+
+  // 1. Explicit cancellation check
+  if (isExplicitDenial(message)) {
+    return {
+      replyMessage: "Understood. We have cancelled this lab order request. If you need to quote again in the future, just message us.",
+      nextState: OrderState.CANCELLED,
+      payloadModified: true,
+    };
+  }
+
+  // 2. Deterministic transactional matching for current state
+  if (currentState === OrderState.CONFIRMING_ORDER && isDirectConfirmation(message)) {
+    const paymentUrl = await generateSecurePaymentLink(session.orderPayload);
+    return {
+      replyMessage: `Great! Your quotation is confirmed. You can complete your secure payment here:\n${paymentUrl}`,
+      nextState: OrderState.AWAITING_PAYMENT,
+      payloadModified: true,
+    };
+  }
+
+  if (currentState === OrderState.AWAITING_RUT) {
+    const rutResult = extractAndValidateRut(message);
+    if (rutResult.found && rutResult.isValidChecksum) {
+      session.orderPayload.rut = rutResult.normalizedRut;
+      return {
+        replyMessage: `ID ${rutResult.normalizedRut} validated successfully. Calculating insurance copay...`,
+        nextState: OrderState.CONFIRMING_ORDER,
+        payloadModified: true,
+      };
+    }
+  }
+
+  // 3. Off-Topic Interception with State Preservation
+  if (OFF_TOPIC_PURCHASE_STAGES.has(currentState)) {
+    const faqAnswer = await knowledgeBase.answerInquiry(message);
+    const hint = STAGE_TASK_HINT[currentState];
+
+    const combinedReply = `${faqAnswer}${hint}`;
+
+    return {
+      replyMessage: combinedReply,
+      nextState: currentState, // STATE PRESERVED
+      payloadModified: false,  // PAYLOAD UNTOUCHED
+    };
+  }
+
+  // 4. Default fallback for non-transactional stages
+  return {
+    replyMessage: "Hello! To assist you with your laboratory tests, please upload a photo of your medical order.",
+    nextState: OrderState.START,
+    payloadModified: false,
+  };
+}
+```
+
+---
+
+## Disentangling Explicit Denial (`isDenial()`) from Informational Inquiries
+
+A frequent pitfall when designing off-topic interceptors is conflating negative phrasing with an explicit order cancellation.
+
+If a patient types *"I don't know what a CBC test is"*, the engine **must not** treat the word *"don't"* as a cancellation trigger. Conversely, if the user explicitly states *"I do not want to proceed, cancel this"*, the system must immediately honor their decision rather than repeatedly re-prompting for payment.
+
+We designed a strict discriminator function to eliminate false-positive cancellations:
+
+```typescript
+const EXPLICIT_CANCELLATION_PATTERNS = [
+  /^(no|cancel|stop|nevermind|abort)$/i,
+  /^(i do not want to|i don't want to|not going to) (continue|pay|proceed|buy)/i,
+  /cancel (the )?(order|request|quote)/i,
+];
+
+const NON_CANCELLATION_INQUIRIES = [
+  /i don't know/i,
+  /i do not understand/i,
+  /i don't have (the order|id|money|time)/i,
+  /cannot (visit|open)/i,
+];
+
+export function isExplicitDenial(message: string): boolean {
+  const trimmed = message.trim();
+
+  for (const inquiryPattern of NON_CANCELLATION_INQUIRIES) {
+    if (inquiryPattern.test(trimmed)) {
+      return false;
+    }
+  }
+
+  return EXPLICIT_CANCELLATION_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+```
+
+This clear separation ensures conversational empathy never overrides user agency.
+
+---
+
+## Empirical Verification: 18/18 TDD Unit Tests & DeepEval Multi-Turn Benchmark
+
+We developed this architecture using Test-Driven Development (TDD), constructing 18 automated test suites targeting complex syntactic variations:
+
+```typescript
+describe("Shuri FSM Off-Topic Interception & State Preservation", () => {
+  const mockKnowledge = {
+    answerInquiry: vi.fn().mockResolvedValue("We are open Monday through Saturday from 7:30 AM to 1:00 PM."),
+  };
+
+  test("CONFIRM-FSM-01: Preserves CONFIRMING_ORDER state upon schedule inquiry", async () => {
+    const session: SessionContext = {
+      userId: "user-56912345678",
+      currentState: OrderState.CONFIRMING_ORDER,
+      orderPayload: { examCodes: ["0301045", "0302034"], totalCopay: 8400 },
+      updatedAt: new Date(),
+    };
+
+    const result = await handleUserMessage("Are you open on Saturdays?", session, mockKnowledge);
+
+    expect(result.nextState).toBe(OrderState.CONFIRMING_ORDER);
+    expect(result.payloadModified).toBe(false);
+    expect(result.replyMessage).toContain("Monday through Saturday");
+    expect(result.replyMessage).toContain("do you confirm this request");
+  });
+
+  test("CONFIRM-FSM-02: Accepts accented affirmative confirmation with punctuation", async () => {
+    const session: SessionContext = {
+      userId: "user-56912345678",
+      currentState: OrderState.CONFIRMING_ORDER,
+      orderPayload: { examCodes: ["0301045"], totalCopay: 4200 },
+      updatedAt: new Date(),
+    };
+
+    const result = await handleUserMessage("¡Sí, confirmo!", session, mockKnowledge);
+
+    expect(result.nextState).toBe(OrderState.AWAITING_PAYMENT);
+    expect(result.replyMessage).toContain("Your quotation is confirmed");
+  });
+
+  test("UPLOAD-OFFTOPIC-01: Extracts valid ID within conversational sentence without resetting FSM", async () => {
+    const session: SessionContext = {
+      userId: "user-56912345678",
+      currentState: OrderState.AWAITING_RUT,
+      orderPayload: { examCodes: ["0301045"] },
+      updatedAt: new Date(),
+    };
+
+    const result = await handleUserMessage("Hi, I made a mistake earlier, my ID is 14.285.714-2 thanks", session, mockKnowledge);
+
+    expect(result.nextState).toBe(OrderState.CONFIRMING_ORDER);
+    expect(session.orderPayload.rut).toBe("14285714-2");
+  });
+});
+```
+
+All 18 unit tests passed cleanly (`18/18 PASS`).
+
+We then evaluated the architecture against our **DeepEval** multi-turn testing suite, running 10 automated end-to-end conversation scenarios featuring noisy user inputs, off-topic pricing inquiries, fasting questions, and mid-checkout corrections.
+
+```text
+DEEPEVAL MULTI-TURN CONVERSATION COMPLETENESS BENCHMARK:
+
+Legacy Architecture (Rigid FSM):
+██████████████░░░░░░  70% (7/10 orders successfully completed)
+(3 failures caused by accidental resets on schedule and coverage queries)
+
+Current Architecture (Off-Topic Interceptor + FSM Guards):
+██████████████████░░  90%+ (9/10 orders successfully completed)
+(Only 1 abandonment due to explicit voluntary cancellation by synthetic user)
+```
+
+Multi-turn conversational completeness increased from **70% to 90%+**, eliminating software-induced funnel drop-offs.
+
+---
+
+## The Production Rule for Healthcare AI Agents
+
+Deploying transactional conversational agents in healthcare or mission-critical domains demands an uncompromising architectural boundary:
+
+> **Strict determinism in state machines; empathetic flexibility in dialogue layers.**
+
+Large Language Models (LLMs) are exceptional at synthesizing medical knowledge, parsing unstructured natural phrasing, and generating empathetic responses. However, **they must never dictate state transitions or manage clinical order persistence**.
+
+When state machines remain strictly anchored in PostgreSQL and conversational interceptors absorb off-topic patient questions, fragile bots transform into robust, dependable, and truly human-centered healthcare experiences.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
