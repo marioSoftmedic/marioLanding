@@ -1,0 +1,348 @@
+---
+title: "La arquitectura de un Revenue Kernel modular: por qué separamos el núcleo de negocio de los adaptadores (API, Webhooks, CLI y MCP)"
+date: 2026-10-02
+lang: "es"
+image: "/img/blog/2026-10-02-arquitectura-modular-revenue-kernel-adaptadores.png"
+description: "Cómo estructurar un núcleo de negocio y monetización desacoplado de sus interfaces de entrada mediante puertos y adaptadores, tratando MCP como adaptador de herramientas seguro y testeando reconciliación determinística en memoria."
+tags: [architecture, backend, builder, agents, infrastructure]
+series: "agentes"
+seriesOrder: 26
+draft: false
+---
+
+El error más común al construir un sistema de monetización, tarificación o gestión de créditos es comenzar por los endpoints HTTP.
+
+Empiezas definiendo una ruta en tu framework web favorito: `POST /api/v1/credits/consume`. Dentro del controlador, inyectas el cliente de base de datos, lees el saldo del usuario, ejecutas una resta matemática, verificas si el plan actual tiene descuento y guardas la transacción en una sola función de cuarenta líneas. Funciona en local, pasa la primera prueba manual y parece suficiente para salir a producción.
+
+Dos semanas después, la realidad del producto te golpea de frente. Necesitas procesar webhooks de pagos asíncronos para recargas de saldo, requieres una herramienta de línea de comandos (CLI) para que operaciones ajuste cuotas manualmente y, como paso obligado en la era de los agentes de inteligencia artificial, quieres que un asistente conectado por Model Context Protocol (MCP) pueda consultar saldos y ejecutar consumos en nombre del usuario.
+
+Si tu lógica de negocio está atrapada dentro de los controladores de tu framework web o acoplada directamente a llamadas SQL en la capa de transporte, tienes un problema grave. Para reutilizar la lógica, terminas copiando y pegando validaciones en cuatro lugares distintos o haciendo que tu CLI y tu servidor MCP invoquen endpoints HTTP internos sobre la red, multiplicando la latencia, los puntos de fallo y el riesgo de inconsistencias transaccionales.
+
+En este artículo analizamos cómo resolver este problema aplicando el patrón de Puertos y Adaptadores (Arquitectura Hexagonal) a un **Revenue Kernel**: un motor puro de reglas de negocio, catálogo e invariantes transaccionales completamente desacoplado de sus interfaces de entrada.
+
+```text
+ACOPLAMIENTO TRADICIONAL (FRÁGIL):
+[REST Controller] ───┐
+[Webhook Handler] ───┼──> [Lógica de negocio mezclada con queries SQL] ──> Base de Datos
+[Admin CLI]       ───┤    (Duplicación de reglas, difícil de testear)
+[MCP Agent Tool]  ───┘
+
+ARQUITECTURA MODULAR (PUERTOS Y ADAPTADORES):
+[REST API Adapter]    ──┐
+[Webhook Ingress]     ──┤      ┌─────────────────────────────┐      ┌────────────────────────┐
+[Admin CLI Adapter]   ──┼───>  │       REVENUE KERNEL        │ ──>  │  Driven Ports          │
+[MCP Server Adapter]  ──┘      │  (Dominio puro, invariantes │      │  (ILedgerRepository,   │
+                               │   y políticas de negocio)   │      │   ICatalogRepository)  │
+                               └─────────────────────────────┘      └────────────────────────┘
+                                                                                │
+                                                                                ▼
+                                                                    [Postgres / In-Memory]
+```
+
+---
+
+## El Revenue Kernel: Dominio puro sin dependencias externas
+
+El núcleo de negocio (Revenue Kernel) debe ser código TypeScript o JavaScript completamente agnóstico de frameworks, protocolos de red o librerías de persistencia. No importa si corres en Node.js, Bun, Cloudflare Workers o un proceso local: el kernel solo conoce tipos puros, entidades de dominio y contratos de interfaces (puertos).
+
+Dentro del Revenue Kernel estructuramos cuatro componentes fundamentales:
+
+1. **Catálogo Inmutable (Catalog):** Define los planes de suscripción, las capacidades disponibles (*capabilities*), las monedas aceptadas y las tarifas base.
+2. **Registro de Capacidades (Capability Registry):** Mapea qué acciones del sistema tienen costo, qué permisos exigen y qué multiplicadores de consumo aplican.
+3. **Motor de Políticas e Invariantes (Policy Engine):** Las reglas duras que jamás pueden romperse (por ejemplo: ningún balance puede quedar negativo sin autorización explícita de sobregiro, las cuentas suspendidas no pueden consumir cuota, y los upgrades de plan recalculan prorrateos determinísticamente).
+4. **Motor de Reconciliación (Reconciliation Engine):** Compara los eventos del libro mayor transaccional (*ledger*) contra los períodos de facturación para garantizar que cada unidad cobrada coincida exactamente con las unidades consumidas.
+
+El kernel define puertos de salida (*driven ports*) para comunicarse con el mundo exterior mediante interfaces abstractas:
+
+```typescript
+// domain/ports/driven/ledger-repository.port.ts
+export interface LedgerEntry {
+  id: string;
+  accountId: string;
+  capabilityId: string;
+  units: number;
+  amountCents: number;
+  currency: 'USD' | 'CLP';
+  timestamp: Date;
+  idempotencyKey: string;
+}
+
+export interface ILedgerRepository {
+  append(entry: LedgerEntry): Promise<void>;
+  getBalance(accountId: string): Promise<number>;
+  findByIdempotencyKey(key: string): Promise<LedgerEntry | null>;
+  listByPeriod(accountId: string, start: Date, end: Date): Promise<LedgerEntry[]>;
+}
+```
+
+Al mantener estas interfaces puras, cualquier caso de uso del dominio se ejecuta como una función determinística que recibe un comando y devuelve un resultado tipado:
+
+```typescript
+// domain/use-cases/consume-capability.use-case.ts
+export interface ConsumeCapabilityCommand {
+  accountId: string;
+  capabilityId: string;
+  units: number;
+  idempotencyKey: string;
+}
+
+export class ConsumeCapabilityUseCase {
+  constructor(
+    private readonly ledgerRepo: ILedgerRepository,
+    private readonly policyEngine: IPolicyEngine,
+    private readonly catalog: ICatalogRepository
+  ) {}
+
+  async execute(command: ConsumeCapabilityCommand): Promise<ConsumptionResult> {
+    // 1. Verificación de idempotencia
+    const existing = await this.ledgerRepo.findByIdempotencyKey(command.idempotencyKey);
+    if (existing) {
+      return { status: 'ALREADY_PROCESSED', entry: existing };
+    }
+
+    // 2. Validación de catálogo y cálculo de costo
+    const capability = await this.catalog.getCapability(command.capabilityId);
+    if (!capability || !capability.isActive) {
+      throw new Error(`Capacidad no disponible: ${command.capabilityId}`);
+    }
+
+    // 3. Evaluación de políticas e invariantes de saldo
+    const currentBalance = await this.ledgerRepo.getBalance(command.accountId);
+    const requiredAmount = capability.unitCostCents * command.units;
+    
+    this.policyEngine.assertCanConsume({
+      currentBalance,
+      requiredAmount,
+      allowOverdraft: capability.allowOverdraft,
+    });
+
+    // 4. Registro inmutable en el ledger
+    const entry: LedgerEntry = {
+      id: crypto.randomUUID(),
+      accountId: command.accountId,
+      capabilityId: command.capabilityId,
+      units: command.units,
+      amountCents: requiredAmount,
+      currency: capability.currency,
+      timestamp: new Date(),
+      idempotencyKey: command.idempotencyKey,
+    };
+
+    await this.ledgerRepo.append(entry);
+    return { status: 'SUCCESS', entry };
+  }
+}
+```
+
+---
+
+## Model Context Protocol (MCP): Adaptador de herramientas supervisado
+
+Uno de los mayores riesgos arquitectónicos actuales surge al integrar agentes de inteligencia artificial con sistemas transaccionales. Muchas implementaciones caen en la tentación de otorgar al LLM herramientas con acceso directo a consultas SQL o acceso irrestricto a clientes de Prisma/Drizzle bajo la premisa de "darle flexibilidad al agente".
+
+Esto es peligroso por tres razones fundamentales:
+
+1. **Bypass de invariantes:** El agente puede ejecutar un `UPDATE balance = balance - 10` omitiendo validaciones de sobregiro, bloqueos por fraude o reglas de prorrateo.
+2. **Destrucción de la auditoría:** No queda registro estructurado de qué caso de uso se invocó ni qué idempotencia protegía la operación.
+3. **Inyección y alucinación de esquemas:** Un LLM que genera sentencias de base de datos puede equivocarse en tipos numéricos, monedas o relaciones foráneas.
+
+En nuestra arquitectura, el servidor Model Context Protocol (MCP) es simplemente otro **adaptador de entrada periférico** (*driving adapter*). Trata al agente de IA exactamente con las mismas restricciones que a una llamada HTTP o un comando de terminal.
+
+```text
+FLUJO DE HERRAMIENTA MCP SUPERVISADA:
+
+[Agente LLM] ──> [JSON-RPC: tools/call] 
+                       │
+                       ▼
+             [MCP Server Adapter]
+             (Valida esquema Zod y autenticación de sesión)
+                       │
+                       ▼
+             [ConsumeCapabilityUseCase]
+             (Aplica reglas, evalúa políticas y verifica saldo)
+                       │
+                       ▼
+             [ILedgerRepository] ──> [Persistencia Segura]
+```
+
+La implementación del adaptador MCP traduce los argumentos validados del protocolo hacia el comando del dominio:
+
+```typescript
+// adapters/driving/mcp/tools/consume-credits.tool.ts
+import { z } from 'zod';
+import { ConsumeCapabilityUseCase } from '../../../../domain/use-cases/consume-capability.use-case';
+
+export const ConsumeCreditsSchema = z.object({
+  accountId: z.string().uuid(),
+  capabilityId: z.string().min(1),
+  units: z.number().int().positive(),
+  idempotencyKey: z.string().min(8),
+});
+
+export function createConsumeCreditsTool(useCase: ConsumeCapabilityUseCase) {
+  return {
+    name: 'consume_account_credits',
+    description: 'Consume unidades de una capacidad específica para una cuenta bajo políticas estrictas de saldo.',
+    inputSchema: ConsumeCreditsSchema,
+    execute: async (args: z.infer<typeof ConsumeCreditsSchema>) => {
+      try {
+        const result = await useCase.execute({
+          accountId: args.accountId,
+          capabilityId: args.capabilityId,
+          units: args.units,
+          idempotencyKey: args.idempotencyKey,
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                status: result.status,
+                transactionId: result.entry.id,
+                chargedCents: result.entry.amountCents,
+              }),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Rechazado por el kernel: ${error.message}` }],
+        };
+      }
+    },
+  };
+}
+```
+
+El agente no tiene acceso a la base de datos, no puede alterar tablas y no puede evadir las políticas del kernel. Si el saldo es insuficiente o el token de idempotencia ya fue consumido, el error es emitido por el dominio de forma determinística.
+
+---
+
+## Ingesta sintética de catálogos: Snapshots inmutables y principio fail-closed
+
+En sistemas de tarificación e infraestructura de ingresos, los catálogos de precios y matrices de capacidades suelen definirse en archivos externos (JSON, YAML, CSV o planillas XLSX que los equipos comerciales o de operaciones actualizan periódicamente).
+
+Si tu sistema lee estas tablas directamente en tiempo de ejecución o realiza mutaciones parciales en vivo sobre la base de datos, corres el riesgo de procesar transacciones con precios a medio actualizar o con errores tipográficos catastróficos.
+
+Para blindar el Revenue Kernel diseñamos una tubería de ingesta basada en **snapshots inmutables** y el principio **fail-closed**:
+
+```text
+PIPELINE DE INGESTA DE CATÁLOGOS:
+
+[Planilla / CSV / JSON] 
+         │
+         ▼
+[Parser Acotado + Validador Zod Estricto]
+         │
+   ¿Es 100% válido?
+     ├── NO ──> [Rechazo Total Fail-Closed] (Error explícito, cero mutación)
+     │
+     └── SÍ ──> [Generación de SHA-256 Hash]
+                      │
+                      ▼
+               [CatalogSnapshot Inmutable] ──> [Activación Atómica en Kernel]
+```
+
+1. **Parsers acotados:** El parser no realiza inferencias ni asume valores por defecto en campos financieros críticos.
+2. **Validación estructural rigurosa:** Cada fila debe cumplir tipos exactos (enteros para centavos, códigos de moneda ISO 4217, claves de capacidad registradas).
+3. **Integridad criptográfica:** Cada snapshot generado recibe un hash SHA-256 basado en su contenido normalizado.
+4. **Activación atómica:** El kernel opera con el snapshot activo. Si un nuevo catálogo falla una sola validación de regla de negocio en la fila 450 de 500, toda la carga es abortada de inmediato. El sistema continúa operando con el último snapshot válido sin caer jamás en estados parciales o inconsistentes.
+
+---
+
+## Reconciliación determinística: Tests en memoria antes de montar PostgreSQL
+
+Uno de los mayores beneficios de desacoplar los puertos de persistencia es la capacidad de ejecutar pruebas unitarias y de reconciliación complejas en milisegundos, sin necesidad de levantar contenedores Docker, bases de datos PostgreSQL o servidores mock.
+
+Implementamos un repositorio de libro mayor en memoria (*In-Memory Ledger*) que satisface exactamente la misma interfaz `ILedgerRepository` que el adaptador de base de datos relacional:
+
+```typescript
+// adapters/driven/testing/in-memory-ledger.repository.ts
+import { ILedgerRepository, LedgerEntry } from '../../../domain/ports/driven/ledger-repository.port';
+
+export class InMemoryLedgerRepository implements ILedgerRepository {
+  private entries: LedgerEntry[] = [];
+
+  async append(entry: LedgerEntry): Promise<void> {
+    this.entries.push({ ...entry });
+  }
+
+  async getBalance(accountId: string): Promise<number> {
+    return this.entries
+      .filter((e) => e.accountId === accountId)
+      .reduce((acc, curr) => acc - curr.amountCents, 0); // O balance según créditos
+  }
+
+  async findByIdempotencyKey(key: string): Promise<LedgerEntry | null> {
+    return this.entries.find((e) => e.idempotencyKey === key) || null;
+  }
+
+  async listByPeriod(accountId: string, start: Date, end: Date): Promise<LedgerEntry[]> {
+    return this.entries.filter(
+      (e) => e.accountId === accountId && e.timestamp >= start && e.timestamp <= end
+    );
+  }
+
+  // Método auxiliar de inspección rápida para tests
+  clear(): void {
+    this.entries = [];
+  }
+}
+```
+
+Con este adaptador, una suite de pruebas que valida cincuenta escenarios de sobregiro concurrente, duplicación de eventos de webhook, reconciliación mensual y llamadas de herramientas MCP se ejecuta en menos de diez milisegundos:
+
+```typescript
+// tests/reconciliation-engine.spec.ts
+describe('ReconciliationEngine & Policy Invariants', () => {
+  it('debe rechazar consumo cuando el saldo es insuficiente y la capacidad no permite sobregiro', async () => {
+    const ledger = new InMemoryLedgerRepository();
+    const catalog = new InMemoryCatalogRepository([
+      { id: 'ocr-scan', unitCostCents: 500, currency: 'USD', allowOverdraft: false, isActive: true },
+    ]);
+    const policies = new StrictPolicyEngine();
+    const useCase = new ConsumeCapabilityUseCase(ledger, policies, catalog);
+
+    // Intentar consumir 10 unidades sin saldo previo (5.000 centavos requeridos)
+    await expect(
+      useCase.execute({
+        accountId: 'acc-123',
+        capabilityId: 'ocr-scan',
+        units: 10,
+        idempotencyKey: 'tx-unique-001',
+      })
+    ).rejects.toThrow('Saldo insuficiente para ejecutar la operación.');
+
+    // Verificar que el libro mayor permanezca totalmente limpio
+    const balance = await ledger.getBalance('acc-123');
+    expect(balance).toBe(0);
+  });
+});
+```
+
+Cuando llega el momento de conectar PostgreSQL en producción, solo escribes el adaptador que implementa `ILedgerRepository` usando Drizzle, Prisma o SQL nativo. El cien por ciento de las reglas de negocio, los cálculos de tarifas y las pruebas de dominio permanecen intactos.
+
+---
+
+## Lecciones desde el sandbox técnico y lo que viene
+
+Es importante establecer la honestidad técnica de este desarrollo: esta arquitectura fue diseñada y refinada dentro de **Velerio** (nuestro sandbox técnico de ingeniería y spike arquitectónico en DeepTech), no como un SaaS masivo con miles de clientes corporativos en producción simultánea.
+
+El objetivo de construir este sandbox fue precisamente experimentar y aislar los dolores de escalabilidad, pruebas automatizadas e interfaces heterogéneas antes de exponer sistemas financieros a tráfico real.
+
+Las lecciones más claras que obtuvimos durante el desarrollo son:
+
+1. **Los adaptadores deben ser delgados:** Un adaptador solo debe parsear la entrada externa (JSON de HTTP, argumentos de MCP o flags de CLI), mapear errores del dominio a respuestas comprensibles y delegar inmediatamente al caso de uso.
+2. **La idempotencia es propiedad del dominio:** Manejar llaves de idempotencia en middlewares de red es insuficiente; el libro mayor es el único juez de verdad para evitar cobros dobles.
+3. **MCP requiere la misma disciplina que una API pública:** Nunca expongas la base de datos a un agente. Diseña herramientas que reflejen intenciones de negocio claras y deja que el kernel aplique las políticas.
+
+Desacoplar el núcleo de negocio de las interfaces de entrada no es una sobreingeniería prematura: es la garantía de que tu sistema podrá adaptarse a nuevos canales, herramientas de IA y pasarelas de pago sin reescribir una sola línea de lógica transaccional.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

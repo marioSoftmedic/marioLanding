@@ -1,0 +1,348 @@
+---
+title: "Architecting a Modular Revenue Kernel: Why We Decoupled Business Core from Entry Adapters (API, Webhooks, CLI & MCP)"
+date: 2026-10-02
+lang: "en"
+canonicalSlug: "2026-10-02-modular-revenue-kernel-architecture-adapters"
+image: "/img/blog/2026-10-02-arquitectura-modular-revenue-kernel-adaptadores.png"
+description: "How to design a business and monetization core decoupled from entry interfaces via ports and adapters, treating MCP as a supervised tool adapter and verifying reconciliation deterministically in memory."
+tags: [architecture, backend, builder, agents, infrastructure]
+series: "agentes"
+seriesOrder: 26
+draft: false
+---
+
+The most common mistake when building a monetization, billing, or credit management engine is starting with HTTP endpoints.
+
+You begin by defining a route in your web framework of choice: `POST /api/v1/credits/consume`. Inside the controller, you inject the database client, read the user balance, subtract the units, check whether their active plan has a discount, and commit the transaction—all inside a single forty-line function. It works locally, passes the initial manual tests, and feels ready for production.
+
+Two weeks later, reality hits. You need to process asynchronous payment gateway webhooks for credit top-ups, you require an administrative command-line tool (CLI) so operations can adjust quotas manually, and, as an inevitable requirement in the age of AI agents, you want an assistant connected via Model Context Protocol (MCP) to query balances and execute capability consumption on behalf of the user.
+
+If your core business logic is trapped inside web framework controllers or coupled directly to transport-layer SQL calls, you face serious architectural friction. To reuse that logic, you end up copy-pasting validations across multiple handlers or forcing your CLI and MCP server to call internal HTTP endpoints over the network—compounding latency, introducing unnecessary failure points, and increasing the risk of transactional state corruption.
+
+In this article, we break down how to solve this by applying the Ports & Adapters (Hexagonal Architecture) pattern to a **Revenue Kernel**: a pure business engine managing catalog definitions, transactional invariants, and reconciliation policies, completely decoupled from entry interfaces.
+
+```text
+TRADITIONAL COUPLING (BRITTLE):
+[REST Controller] ───┐
+[Webhook Handler] ───┼──> [Business logic entangled with SQL queries] ──> Database
+[Admin CLI]       ───┤    (Duplicated rules, painful to test)
+[MCP Agent Tool]  ───┘
+
+MODULAR ARCHITECTURE (PORTS & ADAPTERS):
+[REST API Adapter]    ──┐
+[Webhook Ingress]     ──┤      ┌─────────────────────────────┐      ┌────────────────────────┐
+[Admin CLI Adapter]   ──┼───>  │       REVENUE KERNEL        │ ──>  │  Driven Ports          │
+[MCP Server Adapter]  ──┘      │  (Pure domain, invariants,  │      │  (ILedgerRepository,   │
+                               │   and business policies)    │      │   ICatalogRepository)  │
+                               └─────────────────────────────┘      └────────────────────────┘
+                                                                                │
+                                                                                ▼
+                                                                    [Postgres / In-Memory]
+```
+
+---
+
+## The Revenue Kernel: Pure Domain Without External Frameworks
+
+The core business engine (Revenue Kernel) must be plain TypeScript or JavaScript code, entirely agnostic of web frameworks, network protocols, and persistence libraries. Whether running on Node.js, Bun, Cloudflare Workers, or a standalone local worker, the kernel knows only pure domain types, entities, and interface contracts (ports).
+
+Inside the Revenue Kernel, we isolate four core components:
+
+1. **Immutable Catalog:** Defines subscription tiers, available capabilities, accepted currencies, and base pricing structures.
+2. **Capability Registry:** Maps which system actions incur costs, which permissions they require, and what billing multipliers apply.
+3. **Policy Engine & Invariants:** Strict rules that must never be bypassed (e.g., account balances cannot drop below zero without explicit overdraft approval, suspended accounts cannot consume quotas, and plan upgrades calculate prorations deterministically).
+4. **Reconciliation Engine:** Compares transactional ledger events against billing cycles to guarantee that every billed amount strictly matches actual consumed units.
+
+The kernel defines outbound interfaces (*driven ports*) to interact with external storage and services:
+
+```typescript
+// domain/ports/driven/ledger-repository.port.ts
+export interface LedgerEntry {
+  id: string;
+  accountId: string;
+  capabilityId: string;
+  units: number;
+  amountCents: number;
+  currency: 'USD' | 'CLP';
+  timestamp: Date;
+  idempotencyKey: string;
+}
+
+export interface ILedgerRepository {
+  append(entry: LedgerEntry): Promise<void>;
+  getBalance(accountId: string): Promise<number>;
+  findByIdempotencyKey(key: string): Promise<LedgerEntry | null>;
+  listByPeriod(accountId: string, start: Date, end: Date): Promise<LedgerEntry[]>;
+}
+```
+
+By keeping these contracts pure, domain use cases execute as deterministic functions that receive a typed command and produce an explicit result:
+
+```typescript
+// domain/use-cases/consume-capability.use-case.ts
+export interface ConsumeCapabilityCommand {
+  accountId: string;
+  capabilityId: string;
+  units: number;
+  idempotencyKey: string;
+}
+
+export class ConsumeCapabilityUseCase {
+  constructor(
+    private readonly ledgerRepo: ILedgerRepository,
+    private readonly policyEngine: IPolicyEngine,
+    private readonly catalog: ICatalogRepository
+  ) {}
+
+  async execute(command: ConsumeCapabilityCommand): Promise<ConsumptionResult> {
+    // 1. Idempotency check
+    const existing = await this.ledgerRepo.findByIdempotencyKey(command.idempotencyKey);
+    if (existing) {
+      return { status: 'ALREADY_PROCESSED', entry: existing };
+    }
+
+    // 2. Catalog validation and pricing calculation
+    const capability = await this.catalog.getCapability(command.capabilityId);
+    if (!capability || !capability.isActive) {
+      throw new Error(`Capability unavailable: ${command.capabilityId}`);
+    }
+
+    // 3. Policy evaluation and balance invariants
+    const currentBalance = await this.ledgerRepo.getBalance(command.accountId);
+    const requiredAmount = capability.unitCostCents * command.units;
+    
+    this.policyEngine.assertCanConsume({
+      currentBalance,
+      requiredAmount,
+      allowOverdraft: capability.allowOverdraft,
+    });
+
+    // 4. Immutable append to the ledger
+    const entry: LedgerEntry = {
+      id: crypto.randomUUID(),
+      accountId: command.accountId,
+      capabilityId: command.capabilityId,
+      units: command.units,
+      amountCents: requiredAmount,
+      currency: capability.currency,
+      timestamp: new Date(),
+      idempotencyKey: command.idempotencyKey,
+    };
+
+    await this.ledgerRepo.append(entry);
+    return { status: 'SUCCESS', entry };
+  }
+}
+```
+
+---
+
+## Model Context Protocol (MCP): A Supervised Tool Adapter
+
+A significant architectural risk in modern AI applications is giving LLMs direct tool access to database query clients like Prisma or Drizzle under the guise of "maximizing agent autonomy."
+
+This is dangerous for three primary reasons:
+
+1. **Invariant Bypass:** An agent generating raw `UPDATE balance = balance - 10` queries bypasses overdraft validations, fraud locks, and proration calculations.
+2. **Loss of Auditability:** There is no structured record of which business use case was executed or whether idempotency guards were observed.
+3. **Schema Hallucination and Injection:** LLMs generating SQL or ORM operations can hallucinate foreign keys, mismatch currency units, or execute invalid mutations.
+
+In our architecture, the Model Context Protocol (MCP) server is simply another **peripheral driving adapter**. It subjects AI agents to the exact same validations and policy controls applied to HTTP requests or CLI commands.
+
+```text
+SUPERVISED MCP TOOL EXECUTION FLOW:
+
+[LLM Agent] ──> [JSON-RPC: tools/call] 
+                      │
+                      ▼
+            [MCP Server Adapter]
+            (Validates Zod schema and session authentication)
+                      │
+                      ▼
+            [ConsumeCapabilityUseCase]
+            (Applies domain rules, checks policies and balance)
+                      │
+                      ▼
+            [ILedgerRepository] ──> [Secure Persistence]
+```
+
+The MCP adapter maps validated input schemas directly into domain commands:
+
+```typescript
+// adapters/driving/mcp/tools/consume-credits.tool.ts
+import { z } from 'zod';
+import { ConsumeCapabilityUseCase } from '../../../../domain/use-cases/consume-capability.use-case';
+
+export const ConsumeCreditsSchema = z.object({
+  accountId: z.string().uuid(),
+  capabilityId: z.string().min(1),
+  units: z.number().int().positive(),
+  idempotencyKey: z.string().min(8),
+});
+
+export function createConsumeCreditsTool(useCase: ConsumeCapabilityUseCase) {
+  return {
+    name: 'consume_account_credits',
+    description: 'Consumes units of a specific capability for an account under strict balance policies.',
+    inputSchema: ConsumeCreditsSchema,
+    execute: async (args: z.infer<typeof ConsumeCreditsSchema>) => {
+      try {
+        const result = await useCase.execute({
+          accountId: args.accountId,
+          capabilityId: args.capabilityId,
+          units: args.units,
+          idempotencyKey: args.idempotencyKey,
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                status: result.status,
+                transactionId: result.entry.id,
+                chargedCents: result.entry.amountCents,
+              }),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Rejected by kernel: ${error.message}` }],
+        };
+      }
+    },
+  };
+}
+```
+
+The agent never interacts with the database directly. If account funds are insufficient or an idempotency token has already been consumed, the domain kernel rejects the operation deterministically.
+
+---
+
+## Synthetic Catalog Ingestion: Immutable Snapshots & Fail-Closed Ingestion
+
+In billing platforms and revenue infrastructure, pricing tables and capability matrixes often originate from external sources—JSON schemas, CSV exports, or spreadsheets maintained by commercial teams.
+
+Reading these configuration files dynamically on every request or performing live partial updates against the database creates severe risks of transient pricing mismatches or runtime crashes due to malformed rows.
+
+To guard the Revenue Kernel, we implement an ingestion pipeline based on **immutable snapshots** and the **fail-closed principle**:
+
+```text
+CATALOG INGESTION PIPELINE:
+
+[Spreadsheet / CSV / JSON] 
+             │
+             ▼
+[Bounded Parser + Strict Zod Schema]
+             │
+       Is it 100% valid?
+         ├── NO  ──> [Total Fail-Closed Rejection] (Explicit error, zero mutations)
+         │
+         └── YES ──> [SHA-256 Digest Generation]
+                           │
+                           ▼
+                  [Immutable CatalogSnapshot] ──> [Atomic Kernel Activation]
+```
+
+1. **Bounded Parsers:** The parser does not guess defaults or infer missing financial fields.
+2. **Strict Structural Validation:** Every single row must strictly adhere to typed definitions (integer cents, standard ISO 4217 currencies, registered capability identifiers).
+3. **Cryptographic Integrity:** Each validated snapshot receives a deterministic SHA-256 hash representing its normalized payload.
+4. **Atomic Activation:** The kernel operates against active immutable snapshots. If row 450 out of 500 contains an invalid decimal, the entire ingestion aborts immediately. The kernel continues serving requests from the previous verified snapshot without entering broken intermediate states.
+
+---
+
+## Deterministic In-Memory Testing Before Mounting PostgreSQL
+
+A major payoff of abstracting persistence behind interface ports is running comprehensive reconciliation and invariant tests in milliseconds, without spinning up Docker containers, PostgreSQL instances, or network mocks.
+
+We construct an in-memory ledger repository that satisfies the exact same `ILedgerRepository` interface as our production database adapter:
+
+```typescript
+// adapters/driven/testing/in-memory-ledger.repository.ts
+import { ILedgerRepository, LedgerEntry } from '../../../domain/ports/driven/ledger-repository.port';
+
+export class InMemoryLedgerRepository implements ILedgerRepository {
+  private entries: LedgerEntry[] = [];
+
+  async append(entry: LedgerEntry): Promise<void> {
+    this.entries.push({ ...entry });
+  }
+
+  async getBalance(accountId: string): Promise<number> {
+    return this.entries
+      .filter((e) => e.accountId === accountId)
+      .reduce((acc, curr) => acc - curr.amountCents, 0);
+  }
+
+  async findByIdempotencyKey(key: string): Promise<LedgerEntry | null> {
+    return this.entries.find((e) => e.idempotencyKey === key) || null;
+  }
+
+  async listByPeriod(accountId: string, start: Date, end: Date): Promise<LedgerEntry[]> {
+    return this.entries.filter(
+      (e) => e.accountId === accountId && e.timestamp >= start && e.timestamp <= end
+    );
+  }
+
+  clear(): void {
+    this.entries = [];
+  }
+}
+```
+
+With this fakeable adapter, an entire test suite verifying overdraft guards, webhook idempotency, reconciliation cycles, and MCP tool handlers executes in under ten milliseconds:
+
+```typescript
+// tests/reconciliation-engine.spec.ts
+describe('ReconciliationEngine & Policy Invariants', () => {
+  it('rejects consumption when balance is insufficient and overdraft is disabled', async () => {
+    const ledger = new InMemoryLedgerRepository();
+    const catalog = new InMemoryCatalogRepository([
+      { id: 'ocr-scan', unitCostCents: 500, currency: 'USD', allowOverdraft: false, isActive: true },
+    ]);
+    const policies = new StrictPolicyEngine();
+    const useCase = new ConsumeCapabilityUseCase(ledger, policies, catalog);
+
+    // Attempt to consume 10 units with zero balance (5,000 cents required)
+    await expect(
+      useCase.execute({
+        accountId: 'acc-123',
+        capabilityId: 'ocr-scan',
+        units: 10,
+        idempotencyKey: 'tx-unique-001',
+      })
+    ).rejects.toThrow('Insufficient balance to execute transaction.');
+
+    // Confirm the ledger remains completely unmutated
+    const balance = await ledger.getBalance('acc-123');
+    expect(balance).toBe(0);
+  });
+});
+```
+
+When connecting PostgreSQL in production, you implement `ILedgerRepository` using Drizzle, Prisma, or native SQL queries. One hundred percent of your business rules, catalog logic, and domain tests remain completely unchanged.
+
+---
+
+## Lessons from the Technical Sandbox & Next Steps
+
+It is important to provide clear technical context on maturity: this architecture was designed and evaluated inside **Velerio** (our engineering sandbox and architectural spike in DeepTech), rather than within a mature SaaS handling thousands of live enterprise billing accounts.
+
+The purpose of building this spike was precisely to stress-test integration patterns, automated reconciliation, and multi-adapter safety before exposing financial logic to production traffic.
+
+The key engineering takeaways include:
+
+1. **Keep adapters thin:** Adapters should strictly parse input payloads (HTTP JSON, MCP tool arguments, or CLI flags), map domain errors to clear client responses, and delegate execution immediately to use cases.
+2. **Idempotency belongs to the domain:** Enforcing idempotency solely in HTTP gateway middleware is fragile; the transactional ledger must be the ultimate authority against duplicate charges.
+3. **Treat MCP with the rigor of a public API:** Never hand direct database connections to AI agents. Expose clean business capabilities as tools and let the kernel enforce policy invariants.
+
+Decoupling the business core from entry adapters is not premature optimization: it is the baseline requirement to safely support webhooks, admin tooling, and autonomous AI agents without risking transactional integrity.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
