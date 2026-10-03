@@ -30,6 +30,7 @@ const blog = defineCollection({
 		description: z.string(),
 		tags: z.array(z.string()).default([]),
 		image: z.string().optional(),
+		youtubeId: z.string().optional(),
 		draft: z.boolean().default(false),
 		lang: z.enum(["es", "en"]).default("es"),
 		canonicalSlug: z.string().optional(),

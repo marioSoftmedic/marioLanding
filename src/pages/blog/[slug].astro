@@ -11,6 +11,7 @@ import CorrectionNotes from '../../components/CorrectionNotes.astro';
 import { EDITORIAL_ENTITY } from '../../data/editorial';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { buildArticleSchema } from '../../lib/schema';
+import YouTubeEmbed from '../../components/YouTubeEmbed.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft && data.lang === 'es');
@@ -89,6 +90,14 @@ const articleSchema = buildArticleSchema({ post, lang: 'es', path, breadcrumbs }
 
         <AuthorByline lang="es" date={post.data.date} updatedDate={post.data.updatedDate} />
       </header>
+
+      {post.data.youtubeId && (
+        <YouTubeEmbed
+          id={post.data.youtubeId}
+          title={post.data.title}
+          label="Video Explainer"
+        />
+      )}
 
       <div class="prose-blog">
         <Content />
