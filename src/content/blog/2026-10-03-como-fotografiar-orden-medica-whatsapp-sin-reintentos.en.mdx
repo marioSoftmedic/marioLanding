@@ -1,0 +1,115 @@
+---
+title: "How to photograph your medical order for frictionless WhatsApp quotes: 4 practical rules"
+date: 2026-10-03
+lang: "en"
+canonicalSlug: "2026-10-03-how-to-photograph-medical-order-whatsapp-quotes"
+description: "A practical guide for patients and caregivers on capturing medical orders with optimal lighting and framing for instant OCR quotation in Examya."
+tags: [examya, whatsapp, ocr, digital-health, healthcare]
+series: "examya"
+seriesOrder: 22
+image: "/img/blog/2026-10-03-como-fotografiar-orden-medica-whatsapp-sin-reintentos.png"
+draft: false
+---
+
+## The message no one wants to receive at 7 AM
+
+It is 6:45 in the morning. You have been fasting for ten hours, holding a crumpled paper medical order in your hand, preparing to head out into the cold and stand in a reception line at the clinical laboratory. To avoid an uninformed trip, you decide to send a photo of your medical order via WhatsApp to check the cost of your tests and confirm pre-analytical fasting requirements.
+
+You send the picture, wait a couple of seconds, and the system responds: *"We could not clearly read the tests on your order. Please send a clearer photo."*
+
+That bounce creates immediate friction during a vulnerable clinical moment. It delays your quotation, puts your fasting window at risk, and forces the laboratory admission staff to step in manually to decipher the document.
+
+In digital health architectures processing outpatient prescriptions and lab orders, roughly 80% of automated retrials are not caused by flawed machine learning models or illegible doctor handwriting. They happen because of four basic optical issues when snapping the photo on a smartphone.
+
+## The optical physics behind computer vision
+
+When a physical piece of paper moves from a table to a messaging conversation, optical factors come into play that human eyes compensate for naturally, but that severely degrade computer vision pipelines:
+
+1. **Cast shadows:** Tilting the phone directly above the paper causes the device or your hand to block the light source, creating an uneven dark gradient across the text.
+2. **Specular flash glare:** Firing the flash directly at semi-gloss paper or thermal receipts creates white hot spots of overexposure that completely wash out the ink.
+3. **Missing metadata from tight cropping:** Cropping in too closely cuts off the document corners where vital administrative data resides (National ID/RUT, date, physician signature, and institutional stamp).
+4. **Motion blur:** Taking a handheld shot in mid-air introduces micro-vibrations that smudge neighboring characters together.
+
+The good news is that preventing these four pitfalls takes exactly ten seconds before pressing "Send".
+
+## What happens when an image hits Examya's webhook
+
+In Examya's architecture (`apps/agents/src/fsm/`), the WhatsApp webhook does not treat the uploaded photo as an uninspected static payload. Shuri's transactional state machine executes a structured quality evaluation before attempting semantic test extraction.
+
+The assessment service (`OcrExtractionEvaluatorService`) runs a preliminary check on the image frame:
+
+```typescript
+// apps/agents/src/fsm/services/ocr-extraction-evaluator.service.ts
+export interface DocumentFrameAssessment {
+  hasSufficientContrast: boolean;
+  specularGlareDetected: boolean;
+  allCornersVisible: boolean;
+  isMotionBlurred: boolean;
+  readabilityConfidence: number; // 0.0 to 1.0
+}
+
+export function assessMedicalOrderCapture(
+  metadata: DocumentFrameAssessment
+): 'PROCEED_OCR' | 'REQUEST_RETRIAL' | 'ROUTE_HUMAN_REVIEW' {
+  if (metadata.specularGlareDetected || metadata.isMotionBlurred) {
+    return 'REQUEST_RETRIAL';
+  }
+  if (!metadata.allCornersVisible || metadata.readabilityConfidence < 0.65) {
+    return 'ROUTE_HUMAN_REVIEW';
+  }
+  return 'PROCEED_OCR';
+}
+```
+
+If the capture satisfies contrast and geometric structure thresholds, the pipeline extracts the requested tests and maps them to fee schedules and insurance co-payments. If the image suffers from flash glare or heavy blur, the system immediately requests a guided retrial, saving the patient from waiting indefinitely.
+
+## 4 golden rules for a flawless capture on the first try
+
+To ensure your medical order processes instantly without retrials, follow these four practical rules:
+
+### 1. Flat overhead or natural light (no phone shadows)
+Place the medical order flat on a table or desk. Ensure light comes from an overhead fixture or diffuse side lighting (such as a nearby window). Hold the phone about 30 centimeters away and slightly back from your torso to prevent your phone's shadow from falling over the written test names.
+
+### 2. Keep the camera flash off
+Always disable the flash. A direct camera flash creates a concentrated specular glare in the center of the sheet, blinding optical sensors and destroying the contrast of faint ink or light stamps. Uniform ambient lighting consistently outperforms direct flash.
+
+### 3. Perpendicular framing with all 4 corners visible
+Hold your phone parallel to the table (a 90-degree angle relative to the document) and capture all four corners of the page. In Chile, healthcare regulations (Law 20,584 and national prescription standards) require validating critical administrative fields before calculating co-payments:
+- Patient full name and National ID (RUT).
+- Issuing date of the medical order.
+- Clear itemization of requested laboratory tests.
+- Physician signature and professional registration stamp.
+
+Cropping out the margins to zoom in prevents the system from verifying the formal validity of the document.
+
+### 4. A 2-second zoom check before sending
+Before hitting send in WhatsApp, tap the photo preview and quickly zoom in on the first test name. If you can read the handwriting and numbers effortlessly, the OCR engine and the laboratory clinical team will extract them with high confidence. If it looks blurry to you, retake the photo with your hands resting steadily on the table edge.
+
+## Guardrails for complex handwriting: human review without hallucinations
+
+What happens when a prescription has unusually complex handwriting or physical paper damage?
+
+In healthcare, precision is absolute. Examya's state machine (`ShuriStateMachine`) is engineered around strict containment: if extraction confidence falls below safe thresholds, the system **never invents tests or guesses diagnoses**.
+
+Instead of hallucinating an inaccurate quote, the state machine transitions into `OCR_REVIEW` and routes the document to the laboratory's human review team. Examya operates strictly as an administrative and quotation assistant; it does not issue clinical diagnoses or alter the prescribing physician's orders.
+
+## Sensitive data privacy and the official channel
+
+A medical order contains Protected Health Information (PHI) governed by Law 20,584 (patient rights and duties) and Law 21,719 (personal data protection) in Chile.
+
+For your protection:
+- **Never upload photos of medical orders in public comment sections, open forums, or social media feeds.**
+- Always submit your orders through Examya's verified official WhatsApp channel or the laboratory's secure portal.
+- Official channels maintain end-to-end encryption in transit and strict data governance policies.
+
+## Clear quotes and frictionless laboratories
+
+True digital health transformation is not about adopting flashy tools, but about removing the daily points of friction that drain patients and clinical staff alike.
+
+Taking a clean photograph with proper lighting, no flash, and all four corners visible takes just ten seconds. Those ten seconds prevent unnecessary trips while fasting, cut manual transcription bottlenecks in the back office, and ensure your healthcare journey begins smoothly from minute one.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

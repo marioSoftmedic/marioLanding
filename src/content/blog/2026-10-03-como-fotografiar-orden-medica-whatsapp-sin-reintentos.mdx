@@ -1,0 +1,114 @@
+---
+title: "Cómo fotografiar tu orden médica para cotizar por WhatsApp sin reintentos: 4 reglas prácticas"
+date: 2026-10-03
+lang: "es"
+description: "Guía práctica para pacientes y cuidadores: cómo capturar una orden médica con luz y encuadre óptimos para que la IA de Examya procese tu cotización al instante."
+tags: [examya, whatsapp, ocr, digital-health, healthcare]
+series: "examya"
+seriesOrder: 22
+image: "/img/blog/2026-10-03-como-fotografiar-orden-medica-whatsapp-sin-reintentos.png"
+draft: false
+---
+
+## El mensaje que nadie quiere recibir a las 7 AM
+
+Son las 6:45 de la mañana. Llevas diez horas de ayuno estricto, tienes una orden médica arrugada en la mano y estás a punto de salir con frío hacia el laboratorio para hacer una fila de pie en el mesón de admisión. Para evitar ese viaje a ciegas, decides enviar una fotografía de tu orden médica por WhatsApp para cotizar el valor de tus exámenes y confirmar los requisitos de toma de muestra.
+
+Envías la imagen, esperas un par de segundos y llega la respuesta del sistema: *"No pudimos leer con claridad los exámenes de tu orden. Por favor, envía una foto más nítida"*.
+
+Ese rebote no solo genera frustración en un momento de vulnerabilidad clínica; atrasa tu cotización, compromete la ventana de ayuno y obliga al equipo de admisión del laboratorio a intervenir manualmente para descifrar la solicitud.
+
+En los sistemas de salud digital que procesan recetas y órdenes ambulatorias, cerca del 80% de los reintentos automáticos no ocurren por fallas en los modelos de inteligencia artificial ni por la caligrafía del médico. Ocurren por cuatro descuidos ópticos elementales al momento de presionar el obturador de la cámara.
+
+## La física óptica detrás de la visión artificial
+
+Cuando un documento físico pasa de la mesa a una conversación de mensajería, entran en juego factores físicos que los ojos humanos corrigen de forma inconsciente, pero que degradan drásticamente los algoritmos de visión por computadora:
+
+1. **Sombras proyectadas:** Al inclinar el teléfono sobre el papel, el propio dispositivo o la mano bloquean la fuente de luz, generando un gradiente de oscuridad sobre las líneas de texto.
+2. **Reflejos especulares por flash:** El flash directo sobre papel satinado o recetas impresas en papel térmico crea manchas blancas de sobreexposición que borran por completo los trazos de tinta.
+3. **Pérdida de metadatos por recorte:** Encuadres demasiado cerrados cortan las esquinas donde residen los datos normativos indispensables (RUT, fecha, firma y timbre médico).
+4. **Desenfoque de movimiento:** Tomar la foto en el aire con una sola mano genera microvibraciones que funden las letras entre sí.
+
+La buena noticia es que corregir estos cuatro factores toma exactamente diez segundos antes de presionar "Enviar".
+
+## Qué ocurre cuando la imagen llega al webhook de Examya
+
+En la arquitectura de Examya (`apps/agents/src/fsm/`), el webhook de WhatsApp no procesa la foto como un simple archivo estático. El flujo transaccional de Shuri ejecuta una evaluación estructurada antes de intentar la extracción semántica de los exámenes.
+
+El servicio evaluador (`OcrExtractionEvaluatorService`) somete la captura a un análisis preliminar de calidad:
+
+```typescript
+// apps/agents/src/fsm/services/ocr-extraction-evaluator.service.ts
+export interface DocumentFrameAssessment {
+  hasSufficientContrast: boolean;
+  specularGlareDetected: boolean;
+  allCornersVisible: boolean;
+  isMotionBlurred: boolean;
+  readabilityConfidence: number; // 0.0 a 1.0
+}
+
+export function assessMedicalOrderCapture(
+  metadata: DocumentFrameAssessment
+): 'PROCEED_OCR' | 'REQUEST_RETRIAL' | 'ROUTE_HUMAN_REVIEW' {
+  if (metadata.specularGlareDetected || metadata.isMotionBlurred) {
+    return 'REQUEST_RETRIAL';
+  }
+  if (!metadata.allCornersVisible || metadata.readabilityConfidence < 0.65) {
+    return 'ROUTE_HUMAN_REVIEW';
+  }
+  return 'PROCEED_OCR';
+}
+```
+
+Si la imagen cumple con los umbrales mínimos de contraste y estructura geométrica, el pipeline procede a identificar los códigos arancelarios y convenios de salud. Si la imagen está sobreexpuesta por flash o borrosa, el sistema solicita un reintento guiado de inmediato, evitando que el paciente espere en vano.
+
+## Las 4 reglas de oro para una foto perfecta al primer intento
+
+Para asegurar que tu orden médica se procese de forma inmediata y sin fricciones, sigue estas cuatro pautas prácticas:
+
+### 1. Luz cenital o natural plana (sin sombra del teléfono)
+Apoya la orden médica sobre una superficie plana (una mesa o escritorio). Asegúrate de que la iluminación provenga desde arriba o de forma lateral difusa (como una ventana cercana). Mantén el teléfono a unos 30 centímetros de distancia, ligeramente alejado de tu cuerpo, para evitar que la sombra del propio celular se proyecte sobre los exámenes prescritos.
+
+### 2. Flash siempre desactivado
+Desactiva el flash de la cámara. El destello concentrado genera un punto ciego de alto brillo en el centro del papel que ciega a los sensores ópticos y anula el contraste de las tintas tenues o sellos médicos. La luz ambiente uniforme siempre entrega mejores resultados que el flash directo.
+
+### 3. Encuadre perpendicular de los 4 bordes
+Sostén el teléfono de forma paralela a la mesa (ángulo de 90 grados respecto al papel) y encuadra los cuatro bordes completos de la hoja. En Chile, la normativa sanitaria (Ley 20.584 y estándares de prescripción médica) exige validar datos administrativos críticos antes de emitir una cotización con copago:
+- Nombre completo y RUT del paciente.
+- Fecha de emisión de la orden médica.
+- Detalle legible de los exámenes solicitados.
+- Firma y timbre del médico tratante con su registro profesional.
+
+Si cortas los márgenes para "acercar" el texto, el sistema no podrá verificar la validez formal del documento.
+
+### 4. Verificación de nitidez en 2 segundos
+Antes de tocar el botón de enviar en WhatsApp, abre la previsualización de la foto y haz un zoom rápido sobre el nombre del primer examen. Si tú puedes leer con claridad la letra y los números sin forzar la vista, el algoritmo de OCR y el equipo clínico del laboratorio podrán interpretarlo con total precisión. Si tú lo ves borroso, toma la foto una segunda vez con el teléfono apoyado firmemente.
+
+## El guardrail ante órdenes complejas: revisión humana sin alucinaciones
+
+¿Qué ocurre cuando una orden médica tiene una caligrafía extremadamente difícil o un deterioro físico en el papel?
+
+En salud, la precisión no es negociable. La máquina de estados de Examya (`ShuriStateMachine`) está diseñada bajo el principio de contención estricta: si la confianza de extracción no alcanza el umbral de seguridad, el sistema **nunca inventa exámenes ni adivina diagnósticos**. 
+
+En lugar de alucinar una cotización errónea, el flujo activa el estado `OCR_REVIEW` y deriva la imagen al equipo de supervisión humana del laboratorio. Examya opera estrictamente como un asistente logístico y administrativo de admisión; no emite juicios clínicos ni modifica jamás las indicaciones del médico tratante.
+
+## Privacidad de datos sensibles y el canal oficial
+
+Una orden médica contiene información de salud protegida (PHI) sujeta a la Ley 20.584 sobre derechos y deberes del paciente y la Ley 21.719 de protección de datos personales en Chile.
+
+Por esta razón:
+- **Nunca publiques fotos de tus órdenes médicas en comentarios públicos, foros o redes sociales abiertas.**
+- Realiza siempre tus consultas y cotizaciones a través del canal oficial y verificado de WhatsApp de Examya o directamente en los canales seguros del laboratorio clínico.
+- Los canales oficiales cuentan con cifrado de extremo a extremo en tránsito y políticas estrictas de gobierno de datos.
+
+## Cotizaciones claras y laboratorios sin fricción
+
+La transformación digital en salud no consiste en instalar herramientas complejas, sino en eliminar las pequeñas fricciones cotidianas que desgastan a pacientes y equipos clínicos.
+
+Tomar una fotografía clara con buena luz, sin flash y con los cuatro bordes visibles toma diez segundos. Esos diez segundos evitan desplazamientos innecesarios en ayuno, reducen la carga de transcripción manual en recepción y aseguran que tu atención en salud comience con información certera desde el primer minuto.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

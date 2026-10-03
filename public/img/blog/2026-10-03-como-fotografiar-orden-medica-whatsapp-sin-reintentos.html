@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1200, height=630, initial-scale=1.0">
+  <title>Cómo fotografiar tu orden médica para cotizar por WhatsApp sin reintentos - OpenGraph</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background-color: #020617;
+      font-family: 'Inter', sans-serif;
+      color: #f8fafc;
+    }
+    .og-container {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      padding: 34px 46px;
+      background: radial-gradient(circle at 90% 12%, rgba(6, 182, 212, 0.2), transparent 42%),
+                  radial-gradient(circle at 10% 85%, rgba(16, 185, 129, 0.16), transparent 38%),
+                  radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.08), transparent 45%),
+                  linear-gradient(135deg, #020617 0%, #081528 50%, #030712 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Grid pattern */
+    .og-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1200px;
+      height: 630px;
+      background-image: 
+        linear-gradient(to right, rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+      background-size: 30px 30px;
+      z-index: 0;
+      opacity: 0.7;
+    }
+
+    .header-bar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 9999px;
+      padding: 6px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #22d3ee;
+      text-transform: uppercase;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+    }
+
+    .brand-mark {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+
+    .brand-mark span {
+      color: #10b981;
+    }
+
+    .main-content {
+      position: relative;
+      z-index: 1;
+      margin-top: 2px;
+    }
+
+    .title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+      color: #ffffff;
+    }
+
+    .title .highlight {
+      color: #38bdf8;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      line-height: 1.35;
+      color: #cbd5e1;
+      margin-top: 5px;
+      max-width: 1080px;
+      font-weight: 400;
+    }
+
+    /* 3-Column Diagram Grid */
+    .diagram-section {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 320px 420px 320px;
+      gap: 18px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .column-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      backdrop-filter: blur(8px);
+    }
+
+    .column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      padding-bottom: 6px;
+    }
+
+    .column-header h4 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .tag-rose { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .tag-cyan { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .tag-emerald { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .node-item {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .node-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .node-desc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: #94a3b8;
+    }
+
+    /* Central Kernel Card */
+    .kernel-card {
+      background: rgba(11, 27, 61, 0.9);
+      border: 2px solid #0284c7;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 0 25px rgba(2, 132, 199, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kernel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .kernel-node {
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 8px;
+      padding: 7px 9px;
+    }
+
+    .kernel-node .node-title {
+      color: #38bdf8;
+      font-size: 11.5px;
+    }
+
+    .kernel-node .node-desc {
+      font-size: 9px;
+      color: #cbd5e1;
+    }
+
+    .guardrail-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 8px;
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* Footer Meta */
+    .footer-bar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
+      padding-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="og-container">
+    <div class="og-grid"></div>
+
+    <!-- Header Bar -->
+    <div class="header-bar">
+      <div class="badge">
+        <div class="badge-dot"></div>
+        Visión Computacional • Shuri FSM
+      </div>
+      <div class="brand-mark">mariohealthbits<span>.dev</span></div>
+    </div>
+
+    <!-- Titles -->
+    <div class="main-content">
+      <h1 class="title">
+        4 Reglas de Captura para <span class="highlight">Órdenes Médicas en WhatsApp</span>
+      </h1>
+      <p class="subtitle">
+        Resolución del 80% de reintentos en admisión ambulatoria: evaluación óptica previa, geometría perimetral y guardrail sin alucinaciones.
+      </p>
+    </div>
+
+    <!-- 3-Column Diagram -->
+    <div class="diagram-section">
+      <!-- Columna 1: Los 4 Fallos Ópticos Comunes -->
+      <div class="column-box" style="border-color: rgba(244, 63, 94, 0.3);">
+        <div class="column-header">
+          <h4 style="color: #fb7185;">Fallos Ópticos Frecuentes</h4>
+          <span class="pill-tag tag-rose">80% de Rebotes</span>
+        </div>
+
+        <div class="node-item">
+          <div class="node-title">
+            <span>1. Sombra del Teléfono</span>
+            <span style="color: #fb7185;">-45% contraste</span>
+          </div>
+          <div class="node-desc">Mano/móvil bloquean luz cenital</div>
+        </div>
+
+        <div class="node-item">
+          <div class="node-title">
+            <span>2. Flash Especular</span>
+            <span style="color: #fb7185;">Puntos ciegos</span>
+          </div>
+          <div class="node-desc">Sobreexposición borra la tinta</div>
+        </div>
+
+        <div class="node-item">
+          <div class="node-title">
+            <span>3. Recorte de Bordes</span>
+            <span style="color: #fb7185;">Invalidez legal</span>
+          </div>
+          <div class="node-desc">Falta RUT, fecha, firma o timbre</div>
+        </div>
+
+        <div class="node-item">
+          <div class="node-title">
+            <span>4. Microdesenfoque</span>
+            <span style="color: #fb7185;">Blur en el aire</span>
+          </div>
+          <div class="node-desc">Pérdida de bordes en caligrafía</div>
+        </div>
+      </div>
+
+      <!-- Columna 2: Central Shuri Evaluator -->
+      <div class="kernel-card">
+        <div class="column-header" style="border-color: rgba(56, 189, 248, 0.25);">
+          <h4 style="color: #38bdf8;">OcrExtractionEvaluator</h4>
+          <span class="pill-tag tag-cyan">FSM Guardrail</span>
+        </div>
+
+        <div class="kernel-grid">
+          <div class="kernel-node">
+            <div class="node-title">Contraste Global</div>
+            <div class="node-desc">hasSufficientContrast (Score ≥ 0.85)</div>
+          </div>
+
+          <div class="kernel-node">
+            <div class="node-title">Reflejo Flash</div>
+            <div class="node-desc">noSpecularGlareDetected: PASS</div>
+          </div>
+
+          <div class="kernel-node">
+            <div class="node-title">4 Esquinas Visibles</div>
+            <div class="node-desc">allCornersVisible (Ley 20.584)</div>
+          </div>
+
+          <div class="kernel-node">
+            <div class="node-title">Varianza Laplaciana</div>
+            <div class="node-desc">sharpnessThreshold &gt; 120.0</div>
+          </div>
+        </div>
+
+        <div class="guardrail-box">
+          <div class="node-title" style="color: #34d399; font-size: 11.5px;">
+            <span>🛡️ Decisión Determinística de Admisión</span>
+          </div>
+          <div class="node-desc" style="color: #e2e8f0; font-size: 9.5px;">
+            <code>Score ≥ 0.85 ➔ OCR Inmediato | Score &lt; 0.85 ➔ Reintento Guiado</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna 3: Las 4 Reglas de Captura Exitosa -->
+      <div class="column-box" style="border-color: rgba(16, 185, 129, 0.3);">
+        <div class="column-header">
+          <h4 style="color: #34d399;">4 Reglas de Captura</h4>
+          <span class="pill-tag tag-emerald">10 Segundos</span>
+        </div>
+
+        <div class="node-item" style="border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08);">
+          <div class="node-title">
+            <span>1. Luz Plana Cenital</span>
+            <span style="color: #34d399;">Sin sombras</span>
+          </div>
+          <div class="node-desc">Apoyar orden sobre mesa plana</div>
+        </div>
+
+        <div class="node-item" style="border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08);">
+          <div class="node-title">
+            <span>2. Flash Apagado</span>
+            <span style="color: #34d399;">100% nítido</span>
+          </div>
+          <div class="node-desc">Evita destellos sobre papel satinado</div>
+        </div>
+
+        <div class="node-item" style="border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08);">
+          <div class="node-title">
+            <span>3. Los 4 Bordes Visibles</span>
+            <span style="color: #34d399;">Firma + RUT</span>
+          </div>
+          <div class="node-desc">Encuadre completo para copago FONASA</div>
+        </div>
+
+        <div class="node-item" style="border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08);">
+          <div class="node-title">
+            <span>4. Zoom de 2 Segundos</span>
+            <span style="color: #34d399;">Verificación</span>
+          </div>
+          <div class="node-desc">Revisión humana previa al envío</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Bar -->
+    <div class="footer-bar">
+      <div>Computer Vision • Shuri FSM • OCR Guardrail • Zero Hallucinations • mariohealthbits.dev</div>
+      <div>https://mariohealthbits.dev/blog/2026-10-03-como-fotografiar-orden-medica-whatsapp-sin-reintentos/</div>
+    </div>
+  </div>
+</body>
+</html>
