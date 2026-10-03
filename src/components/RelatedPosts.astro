@@ -48,32 +48,40 @@ const reasonLabel = (reason: 'related' | 'series' | 'tags') => {
         .replace('{n}', String(seriesIndex + 1))
         .replace('{total}', String(seriesPosts.length))}
     </p>
-    <ol class="flex flex-col gap-2">
-      {seriesPosts.map((p, i) => {
-        const isCurrent = p.id === post.id;
-        return (
-          <li class="flex items-baseline gap-3 text-sm">
-            <span
-              class="tabular-nums shrink-0 font-mono text-xs"
-              style={`color: ${isCurrent ? 'var(--accent-cyan)' : 'var(--text-faint)'};`}
+    <div
+      class="series-scroll max-h-[220px] overflow-y-auto pr-2"
+      style="scrollbar-width: thin; scrollbar-color: var(--border-default) transparent;"
+    >
+      <ol class="flex flex-col gap-2">
+        {seriesPosts.map((p, i) => {
+          const isCurrent = p.id === post.id;
+          return (
+            <li
+              class="flex items-baseline gap-3 text-sm py-0.5"
+              data-current={isCurrent ? 'true' : undefined}
             >
-              {String(i + 1).padStart(2, '0')}
-            </span>
-            {isCurrent ? (
-              <span style="color: var(--text-primary); font-weight: 600;">{p.data.title}</span>
-            ) : (
-              <a
-                href={postUrl(p, base)}
-                class="hover:underline transition-colors"
-                style="color: var(--text-secondary);"
+              <span
+                class="tabular-nums shrink-0 font-mono text-xs"
+                style={`color: ${isCurrent ? 'var(--accent-cyan)' : 'var(--text-faint)'};`}
               >
-                {p.data.title}
-              </a>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              {isCurrent ? (
+                <span style="color: var(--text-primary); font-weight: 600;">{p.data.title}</span>
+              ) : (
+                <a
+                  href={postUrl(p, base)}
+                  class="hover:underline transition-colors"
+                  style="color: var(--text-secondary);"
+                >
+                  {p.data.title}
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   </aside>
 )}
 
@@ -113,3 +121,33 @@ const reasonLabel = (reason: 'related' | 'series' | 'tags') => {
     </div>
   </section>
 )}
+
+<style>
+  .series-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .series-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .series-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border-radius: 9999px;
+  }
+  .series-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+  }
+</style>
+
+<script>
+  function centerCurrentSeriesPost() {
+    const container = document.querySelector('.series-scroll');
+    const current = container?.querySelector('[data-current="true"]') as HTMLElement | null;
+    if (container && current) {
+      const offsetTop = current.offsetTop - container.offsetTop;
+      container.scrollTop = Math.max(0, offsetTop - 60);
+    }
+  }
+
+  centerCurrentSeriesPost();
+  document.addEventListener('astro:page-load', centerCurrentSeriesPost);
+</script>
