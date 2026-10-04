@@ -1,0 +1,204 @@
+---
+title: "The Clean Baseline Principle: Why We Discarded Legacy Prototypes Before Writing a Commercial PRD"
+description: "Why refactoring exploratory prototypes is a technical debt trap and how freezing a deterministic baseline enables writing reliable commercial PRDs."
+date: 2026-10-04
+lang: "en"
+canonicalSlug: "2026-10-04-clean-baseline-principle-deeptech-governance"
+image: "/img/blog/2026-10-04-principio-baseline-limpio-gobernanza-deeptech.png"
+tags: [architecture, backend, builder, agents, infrastructure]
+draft: false
+series: "agentes"
+seriesOrder: 27
+related: [2026-10-02-arquitectura-modular-revenue-kernel-adaptadores]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+There is a critical turning point in every DeepTech initiative where the velocity of the early days suddenly turns against engineering: moving from an exploratory prototype that barely "works" to formally drafting a commercial Product Requirement Document (PRD).
+
+The almost universal temptation among engineering teams is to grab the exploratory spike code, "clean it up a bit," wrap it inside a REST API, and present it to business stakeholders as the foundation for the commercial roadmap. After all, the prototype already processes sample data, connects to LLMs, and validates the initial hypothesis. Discarding it feels like throwing away valuable time and effort.
+
+That decision is one of the most damaging software governance mistakes in technology projects. Dragging prototype code into the commercial product definition phase transfers fragile assumptions, invisible coupling, and severe technical debt directly into delivery commitments and customer SLAs.
+
+In this article, I explain the **Clean Baseline Principle**: why we deliberately discarded our legacy prototype code before writing a single line of our commercial PRD in our DeepTech platform, what knowledge we formally extracted from the spike, and how to build a deterministic core with immutable governance boundaries.
+
+```text
+THE PROTOTYPE REFACTORING TRAP:
+[Exploratory Spike] ──> "Let's just refactor it" ──> [PRD built on fragile assumptions]
+                                                                  │
+[Production Tech Debt] <── [Broken Commercial Commitments] <──────┘
+
+THE CLEAN BASELINE PRINCIPLE:
+[Exploratory Spike] ──> [Formal Hypothesis Extraction] ──> [Deliberate Legacy Code Discard]
+                                                                        │
+[PRD with Technical Certainty] <── [Deterministic Tests] <── [Clean Baseline (Pure Domain)]
+```
+
+---
+
+## The tightly coupled prototype trap: Why refactoring falls short
+
+When building an exploratory spike or technical proof of concept, your sole objective is answering viability questions as quickly as possible: Is this agent orchestration feasible? Does the model respond within the target latency window? Can transactional balances be reconciled across heterogeneous systems?
+
+To get answers fast, you intentionally take shortcuts:
+- Hardcoding configuration flags and credentials in local scripts.
+- Entangling core business logic with database clients and web framework primitives.
+- Omitting comprehensive error handling for network timeouts, edge cases, and concurrency locks.
+- Assuming input payloads will always arrive cleanly formatted.
+
+Taking those shortcuts is not a mistake—it is the legitimate purpose of a technical spike. The mistake happens when product or sales stakeholders watch the working demo and assume the software is 80% complete.
+
+If you attempt to refactor that exploratory code while simultaneously defining commercial PRD requirements, you walk straight into an invisible technical debt trap. Exploratory assumptions become permanently embedded into the architecture. When enterprise clients require strict multi-tenant isolation, idempotency guarantees, or immutable audit logs, you discover that every minor tweak to the core breaks undocumented behaviors from the original prototype.
+
+---
+
+## Formal hypothesis extraction: Discarding code while preserving lessons
+
+Discarding prototype code does not mean starting from scratch blindly or losing weeks of progress. There is a fundamental difference between discarding code carelessly and executing a deliberate discard following a **formal hypothesis extraction**.
+
+During the exploratory phase in our engineering sandbox (Velerio), we rigorously documented every insight before initializing the production repository:
+
+1. **Discovered domain invariants:** Mathematical and business rules that can never be violated (such as fail-closed validation on malformed catalogs and strict transaction uniqueness via idempotency keys).
+2. **External integration boundaries:** Exact interface contracts required by API endpoints, Webhooks, admin CLI commands, and MCP tool servers.
+3. **Persistence bottlenecks:** Query patterns and state mutations that create lock contention when multiple agent workers consume quota concurrently.
+
+Once these invariants and specifications were formalized into clean interface contracts and typed data models, the spike code had served its purpose. Keeping it around only creates cognitive overhead and architectural noise.
+
+```typescript
+// domain/contracts/governance-invariants.ts
+export interface GovernanceRule<TInput, TContext> {
+  readonly code: string;
+  readonly description: string;
+  evaluate(input: TInput, context: TContext): AssertionResult;
+}
+
+export interface AssertionResult {
+  readonly valid: boolean;
+  readonly reason?: string;
+  readonly ruleCode: string;
+  readonly timestamp: Date;
+}
+```
+
+---
+
+## Clean Baseline architecture: Deterministic core and decoupled ports
+
+When architecting a clean baseline, the foundational governance rule is **complete domain isolation** from all peripheral infrastructure.
+
+The core contains zero imports from web frameworks (Fastify, Express, NestJS), zero dependencies on ORMs (Drizzle, Prisma), and zero assumptions about transport protocols. Everything is organized around pure domain models and abstract interfaces (*ports*):
+
+```text
+CLEAN BASELINE ARCHITECTURAL STRUCTURE:
+┌────────────────────────────────────────────────────────────────────────┐
+│                          DRIVING ADAPTERS                              │
+│     [REST API]       [Webhooks]       [Admin CLI]       [MCP Tools]    │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │ (Typed commands validated with Zod)
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                         DETERMINISTIC CORE                             │
+│  ┌────────────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │    Catalog Manager     │  │ Invariants and  │  │  Transactional  │  │
+│  │   (SHA-256 Snapshots)  │  │  Policy Engine  │  │ Reconciliation  │  │
+│  └────────────────────────┘  └─────────────────┘  └─────────────────┘  │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │ (Driven ports / abstract interfaces)
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                          DRIVEN ADAPTERS                               │
+│    [Postgres Repository]    [In-Memory Ledger]    [Audit Log Store]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+The transactional use cases execute strictly against immutable contracts:
+
+```typescript
+// domain/ports/driven/transaction-ledger.port.ts
+export interface TransactionRecord {
+  readonly id: string;
+  readonly accountId: string;
+  readonly actionKey: string;
+  readonly units: number;
+  readonly amountCents: number;
+  readonly currency: 'USD' | 'CLP';
+  readonly idempotencyKey: string;
+  readonly executedAt: Date;
+}
+
+export interface ITransactionLedger {
+  record(entry: TransactionRecord): Promise<void>;
+  getBalance(accountId: string): Promise<number>;
+  findByIdempotency(key: string): Promise<TransactionRecord | null>;
+}
+```
+
+---
+
+## Technical rules and numbers: Deterministic tests before touching the database
+
+One of the largest engineering returns of a clean baseline is testing speed and reliability. Because business invariants and domain rules do not rely on relational database instances or Docker containers, we can run exhaustive stress and invariant test suites in memory within milliseconds.
+
+We implemented an in-memory testing adapter that mirrors the behavior of our relational transactional ledger:
+
+```typescript
+// testing/adapters/in-memory-transaction-ledger.ts
+import { ITransactionLedger, TransactionRecord } from '../../domain/ports/driven/transaction-ledger.port';
+
+export class InMemoryTransactionLedger implements ITransactionLedger {
+  private readonly store = new Map<string, TransactionRecord>();
+  private readonly idempotencyIndex = new Map<string, string>();
+
+  async record(entry: TransactionRecord): Promise<void> {
+    if (this.idempotencyIndex.has(entry.idempotencyKey)) {
+      throw new Error(`Idempotency violation: key ${entry.idempotencyKey} is already recorded.`);
+    }
+    this.store.set(entry.id, { ...entry });
+    this.idempotencyIndex.set(entry.idempotencyKey, entry.id);
+  }
+
+  async getBalance(accountId: string): Promise<number> {
+    let balance = 0;
+    for (const record of this.store.values()) {
+      if (record.accountId === accountId) {
+        balance += record.amountCents;
+      }
+    }
+    return balance;
+  }
+
+  async findByIdempotency(key: string): Promise<TransactionRecord | null> {
+    const id = this.idempotencyIndex.get(key);
+    if (!id) return null;
+    return this.store.get(id) ?? null;
+  }
+
+  reset(): void {
+    this.store.clear();
+    this.idempotencyIndex.clear();
+  }
+}
+```
+
+With this pattern, validating complex race conditions, unauthorized overdraft policies, and catalog corruption rollbacks executes in under 15 milliseconds across CI runs. Technical reliability is proven in code before deploying any external infrastructure.
+
+---
+
+## What changed when writing the commercial PRD
+
+When our product and engineering leads sat down to write the commercial Product Requirement Document (PRD) on top of this clean baseline, our working dynamic shifted completely:
+
+1. **Certainty in engineering timelines:** There were no "black boxes" or volatile prototype scripts that might fail under edge cases. Architectural limits were thoroughly verified by deterministic test suites.
+2. **Explicit integration scoping:** With thin adapters decoupled from the core, scoping new payment webhooks, CLI tools, or MCP tool agents became a modular, predictable effort.
+3. **Protection against unfeasible sales commitments:** The PRD avoided making speculative feature promises. Kernel invariants functioned as strict engineering guardrails, preventing commitments that would jeopardize data consistency.
+
+Establishing a clean baseline demands the discipline to reject shortcuts, but it remains the only sustainable path to turning technical experimentation into production-grade DeepTech infrastructure.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

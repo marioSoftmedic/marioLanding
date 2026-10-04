@@ -1,0 +1,203 @@
+---
+title: "El principio del baseline limpio: por qué descartamos prototipos heredados antes de escribir un PRD comercial"
+description: "Por qué refactorizar prototipos experimentales es una trampa técnica y cómo congelar un baseline determinístico antes de redactar un PRD comercial."
+date: 2026-10-04
+lang: "es"
+image: "/img/blog/2026-10-04-principio-baseline-limpio-gobernanza-deeptech.png"
+tags: [architecture, backend, builder, agents, infrastructure]
+draft: false
+series: "agentes"
+seriesOrder: 27
+related: [2026-10-02-arquitectura-modular-revenue-kernel-adaptadores]
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 1
+---
+
+Existe un momento crítico en todo proyecto de tecnología profunda (*DeepTech*) donde la velocidad de los primeros días se vuelve en contra de la ingeniería: el paso de un prototipo experimental que "funciona" a la redacción formal de un Documento de Requisitos de Producto (*Product Requirement Document* o PRD) comercial.
+
+La tentación casi universal en los equipos técnicos es tomar el código del spike exploratorio, "limpiarlo un poco", envolverlo en una API REST y presentarlo a negocio como la base sobre la cual construir el roadmap de ventas. Después de todo, el prototipo ya procesa datos, conecta con modelos de lenguaje y valida la hipótesis inicial. Descartarlo suena a desperdicio de tiempo y esfuerzo.
+
+Esa decisión es uno de los mayores errores de gobernanza de software. Arrastrar código prototipo a la etapa de definición comercial traslada supuestos frágiles, acoplamientos invisibles y deuda técnica directa a los compromisos de entrega y a los acuerdos de nivel de servicio (SLAs) con clientes.
+
+En este artículo explico el **Principio del Baseline Limpio**: por qué descartamos deliberadamente el código de nuestros prototipos heredados antes de escribir una sola línea del PRD comercial en nuestra plataforma DeepTech, qué extrajimos de ese proceso y cómo diseñar un núcleo determinístico con límites de gobernanza inmutables.
+
+```text
+EL CICLO VICIOSO DE LA REFACTORIZACIÓN DEL PROTOTIPO:
+[Spike Exploratorio] ──> "Solo limpiemos el código" ──> [PRD sobre supuestos frágiles]
+                                                                   │
+[Deuda técnica en producción] <── [Compromisos comerciales rotos] <┘
+
+EL PRINCIPIO DEL BASELINE LIMPIO:
+[Spike Exploratorio] ──> [Extracción formal de hipótesis] ──> [Descarte de código legacy]
+                                                                        │
+[PRD con certeza técnica] <── [Pruebas determinísticas] <── [Baseline Limpio (Núcleo Puro)]
+```
+
+---
+
+## La trampa del prototipo acoplado: Por qué refactorizar no es suficiente
+
+Cuando construyes un spike o una prueba de concepto técnica, tu único objetivo es responder preguntas de viabilidad en el menor tiempo posible: ¿Es viable este flujo de agentes? ¿Responde el modelo con la latencia esperada? ¿Se pueden reconciliar estos saldos transaccionales?
+
+Para responder rápido, tomas atajos conscientes:
+- Hardcodeas configuraciones y credenciales en variables locales.
+- Mezclas la lógica de negocio con librerías específicas de bases de datos o frameworks web.
+- Omites el manejo exhaustivo de estados intermedios, errores de red y concurrencia.
+- Asumes que los datos de entrada vendrán siempre en formatos amigables.
+
+El problema no es haber tomado esos atajos: ese es el propósito legítimo de un spike técnico. El error ocurre cuando el equipo comercial o de producto ve la demo funcionando y asume que el software está completado en un 80%.
+
+Si intentas refactorizar ese código sobre la marcha mientras defines el PRD comercial, caes en una trampa de deuda técnica invisible. Los supuestos exploratorios quedan incrustados en la arquitectura. Cuando el cliente corporativo exige aislamiento multi-tenant estricto, idempotencia transaccional o trazabilidad auditable, descubres que cada cambio menor en el núcleo rompe tres flujos no documentados del prototipo original.
+
+---
+
+## Extracción formal de hipótesis: El código se descarta, el aprendizaje se congela
+
+Descartar el código de un prototipo no significa comenzar desde cero a ciegas ni perder semanas de trabajo. Existe una diferencia radical entre tirar código sin método y aplicar un descarte deliberado tras una **extracción formal de hipótesis**.
+
+Durante la fase de exploración en nuestro sandbox técnico (Velerio), documentamos exhaustivamente cada lección aprendida antes de tocar el repositorio definitivo:
+
+1. **Invariantes de dominio descubiertos:** Cuáles son las reglas matemáticas y de negocio que jamás pueden violarse (por ejemplo: validación *fail-closed* ante catálogos inconsistentes, unicidad estricta de transacciones mediante llaves de idempotencia).
+2. **Límites de integración externos:** Qué contratos de entrada requieren los adaptadores de API, Webhooks, CLI y servidores de herramientas MCP.
+3. **Puntos de fricción en persistencia:** Qué consultas generan bloqueos o contención cuando múltiples agentes intentan consumir saldo concurrentemente.
+
+Una vez formalizadas estas especificaciones en contratos de interfaz y modelos de datos puros, el código original del spike cumplió su ciclo de vida. Mantenerlo vivo solo añade ruido cognitivo.
+
+```typescript
+// domain/contracts/governance-invariants.ts
+export interface GovernanceRule<TInput, TContext> {
+  readonly code: string;
+  readonly description: string;
+  evaluate(input: TInput, context: TContext): AssertionResult;
+}
+
+export interface AssertionResult {
+  readonly valid: boolean;
+  readonly reason?: string;
+  readonly ruleCode: string;
+  readonly timestamp: Date;
+}
+```
+
+---
+
+## La arquitectura del Baseline Limpio: Núcleo determinístico y puertos desacoplados
+
+Al construir el baseline limpio, la regla fundamental de gobernanza es el **desacople absoluto del núcleo de dominio** respecto a cualquier infraestructura periférica.
+
+El núcleo no importa frameworks web (Fastify, Express, NestJS), no importa clientes de base de datos específicos (Drizzle, Prisma) ni depende de protocolos de transporte. Todo se estructura mediante interfaces abstractas (*puertos*):
+
+```text
+ESTRUCTURA DEL BASELINE LIMPIO:
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ADAPTADORES DE ENTRADA                          │
+│     [REST API]       [Webhooks]       [Admin CLI]       [MCP Tools]    │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │ (Comandos tipados con Zod)
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        NÚCLEO DETERMINÍSTICO                           │
+│  ┌────────────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │   Gestor de Catálogo   │  │ Motor de Reglas │  │ Reconciliación  │  │
+│  │   (Snapshots SHA-256)  │  │  e Invariantes  │  │  Transaccional  │  │
+│  └────────────────────────┘  └─────────────────┘  └─────────────────┘  │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │ (Puertos de salida / driven ports)
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ADAPTADORES DE SALIDA                           │
+│    [Postgres Repository]    [In-Memory Ledger]    [Audit Log Store]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+El caso de uso transaccional solo opera contra contratos de salida inmutables:
+
+```typescript
+// domain/ports/driven/transaction-ledger.port.ts
+export interface TransactionRecord {
+  readonly id: string;
+  readonly accountId: string;
+  readonly actionKey: string;
+  readonly units: number;
+  readonly amountCents: number;
+  readonly currency: 'USD' | 'CLP';
+  readonly idempotencyKey: string;
+  readonly executedAt: Date;
+}
+
+export interface ITransactionLedger {
+  record(entry: TransactionRecord): Promise<void>;
+  getBalance(accountId: string): Promise<number>;
+  findByIdempotency(key: string): Promise<TransactionRecord | null>;
+}
+```
+
+---
+
+## Reglas técnicas y números: Pruebas determinísticas antes de tocar la base de datos
+
+Uno de los mayores dividendos de ingeniería que entrega un baseline limpio es la velocidad y cobertura de las pruebas. Al no depender de bases de datos relacionales ni contenedores Docker para validar las reglas de negocio, podemos ejecutar suites de pruebas de estrés e invariantes en memoria en milisegundos.
+
+Implementamos un repositorio de pruebas en memoria que replica exactamente el comportamiento del libro mayor transaccional:
+
+```typescript
+// testing/adapters/in-memory-transaction-ledger.ts
+import { ITransactionLedger, TransactionRecord } from '../../domain/ports/driven/transaction-ledger.port';
+
+export class InMemoryTransactionLedger implements ITransactionLedger {
+  private readonly store = new Map<string, TransactionRecord>();
+  private readonly idempotencyIndex = new Map<string, string>();
+
+  async record(entry: TransactionRecord): Promise<void> {
+    if (this.idempotencyIndex.has(entry.idempotencyKey)) {
+      throw new Error(`Violación de idempotencia: clave ${entry.idempotencyKey} ya registrada.`);
+    }
+    this.store.set(entry.id, { ...entry });
+    this.idempotencyIndex.set(entry.idempotencyKey, entry.id);
+  }
+
+  async getBalance(accountId: string): Promise<number> {
+    let balance = 0;
+    for (const record of this.store.values()) {
+      if (record.accountId === accountId) {
+        balance += record.amountCents;
+      }
+    }
+    return balance;
+  }
+
+  async findByIdempotency(key: string): Promise<TransactionRecord | null> {
+    const id = this.idempotencyIndex.get(key);
+    if (!id) return null;
+    return this.store.get(id) ?? null;
+  }
+
+  reset(): void {
+    this.store.clear();
+    this.idempotencyIndex.clear();
+  }
+}
+```
+
+Con este mecanismo, validar escenarios complejos de concurrencia, sobregiros no autorizados y rechazo de catálogos corruptos toma menos de 15 milisegundos en el pipeline de integración continua. La certeza técnica queda demostrada por el código antes de involucrar infraestructura externa.
+
+---
+
+## Qué cambió en la práctica al escribir el PRD comercial
+
+Cuando el equipo de producto y los líderes de ingeniería nos sentamos a redactar el Documento de Requisitos de Producto (PRD) comercial sobre la base de este baseline limpio, la dinámica de trabajo cambió por completo:
+
+1. **Certeza en las estimaciones:** No existían "cajas negras" ni código experimental que pudiera fallar impredeciblemente. Los límites de lo que el sistema soporta estaban respaldados por pruebas determinísticas.
+2. **Definición clara de integraciones:** Al contar con adaptadores delgados desacoplados del núcleo, sabíamos exactamente qué esfuerzo implicaba añadir soporte para nuevos webhooks de pago o herramientas para agentes MCP.
+3. **Protección contra compromisos inviables de ventas:** El PRD no promete capacidades mágicas. Las políticas e invariantes del kernel actúan como un guardrail de ingeniería que impide comprometer funcionalidades que vulneren la consistencia de los datos.
+
+Establecer un baseline limpio requiere disciplina para resistir la tentación del camino corto, pero es la única forma sostenible de transformar la experimentación técnica en tecnología profunda lista para operar con estabilidad.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
