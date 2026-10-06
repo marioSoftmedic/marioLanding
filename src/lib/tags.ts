@@ -342,6 +342,7 @@ export const TAG_TAXONOMY: TagDef[] = [
 		aliases: [
 			"digital health",
 			"salud digital",
+			"salud-digital",
 			"saluddigital",
 			"digitalhealth",
 			"healthtech",
@@ -393,6 +394,24 @@ export const TAG_TAXONOMY: TagDef[] = [
 		description: {
 			es: "Ley chilena que obliga la interoperabilidad de fichas clínicas.",
 			en: "Chilean law mandating clinical record interoperability.",
+		},
+	},
+	{
+		slug: "ley-21719",
+		label: { es: "Ley 21.719", en: "Law 21.719" },
+		aliases: [
+			"ley 21.719",
+			"ley21719",
+			"ley-21-719",
+			"ley 21719",
+			"ley-21719",
+			"law 21.719",
+			"law21719",
+			"law 21719",
+		],
+		description: {
+			es: "Ley chilena de protección de datos personales y privacidad.",
+			en: "Chilean personal data protection and privacy law.",
 		},
 	},
 	{
