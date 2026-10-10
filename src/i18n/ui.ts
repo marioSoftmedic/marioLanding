@@ -52,6 +52,16 @@ export const ui = {
 		"stack.frontend": "Frontend",
 		"stack.backend": "Backend & Datos",
 		"stack.ai": "IA & Agentes",
+		// Architecture Showcase / Video explainers
+		"section.videos.label": "Visual Architecture",
+		"section.videos.title": "Arquitectura en Video",
+		"section.videos.subtitle": "Diseño de sistemas, flujos FHIR y agentes explicados en pizarra y código.",
+		"section.videos.featured": "Último Explainer",
+		"section.videos.read-post": "Leer artículo completo",
+		"section.videos.more": "Más explainers técnicos",
+		"section.videos.channel-cta": "Canal de YouTube",
+		"section.videos.channel-desc": "Videos técnicos bilingües sobre arquitectura, interoperabilidad y agentes.",
+		"badge.video": "Video Explainer",
 		// Blog section (homepage preview)
 		"section.blog.label": "Escritura",
 		"section.blog.title": "Últimas notas",
@@ -156,6 +166,16 @@ export const ui = {
 		"stack.frontend": "Frontend",
 		"stack.backend": "Backend & Data",
 		"stack.ai": "AI & Agents",
+		// Architecture Showcase / Video explainers
+		"section.videos.label": "Visual Architecture",
+		"section.videos.title": "Architecture in Video",
+		"section.videos.subtitle": "System design, FHIR workflows, and AI agents explained on whiteboard and code.",
+		"section.videos.featured": "Latest Explainer",
+		"section.videos.read-post": "Read full article",
+		"section.videos.more": "More technical explainers",
+		"section.videos.channel-cta": "YouTube Channel",
+		"section.videos.channel-desc": "Bilingual technical videos on infrastructure, interoperability, and agents.",
+		"badge.video": "Video Explainer",
 		// Blog section (homepage preview)
 		"section.blog.label": "Writing",
 		"section.blog.title": "Latest posts",

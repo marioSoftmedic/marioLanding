@@ -1,0 +1,202 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import { postUrl } from '../lib/relations';
+import { basePath, useTranslations, type Lang } from '../i18n/utils';
+import YouTubeEmbed from './YouTubeEmbed.astro';
+
+interface Props {
+  lang: Lang;
+  posts?: CollectionEntry<'blog'>[];
+}
+
+const { lang, posts: passedPosts } = Astro.props;
+const t = useTranslations(lang);
+const base = basePath(lang);
+
+const allPosts = passedPosts ?? (await getCollection('blog'));
+const videos = allPosts
+  .filter((p) => !p.data.draft && p.data.lang === lang && Boolean(p.data.youtubeId))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const flagship = videos[0];
+const moreVideos = videos.slice(1, 3);
+const channelUrl = 'https://www.youtube.com/@mario.inostroza.m';
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'short', day: 'numeric' });
+---
+
+{flagship && (
+  <section id="arquitectura-video" class="py-24 px-4" aria-labelledby="architecture-video-title">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">
+            {t('section.videos.label')}
+          </p>
+          <h2 id="architecture-video-title" class="text-3xl sm:text-4xl font-bold tracking-tight">
+            {t('section.videos.title')}
+          </h2>
+          <p class="mt-2 text-lg max-w-2xl" style="color: var(--text-muted);">
+            {t('section.videos.subtitle')}
+          </p>
+        </div>
+
+        <a
+          href={channelUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-outline inline-flex items-center gap-2.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0 transition-transform duration-200 hover:scale-102"
+          style="color: var(--text-primary); border-color: var(--border-default); background: var(--bg-elevated);"
+          aria-label="YouTube Channel @mario.inostroza.m (se abre en nueva pestaña)"
+        >
+          <svg class="w-4 h-4 text-red-500 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span>{t('section.videos.channel-cta')}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Main Flagship Video Column */}
+        <div class="lg:col-span-8">
+          <div class="glass-card p-4 sm:p-6 overflow-hidden">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <span
+                class="px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase"
+                style="background: color-mix(in srgb, var(--accent-orange) 15%, transparent); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 30%, transparent);"
+              >
+                {t('section.videos.featured')}
+              </span>
+              <time datetime={flagship.data.date.toISOString()} class="text-xs tabular-nums" style="color: var(--text-faint);">
+                {formatDate(flagship.data.date)}
+              </time>
+            </div>
+
+            <div class="overflow-hidden rounded-xl">
+              <YouTubeEmbed
+                id={flagship.data.youtubeId!}
+                title={flagship.data.title}
+                label="Architecture Whiteboard"
+              />
+            </div>
+
+            <div class="mt-5">
+              <h3 class="text-xl sm:text-2xl font-bold tracking-tight mb-2" style="color: var(--text-primary);">
+                {flagship.data.title}
+              </h3>
+              <p class="text-sm sm:text-base leading-relaxed mb-4" style="color: var(--text-muted);">
+                {flagship.data.description}
+              </p>
+              <a
+                href={postUrl(flagship, base)}
+                class="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200 group"
+                style="color: var(--accent-cyan);"
+              >
+                <span>{t('section.videos.read-post')}</span>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="transition-transform duration-200 group-hover:translate-x-1"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary Column: More Videos + Channel Box */}
+        <div class="lg:col-span-4 flex flex-col gap-6">
+          {moreVideos.length > 0 && (
+            <div class="glass-card p-5">
+              <h4 class="text-xs font-semibold uppercase tracking-wider mb-4" style="color: var(--text-faint);">
+                {t('section.videos.more')}
+              </h4>
+
+              <div class="flex flex-col divide-y" style="divide-color: var(--border-subtle);">
+                {moreVideos.map((video) => (
+                  <a
+                    href={postUrl(video, base)}
+                    class="group flex gap-3.5 py-3.5 items-center hover:opacity-90 transition-opacity"
+                  >
+                    <div class="relative w-24 aspect-video shrink-0 rounded-lg overflow-hidden bg-black" style="border: 1px solid var(--border-subtle);">
+                      <img
+                        src={`https://i.ytimg.com/vi/${video.data.youtubeId}/hqdefault.jpg`}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 opacity-85 group-hover:opacity-100"
+                      />
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
+                        <div class="w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white">
+                          <svg class="w-3 h-3 fill-current ml-0.5" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs tabular-nums mb-1" style="color: var(--text-faint);">
+                        {formatDate(video.data.date)}
+                      </p>
+                      <h5 class="text-xs sm:text-sm font-semibold line-clamp-2 group-hover:text-gradient transition-colors" style="color: var(--text-primary);">
+                        {video.data.title}
+                      </h5>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* YouTube Channel Callout Card */}
+          <div
+            class="p-6 rounded-2xl relative overflow-hidden"
+            style="background: linear-gradient(135deg, color-mix(in srgb, var(--bg-surface) 90%, #ff0000 10%), var(--bg-elevated)); border: 1px solid var(--border-default);"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-500">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">@mario.inostroza.m</p>
+                <p class="text-xs" style="color: var(--text-muted);">YouTube</p>
+              </div>
+            </div>
+
+            <p class="text-xs leading-relaxed mb-4" style="color: var(--text-muted);">
+              {t('section.videos.channel-desc')}
+            </p>
+
+            <a
+              href={channelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold rounded-lg transition-colors duration-200"
+              style="background: #ff0000; color: #ffffff;"
+            >
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              <span>{t('section.videos.channel-cta')}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
