@@ -54,8 +54,8 @@ export const ui = {
 		"stack.ai": "IA & Agentes",
 		// Architecture Showcase / Video explainers
 		"section.videos.label": "Systems Design & Proof of Work",
-		"section.videos.title": "Ingeniería de Sistemas en Producción",
-		"section.videos.subtitle": "Desarmando arquitecturas reales: interoperabilidad FHIR, infraestructura de agentes y normativas de salud explicadas en pizarra y código.",
+		"section.videos.title": "Ingeniería de Sistemas Críticos",
+		"section.videos.subtitle": "De la pizarra a producción: infraestructura de revenue, flujos regulados, agentes de IA y automatización multicanal sin rodeos.",
 		"section.videos.featured": "Último Explainer",
 		"section.videos.read-post": "Leer artículo completo",
 		"section.videos.more": "Más explainers técnicos",
@@ -168,8 +168,8 @@ export const ui = {
 		"stack.ai": "AI & Agents",
 		// Architecture Showcase / Video explainers
 		"section.videos.label": "Systems Design & Proof of Work",
-		"section.videos.title": "Production Systems Engineering",
-		"section.videos.subtitle": "Deconstructing real-world architectures: FHIR interoperability, AI agent infrastructure, and healthcare regulations explained on whiteboard and code.",
+		"section.videos.title": "Mission-Critical Systems Engineering",
+		"section.videos.subtitle": "From whiteboard to production: revenue infrastructure, regulated workflows, AI agents, and multichannel automation without fluff.",
 		"section.videos.featured": "Latest Explainer",
 		"section.videos.read-post": "Read full article",
 		"section.videos.more": "More technical explainers",

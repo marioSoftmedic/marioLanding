@@ -43,7 +43,7 @@ test('ArchitectureShowcase, homepage integrations, badges, and YouTube omnichann
 	assert.match(cardPage, /href="https:\/\/www\.youtube\.com\/@mario\.inostroza\.m"/);
 
 	// 6. UI translations exist for ES and EN
-	assert.match(uiSource, /"section\.videos\.title":\s*"Ingeniería de Sistemas en Producción"/);
-	assert.match(uiSource, /"section\.videos\.title":\s*"Production Systems Engineering"/);
+	assert.match(uiSource, /"section\.videos\.title":\s*"Ingeniería de Sistemas Críticos"/);
+	assert.match(uiSource, /"section\.videos\.title":\s*"Mission-Critical Systems Engineering"/);
 	assert.match(uiSource, /"badge\.video":\s*"Video Explainer"/);
 });
