@@ -67,6 +67,10 @@ export const ui = {
 		"section.blog.title": "Últimas notas",
 		"section.blog.subtitle": "Lo que aprendo construyendo desde la Patagonia",
 		"section.blog.cta": "Ver blog",
+		"section.blog.featured": "Último post",
+		"section.blog.read-post": "Leer artículo completo",
+		"section.blog.more": "Entradas recientes",
+		"section.blog.view-all": "Ver todas las publicaciones",
 		// Blog page
 		"blog.page.meta.title": "Blog — Mario Inostroza",
 		"blog.page.meta.desc":
@@ -181,6 +185,10 @@ export const ui = {
 		"section.blog.title": "Latest posts",
 		"section.blog.subtitle": "What I learn building from Patagonia",
 		"section.blog.cta": "View blog",
+		"section.blog.featured": "Latest Post",
+		"section.blog.read-post": "Read full article",
+		"section.blog.more": "Recent posts",
+		"section.blog.view-all": "View all posts",
 		// Blog page
 		"blog.page.meta.title": "Blog — Mario Inostroza",
 		"blog.page.meta.desc":

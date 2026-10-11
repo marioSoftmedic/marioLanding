@@ -1,0 +1,243 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import { postUrl } from '../lib/relations';
+import { basePath, useTranslations, type Lang } from '../i18n/utils';
+import { canonicalPath } from '../lib/routes.mjs';
+import { tagsForPost, tagDisplay } from '../lib/tags';
+import NewsletterSignup from './NewsletterSignup.astro';
+
+interface Props {
+  lang: Lang;
+  posts?: CollectionEntry<'blog'>[];
+}
+
+const { lang, posts: passedPosts } = Astro.props;
+const t = useTranslations(lang);
+const base = basePath(lang);
+
+const allPosts = passedPosts ?? (await getCollection('blog'));
+const posts = allPosts
+  .filter((p) => !p.data.draft && p.data.lang === lang)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const flagship = posts[0];
+const morePosts = posts.slice(1, 5);
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'short', day: 'numeric' });
+
+const flagshipTags = flagship ? tagsForPost(flagship.data.tags) : [];
+const primaryTag = flagshipTags[0];
+---
+
+{flagship && (
+  <section id="blog" class="py-24 px-4" aria-labelledby="blog-title">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">
+            {t('section.blog.label')}
+          </p>
+          <h2 id="blog-title" class="text-3xl sm:text-4xl font-bold tracking-tight">
+            {t('section.blog.title')}
+          </h2>
+          <p class="mt-2 text-lg max-w-2xl" style="color: var(--text-muted);">
+            {t('section.blog.subtitle')}
+          </p>
+        </div>
+
+        <a
+          href={canonicalPath(base + '/blog')}
+          class="btn-outline inline-flex items-center gap-2.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0 transition-transform duration-200 hover:scale-102"
+          style="color: var(--accent-cyan); border-color: color-mix(in srgb, var(--accent-cyan) 20%, transparent); background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);"
+          aria-label={t('section.blog.cta')}
+        >
+          <span>{t('section.blog.cta')}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Main Flagship Post Column */}
+        <div class={morePosts.length > 0 ? "lg:col-span-8" : "lg:col-span-12"}>
+          <article class="glass-card p-4 sm:p-6 overflow-hidden group">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span
+                  class="px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase"
+                  style="background: color-mix(in srgb, var(--accent-cyan) 15%, transparent); color: var(--accent-cyan); border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent);"
+                >
+                  {t('section.blog.featured')}
+                </span>
+                {primaryTag && (
+                  <span
+                    class="px-2.5 py-1 rounded-md text-xs font-medium"
+                    style="background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-subtle);"
+                  >
+                    {tagDisplay(primaryTag, lang)}
+                  </span>
+                )}
+              </div>
+              <time datetime={flagship.data.date.toISOString()} class="text-xs tabular-nums" style="color: var(--text-faint);">
+                {formatDate(flagship.data.date)}
+              </time>
+            </div>
+
+            <a
+              href={postUrl(flagship, base)}
+              class="block overflow-hidden rounded-xl relative aspect-video bg-black/40 border border-[var(--border-subtle)] group/img"
+              aria-label={flagship.data.title}
+            >
+              {flagship.data.image ? (
+                <img
+                  src={flagship.data.image}
+                  alt={flagship.data.title}
+                  loading="eager"
+                  decoding="async"
+                  class="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105"
+                />
+              ) : (
+                <div class="w-full h-full flex items-center justify-center relative overflow-hidden" style="background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));">
+                  <span class="text-4xl font-bold tracking-tight text-gradient" style="font-family: var(--font-heading);">
+                    {flagship.data.title.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none"></div>
+
+              {flagship.data.youtubeId && (
+                <div class="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-black/80 backdrop-blur text-white border border-white/10">
+                  <svg class="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  <span>{t('badge.video')}</span>
+                </div>
+              )}
+            </a>
+
+            <div class="mt-5">
+              <h3 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 group-hover:text-gradient transition-colors" style="color: var(--text-primary);">
+                <a href={postUrl(flagship, base)}>
+                  {flagship.data.title}
+                </a>
+              </h3>
+              <p class="text-sm sm:text-base leading-relaxed mb-4 line-clamp-2" style="color: var(--text-muted);">
+                {flagship.data.description}
+              </p>
+
+              <div class="flex items-center justify-between gap-4 pt-2">
+                <a
+                  href={postUrl(flagship, base)}
+                  class="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200 group/link"
+                  style="color: var(--accent-cyan);"
+                >
+                  <span>{t('section.blog.read-post')}</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="transition-transform duration-200 group-hover/link:translate-x-1"
+                  >
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </a>
+
+                {flagshipTags.length > 0 && (
+                  <div class="flex flex-wrap gap-1.5 hidden sm:flex">
+                    {flagshipTags.slice(0, 3).map((slug) => (
+                      <span
+                        class="px-2 py-0.5 text-xs rounded-md font-medium"
+                        style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);"
+                      >
+                        {tagDisplay(slug, lang)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </article>
+        </div>
+
+        {/* Secondary Column: Recent Posts List */}
+        {morePosts.length > 0 && (
+          <div class="lg:col-span-4 flex flex-col gap-6">
+            <div class="glass-card p-5">
+              <h4 class="text-xs font-semibold uppercase tracking-wider mb-4" style="color: var(--text-faint);">
+                {t('section.blog.more')}
+              </h4>
+
+              <div class="flex flex-col divide-y" style="divide-color: var(--border-subtle);">
+                {morePosts.map((post) => (
+                  <a
+                    href={postUrl(post, base)}
+                    class="group flex gap-3.5 py-3.5 items-center hover:opacity-90 transition-opacity"
+                  >
+                    <div class="relative w-20 aspect-video shrink-0 rounded-lg overflow-hidden bg-black/40 border border-[var(--border-subtle)]">
+                      {post.data.image ? (
+                        <img
+                          src={post.data.image}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 opacity-85 group-hover:opacity-100"
+                        />
+                      ) : (
+                        <div class="w-full h-full flex items-center justify-center bg-[var(--bg-elevated)]">
+                          <span class="text-xs font-bold text-gradient">
+                            {post.data.title.slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {post.data.youtubeId && (
+                        <div class="absolute bottom-1 right-1 w-3.5 h-3.5 rounded bg-black/80 flex items-center justify-center">
+                          <svg class="w-2 h-2 text-red-500 fill-current" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs tabular-nums mb-1" style="color: var(--text-faint);">
+                        {formatDate(post.data.date)}
+                      </p>
+                      <h5 class="text-xs sm:text-sm font-semibold line-clamp-2 group-hover:text-gradient transition-colors" style="color: var(--text-primary);">
+                        {post.data.title}
+                      </h5>
+                    </div>
+                  </a>
+                ))}
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-[var(--border-subtle)]">
+                <a
+                  href={canonicalPath(base + '/blog')}
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
+                  style="color: var(--accent-cyan);"
+                >
+                  <span>{t('section.blog.view-all')}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div class="mt-10">
+        <NewsletterSignup lang={lang} source={`home-blog-${lang}`} />
+      </div>
+    </div>
+  </section>
+)}

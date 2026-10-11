@@ -3,12 +3,10 @@
 import Base from '../../layouts/Base.astro';
 import Timeline from '../../components/Timeline.astro';
 import ArchitectureShowcase from '../../components/ArchitectureShowcase.astro';
+import BlogShowcase from '../../components/BlogShowcase.astro';
 import { getCollection } from 'astro:content';
 import { useTranslations, basePath } from '../../i18n/utils';
-import { HUBS, hubPath } from '../../lib/hubs';
-import NewsletterSignup from '../../components/NewsletterSignup.astro';
 import { absoluteUrl, canonicalPath } from '../../lib/routes.mjs';
-import { postUrl } from '../../lib/relations';
 import { Picture } from 'astro:assets';
 import heroImage from '../../assets/images/marioHealthBits4.png';
 import cotochaImage from '../../assets/images/projects/cotocha.png';
@@ -26,13 +24,6 @@ const projects = (await getCollection('projects'))
   .filter((p) => p.data.lang === 'es')
   .sort((a, b) => projectRank(a.id) - projectRank(b.id));
 const allPosts = await getCollection('blog');
-const latestPosts = allPosts
-  .filter((p) => !p.data.draft && p.data.lang === lang)
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 6);
-
-const formatDate = (date: Date) =>
-  date.toLocaleDateString(t('date.locale'), { year: 'numeric', month: 'short', day: 'numeric' });
 
 const siteUrl = 'https://mariohealthbits.dev';
 const rootUrl = absoluteUrl('/', siteUrl);
@@ -139,29 +130,6 @@ const homeSchema = [
     </div>
   </section>
 
-  <section id="trayectoria" class="py-24 px-4" aria-labelledby="trayectoria-title">
-    <div class="max-w-6xl mx-auto">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-        <div class="lg:sticky lg:top-24">
-          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">{t('section.about.label')}</p>
-          <h2 id="trayectoria-title" class="text-3xl sm:text-4xl font-bold tracking-tight">{t('section.about.title')}</h2>
-          <p class="mt-3 text-lg leading-relaxed" style="color: var(--text-muted);">{t('section.about.subtitle')}</p>
-          <a
-            href="https://www.linkedin.com/in/mario-inostroza-softmedic/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="LinkedIn (opens in new tab)"
-            class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer mt-8"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-            LinkedIn
-          </a>
-        </div>
-        <Timeline lang={lang} />
-      </div>
-    </div>
-  </section>
-
   <section id="proyectos" class="py-24 px-4" aria-labelledby="proyectos-title">
     <div class="max-w-6xl mx-auto">
       <div class="mb-12">
@@ -259,6 +227,29 @@ const homeSchema = [
 
   <ArchitectureShowcase lang={lang} posts={allPosts} />
 
+  <section id="trayectoria" class="py-24 px-4" aria-labelledby="trayectoria-title">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+        <div class="lg:sticky lg:top-24">
+          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">{t('section.about.label')}</p>
+          <h2 id="trayectoria-title" class="text-3xl sm:text-4xl font-bold tracking-tight">{t('section.about.title')}</h2>
+          <p class="mt-3 text-lg leading-relaxed" style="color: var(--text-muted);">{t('section.about.subtitle')}</p>
+          <a
+            href="https://www.linkedin.com/in/mario-inostroza-softmedic/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn (opens in new tab)"
+            class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer mt-8"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            LinkedIn
+          </a>
+        </div>
+        <Timeline lang={lang} />
+      </div>
+    </div>
+  </section>
+
   <section id="stack" class="py-24 px-4" aria-labelledby="stack-title">
     <div class="max-w-6xl mx-auto">
       <div class="text-center mb-14">
@@ -279,13 +270,13 @@ const homeSchema = [
             label: t('stack.backend'),
             color: 'var(--accent-orange)',
             icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0018 0V5"/><path d="M3 12a9 3 0 0018 0"/>',
-            items: ['Node.js', 'PostgreSQL', 'pgvector', 'Drizzle ORM', 'Git'],
+            items: ['Node.js', 'NestJS', 'PostgreSQL', 'Redis', 'Drizzle ORM', 'Docker'],
           },
           {
             label: t('stack.ai'),
             color: 'var(--accent-green)',
             icon: '<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>',
-            items: ['Anthropic Claude', 'GLM-5', 'Kimi K2', 'Gemini', 'OpenClaw', 'MCP', 'WhatsApp API', 'Telegram API'],
+            items: ['Anthropic Claude', 'MCP', 'FSM / State Machines', 'pgvector', 'WhatsApp API', 'OpenClaw'],
           },
         ].map((group) => (
           <div class="glass-card p-6">
@@ -306,97 +297,7 @@ const homeSchema = [
     </div>
   </section>
 
-  {latestPosts.length > 0 && (
-  <section id="blog" class="py-24 px-4" aria-labelledby="blog-title">
-    <div class="max-w-6xl mx-auto">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
-        <div>
-          <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-cyan);">{t('section.blog.label')}</p>
-          <h2 id="blog-title" class="text-3xl sm:text-4xl font-bold tracking-tight">{t('section.blog.title')}</h2>
-          <p class="mt-2" style="color: var(--text-muted);">{t('section.blog.subtitle')}</p>
-        </div>
-        <a href={canonicalPath(base + '/blog')} class="btn-outline inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer shrink-0"
-          style="color: var(--accent-cyan); border-color: color-mix(in srgb, var(--accent-cyan) 20%, transparent); background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);"
-        >
-          {t('section.blog.cta')}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </a>
-      </div>
-
-      <div class="flex flex-col divide-y" style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); divide-color: var(--border-subtle);">
-        {latestPosts.map((post) => (
-          <a
-            href={postUrl(post, base)}
-            class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8 py-6 hover:opacity-80 transition-opacity duration-200"
-          >
-            <time
-              datetime={post.data.date.toISOString()}
-              class="text-xs tabular-nums shrink-0"
-              style="color: var(--text-faint); min-width: 6rem;"
-            >
-              {formatDate(post.data.date)}
-            </time>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <p class="text-base font-semibold group-hover:text-gradient transition-colors duration-200 truncate" style="color: var(--text-primary);">
-                  {post.data.title}
-                </p>
-                {post.data.youtubeId && (
-                  <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-md shrink-0"
-                    style="background: color-mix(in srgb, var(--accent-orange) 15%, transparent); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 30%, transparent);"
-                    title={t('badge.video')}
-                  >
-                    <svg class="w-2.5 h-2.5 text-red-500 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                    <span>{t('badge.video')}</span>
-                  </span>
-                )}
-              </div>
-              <p class="text-sm line-clamp-1" style="color: var(--text-muted);">{post.data.description}</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block"
-              style="color: var(--accent-cyan);"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </a>
-        ))}
-      </div>
-
-      <div class="mt-10">
-        <NewsletterSignup lang={lang} source="home-blog-en" />
-      </div>
-    </div>
-  </section>
-  )}
-
-  <section id="hubs" class="py-24 px-4" aria-labelledby="hubs-title">
-    <div class="max-w-6xl mx-auto">
-      <div class="mb-12">
-        <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">Topic guides</p>
-        <h2 id="hubs-title" class="text-3xl sm:text-4xl font-bold tracking-tight">Reading paths for the blog</h2>
-        <p class="mt-3 text-lg max-w-2xl" style="color: var(--text-muted);">Four living hubs that group new posts by tags. Every daily article lands in an editorial path automatically when it follows the taxonomy.</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {HUBS.map((hub) => (
-          <a href={hubPath(hub, lang)} class="glass-card group block p-6 hover:opacity-90 transition-opacity duration-200">
-            <p class="text-xs font-medium tracking-widest uppercase mb-3" style="color: var(--accent-orange);">{hub.eyebrow[lang]}</p>
-            <h3 class="text-xl font-semibold mb-3 group-hover:text-gradient transition-colors duration-200" style="color: var(--text-primary);">{hub.title[lang]}</h3>
-            <p class="text-sm leading-relaxed mb-4" style="color: var(--text-muted);">{hub.description[lang]}</p>
-            <div class="flex flex-wrap gap-2">
-              {hub.keywords.slice(0, 3).map((keyword) => (
-                <span class="px-2.5 py-1 text-xs rounded-md" style="background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-subtle);">{keyword}</span>
-              ))}
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
+  <BlogShowcase lang={lang} posts={allPosts} />
 
   <section id="contacto" class="py-24 px-4" aria-labelledby="contacto-title">
     <div class="max-w-3xl mx-auto text-center">
