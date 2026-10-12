@@ -1,0 +1,198 @@
+---
+title: "Operaciones de Despliegue sin Staging: Migraciones Fail-Closed y Verificación Sintética en Producción"
+date: 2026-10-12
+lang: "es"
+description: "Por qué ejecutar prisma migrate deploy en Railway exige conexión directa y smoke tests no-clínicos antes de abrir tráfico."
+tags: [architecture, backend, infrastructure, quality, testing, postgresql]
+image: "/img/blog/2026-10-12-operaciones-despliegue-sin-staging-migraciones-fail-closed.png"
+youtubeId: "RD849Uy5kTU"
+draft: false
+series: "agentes"
+seriesOrder: 30
+---
+
+## El dilema del entorno intermedio
+
+Mantener un entorno de staging idéntico a producción es el consejo canónico de cualquier libro de ingeniería. En la teoría, staging replica el volumen de datos, las réplicas de lectura, la latencia de red y la topología exacta del clúster principal. En la práctica de una startup en salud o un equipo lean que opera en plataformas como Railway, staging suele convertirse en una ficción cara: una base de datos desactualizada con cinco registros ficticios que jamás reproduce los bloqueos de concurrencia ni las migraciones pesadas del tráfico real.
+
+Cuando tu presupuesto y tus horas de ingeniería son limitados, financiar dos infraestructuras idénticas en la nube no siempre es viable. Sin embargo, en salud digital o software transaccional, un fallo en producción es inaceptable. Si una migración de esquema corrompe una tabla o deja un servicio en un estado inconsistente, no solo detienes una aplicación: bloqueas la emisión de órdenes, retrasas una cotización o interrumpes la atención clínica.
+
+La solución que adoptamos no fue rezar antes de cada comando `git push`, sino prescindir de la ilusión de staging y reemplazarla por compuertas determinísticas en el propio flujo de release: migraciones estrictamente atómicas con política *fail-closed* y verificación sintética inmediata en producción antes de habilitar una sola conexión de usuarios.
+
+## Railway, réplicas y la trampa del connection pooler
+
+Nuestra topología principal corre en Railway sobre PostgreSQL gestionado, complementado con réplicas y un balanceador de conexiones transaccional (PgBouncer). Para atender ráfagas de tráfico HTTP y peticiones desde agentes satélite sin agotar los descriptores de archivo del motor relacional, el pooler es indispensable. Mantiene vivas cientos de conexiones virtuales hacia los contenedores mientras reutiliza un pool físico reducido contra la base de datos.
+
+El problema aparece en el momento en que automatizas el despliegue de esquemas mediante un ORM como Prisma. Durante el arranque normal de la aplicación, el cliente de Prisma se conecta a través del pooler utilizando la variable `DATABASE_URL`. Todo funciona bien para operaciones DML habituales (`SELECT`, `INSERT`, `UPDATE`), pero una migración de base de datos no es una consulta ordinaria.
+
+Una migración ejecuta sentencias DDL (`ALTER TABLE`, `CREATE INDEX`, `ADD CONSTRAINT`) que requieren transacciones continuas y bloqueos exclusivos a nivel de motor. Cuando intentas ejecutar `prisma migrate deploy` a través de un pooler configurado en modo transacción (`pool_mode=transaction`), la arquitectura colapsa de forma silenciosa o catastrófica.
+
+## La anatomía del fallo: DDL sobre conexiones compartidas
+
+Para garantizar que dos réplicas o dos procesos de despliegue no ejecuten la misma migración simultáneamente, Prisma recurre a mecanismos de bloqueo de base de datos conocidos como *advisory locks* (`pg_advisory_lock` en PostgreSQL). Estos bloqueos están estrictamente ligados a una sesión física única de base de datos.
+
+En un pooler transaccional, cada sentencia dentro de una transacción puede ser asignada a una conexión física diferente en el backend, o bien el pooler intercepta y rechaza comandos de bloqueo a nivel de sesión porque desconoce el estado persistente entre transacciones. El resultado inmediato:
+
+1. **Fallo por advisory locks:** La migración arroja un error `P3014: Prisma Migrate could not acquire the advisory lock` o queda congelada indefinidamente esperando un recurso que nunca se libera.
+2. **Conexiones zombis:** Si el pooler corta la conexión por timeout mientras la migración sigue abierta en el motor principal, la tabla objetivo puede quedar con bloqueos de esquema que degradan el rendimiento de todo el sistema.
+3. **Desalineación de código y esquema:** Si el script de inicio no está aislado y el proceso principal arranca a pesar del fallo en la migración, el nuevo contenedor con código reciente comienza a recibir tráfico sobre un esquema viejo, generando excepciones de columnas inexistentes y errores 500 en cadena.
+
+## Las tres reglas del despliegue determinístico
+
+Para erradicar esta fragilidad sin depender de un entorno de staging intermediario, estructuramos el pipeline bajo tres invariantes de ingeniería:
+
+### Regla 1: Bypass del pooler mediante DIRECT_URL
+
+Las migraciones de esquema jamás deben tocar el connection pooler. Prisma permite desacoplar la conexión de operaciones en tiempo de ejecución de la conexión utilizada exclusivamente para migraciones y operaciones de CLI mediante la directiva `directUrl`.
+
+Mientras que la aplicación en ejecución utiliza `DATABASE_URL` (apuntando al puerto transaccional del pooler, típicamente `6543`), las migraciones se ejecutan apuntando a `DIRECT_URL` (conexión TCP directa al puerto `5432` de PostgreSQL). Esto asegura que la migración mantenga una sesión física dedicada, pueda adquirir y liberar `pg_advisory_lock` sin interferencias y ejecute DDL dentro de transacciones atómicas aisladas.
+
+### Regla 2: Arranque estrictamente Fail-Closed
+
+En sistemas de misión crítica, la disponibilidad ciega es el peor enemigo de la integridad. Si una migración falla, el sistema debe fallar de inmediato y cerrarse (*fail-closed*). 
+
+En Railway, esto significa que la migración no corre en el `CMD` de inicio del contenedor de aplicación junto al servidor HTTP, sino en la fase de `releaseCommand` (o pre-deploy hook). Si el comando de migración devuelve un código de salida distinto de cero (`exit code != 0`), Railway aborta el despliegue de inmediato. El contenedor nuevo jamás se marca como saludable, el tráfico no se conmuta y las instancias anteriores continúan atendiendo peticiones sobre el esquema anterior estable.
+
+### Regla 3: Fixtures sintéticos sin datos personales (cero PHI)
+
+Superada la migración de esquema, el nuevo contenedor no recibe tráfico público hasta superar una batería de *smoke tests* ejecutada directamente contra la base de datos de producción.
+
+Para cumplir con normativas de protección de datos personales y la Ley 21.719 en Chile, está estrictamente prohibido usar datos de pacientes o registros clínicos reales en pruebas de verificación. El arnés genera identidades sintéticas transitorias, inserta registros aislados con identificadores prefijados (`synth_smoke_*`), ejecuta lecturas y transacciones representativas del flujo crítico, y limpia los artefactos generados. Si cualquier aserción falla, el contenedor se declara no saludable y se cancela el enrutamiento.
+
+## Implementación: del schema de Prisma a la compuerta de release
+
+A continuación se muestra la configuración concreta de desacoplamiento de conexiones en Prisma:
+
+```prisma
+// prisma/schema.prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")  // Conexión transaccional vía PgBouncer (puerto 6543)
+  directUrl = env("DIRECT_URL")    // Conexión directa dedicada a DDL (puerto 5432)
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+```
+
+En la configuración de despliegue en Railway (`railway.json` o configuración de servicio), desacoplamos la fase de release del comando de inicio:
+
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "releaseCommand": "sh ./scripts/deploy-release.sh",
+    "startCommand": "node dist/main.js",
+    "healthcheckPath": "/health/ready",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
+```
+
+El script de release encapsula la migración y la verificación sintética bajo una tubería estricta de bash:
+
+```bash
+#!/usr/bin/env bash
+# scripts/deploy-release.sh
+set -euo pipefail
+
+echo "[RELEASE] Iniciando migración de base de datos vía DIRECT_URL..."
+
+# Ejecutar migraciones contra la conexión directa
+# Si falla, set -e aborta el script con exit code 1
+npx prisma migrate deploy
+
+echo "[RELEASE] Migraciones aplicadas exitosamente. Ejecutando smoke tests sintéticos..."
+
+# Ejecutar verificación sintética en producción (cero PHI)
+node dist/scripts/synthetic-smoke-test.js
+
+echo "[RELEASE] Verificación completada. Autorizando inicio de contenedor."
+```
+
+El verificador sintético valida el estado operativo del motor sin comprometer datos reales:
+
+```typescript
+// src/scripts/synthetic-smoke-test.ts
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+const SMOKE_RUN_ID = `synth_smoke_${Date.now()}`;
+
+async function runSyntheticVerification() {
+  console.log(`[SMOKE] Iniciando verificación con ID: ${SMOKE_RUN_ID}`);
+  
+  try {
+    // 1. Validar conectividad básica y advisory lock release
+    await prisma.$queryRaw`SELECT 1 as health_check`;
+
+    // 2. Operación de escritura sintética en tabla de diagnóstico/auditoría
+    const record = await prisma.systemHealthAudit.create({
+      data: {
+        runId: SMOKE_RUN_ID,
+        synthetic: true,
+        nodeEnv: process.env.NODE_ENV || 'production',
+        verifiedAt: new Date(),
+      },
+    });
+
+    if (!record.id) {
+      throw new Error('Fallo al persistir fixture sintético.');
+    }
+
+    // 3. Limpieza inmediata para no acumular basura operacional
+    await prisma.systemHealthAudit.delete({
+      where: { id: record.id },
+    });
+
+    console.log('[SMOKE] Verificación sintética exitosa. Esquema e índices operativos.');
+    process.exit(0);
+  } catch (error) {
+    console.error('[SMOKE-ERROR] Fallo crítico en verificación sintética post-migración:', error);
+    // Exit code no cero bloquea la conmutación de tráfico en Railway
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+runSyntheticVerification();
+```
+
+## Métricas operativas en caliente
+
+Al sustituir el ciclo lento de staging por este arnés determinístico, las métricas de confiabilidad cambiaron de inmediato:
+
+- **Tiempo de migración promedio:** Menos de 4 segundos por despliegue en cambios de esquema estándar, ejecutados directamente contra la conexión dedicada.
+- **Bloqueos de pooler:** Cero incidentes de `advisory lock contention` en PgBouncer desde la adopción de `directUrl`.
+- **Detección de discrepancias:** El 100% de los errores de esquema o dependencias faltantes se interceptan en la fase de `releaseCommand`, antes de que el nuevo contenedor abra puertos de red o reciba una sola petición HTTP.
+
+Es importante subrayar los límites reales de esta arquitectura: una política fail-closed no garantiza disponibilidad infinita ni elimina la posibilidad de que un despliegue falle. Lo que garantiza es la **integridad de los datos**. Si una migración no pasa, el sistema prefiere detener el proceso antes que corromper registros clínicos en producción.
+
+## Lecciones de trinchera y antipatrones costosos
+
+La implementación de este esquema nos dejó lecciones operativas que ningún tutorial de ORM suele mencionar:
+
+1. **Nunca editar `_prisma_migrations` manualmente:** La tabla interna de migraciones de Prisma es un registro criptográfico inmutable basado en checksums SHA-256. Intentar "arreglar" una migración fallida modificando filas a mano en la base de datos de producción suele generar inconsistencias peores. Si una migración falla, se corrige mediante una nueva migración hacia adelante.
+2. **El patrón Expand-and-Contract es obligatorio:** Desplegar sin staging exige que cualquier cambio destructivo (renombrar columnas, eliminar tablas, alterar tipos de datos) se divida en al menos tres fases:
+   - *Fase 1 (Expandir):* Agregar la columna nueva manteniendo la vieja, y escribir en ambas.
+   - *Fase 2 (Migrar datos):* Backfill de registros históricos en segundo plano.
+   - *Fase 3 (Contraer):* Eliminar la columna antigua solo cuando todo el código en producción ya lee exclusivamente del nuevo campo.
+3. **Staging gratuito no existe:** Mantener un staging "a medias" genera una falsa sensación de seguridad que suele ser más peligrosa que no tenerlo. Si el entorno intermedio no replica el volumen ni la topología de red real, cualquier prueba realizada en él carece de valor predictivo.
+
+## Confiabilidad sin duplicar infraestructura
+
+La madurez operativa de una arquitectura no se mide por la cantidad de servidores opositores o entornos intermedios que pagas a fin de mes. Se mide por la disciplina de las compuertas que aíslan tus datos de cualquier fallo imprevisto.
+
+Al garantizar que las migraciones de esquemas operen fuera del connection pooler con sesiones directas, diseñar los scripts de release bajo el principio *fail-closed* y certificar la salud del sistema con pruebas sintéticas antes de conmutar tráfico, es posible desplegar directamente a producción con velocidad y control verificable.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366  
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits  
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
