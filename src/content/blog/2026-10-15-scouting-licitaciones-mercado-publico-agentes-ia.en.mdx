@@ -1,0 +1,146 @@
+---
+title: "Public Procurement Scouting Without Operational Blindness: AI Agents for Fast Qualification"
+description: "How to build a commercial scouting pipeline with Next.js and AI agents to parse public tender documents, extract disqualifying clauses, and qualify fast."
+pubDate: 2026-10-15
+date: 2026-10-15
+author: "Mario Inostroza"
+lang: "en"
+image: "/img/blog/scouting-licitaciones-mercado-publico-agentes-ia.png"
+tags: [ai, agents, b2b, automation, nextjs, typescript]
+canonicalSlug: "2026-10-15-public-procurement-scouting-ai-agents"
+draft: false
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 2
+---
+
+It is 8:30 in the morning. You open the government procurement portal and face an endless stream of newly published tenders: hundreds of opportunity notices, generic descriptions, and dozens of compressed `.zip` or `.rar` attachments containing administrative bidding terms.
+
+For any B2B company or technology provider bidding on public contracts, this daily routine is an exhausting operational drain. A commercial and engineering team can easily spend four or five hours parsing administrative annexes only to discover, on page 47 of the special clauses, an insurmountable blocker: the tender requires five consecutive years of audited billing in an ultra-specific category or a bank guarantee bond that disproportionately drains working capital.
+
+Manual prospecting in public procurement suffers from a structural flaw: teams are not failing due to a lack of available tenders; they are suffering from operational blindness caused by the sheer volume of unstructured documents and the compounding cost of late disqualification.
+
+## The Cost of Late Disqualification in Public Bidding
+
+In standard B2B private sales, qualifying a prospect often takes a quick discovery call covering budget, authority, and timelines. In the public sector, the dynamics are inverted: all information is open and transparent, yet intentionally scattered across dozens of legal documents written in dense administrative jargon.
+
+The true opportunity cost for an engineering and commercial team is not drafting the technical bid; it is the hours spent analyzing tenders they never had a realistic path to bid on. If your team takes two hours to discover that a public tender mandates an obscure certification you do not hold, those two hours were stolen from crafting a winning technical proposal where you held a distinct competitive advantage.
+
+Passive manual monitoring—searching portals with broad keywords and downloading PDFs indiscriminately—leads to two damaging outcomes:
+
+1. **Decision fatigue:** high-margin strategic tenders get overlooked because they were buried under inaccurate procurement categories or obscure procurement codes.
+2. **Non-viable submissions:** teams invest significant engineering resources into complex proposals without catching strict administrative barriers, resulting in early disqualification during document opening.
+
+Solving this bottleneck does not require building an AI tool that attempts to write public proposals automatically. The primary engineering goal is much simpler and more impactful: build a **fast disqualification mechanism** that extracts disqualifying criteria and evaluates technical viability within the first five minutes.
+
+## Deconstructing Public Tenders: What to Catch Before Opening an Editor
+
+When analyzing procurement documents from platforms like Chile's Mercado Público, over 80% of disqualifications or commercial mismatches stem from four predictable variables:
+
+- **Strict admissibility requirements:** specific ISO certifications, regulatory permits, security clearances, or non-negotiable minimum company track records.
+- **Financial liquidity and guarantee instruments:** mandatory bid bonds, performance bonds, insurance policies with custom clauses, and rapid delivery schedules that tie up cash flow.
+- **Clarification inquiry windows:** tight deadlines for the official question-and-answer period (often only 48 to 72 hours from publication), where technical ambiguities must be resolved.
+- **Evaluation and weighting scorecards:** scoring matrices where price may represent 70% against 30% technical weight, or vice versa, dictating whether the potential profit margin justifies the operational effort.
+
+When an automated pipeline extracts these four variables deterministically into structured records, the commercial workflow shifts from passive document skimming to an actionable decision board.
+
+## Building the Scouting Architecture: Next.js, TypeScript, and Agentic Extraction
+
+To explore this workflow, we built **RadarPyme**, an exploratory functional proof of concept and technical portfolio application designed to decouple public tender ingestion and streamline commercial qualification.
+
+The system was engineered on an end-to-end typed stack: Next.js with TypeScript, automated ingestion workers, and specialized extraction agents constrained by strict Zod schema validation.
+
+```text
+SCOUTING PIPELINE ARCHITECTURE:
+
+  [ Public Procurement API / Portal ]
+                  │
+                  ▼
+  [ Ingestion & Normalization ]   ───► Base metadata extraction
+                  │
+                  ▼
+  [ Deterministic Rule Filter ]   ───► Business constraints (budget, region, industry)
+                  │ (Passes filter)
+                  ▼
+  [ Extraction Agent ]            ───► Document parsing with typed Zod schemas
+                  │
+                  ▼
+  [ Decision Pipeline ]           ───► Discarded | Under Review | Qualified Candidates
+```
+
+The core design principle here is to never delegate business logic or initial filtering to the language model. Feeding 90-page administrative tender documents directly to an LLM without preprocessing is expensive, slow, and prone to hallucinating numerical figures.
+
+Instead, the system applies deterministic TypeScript filters first (budget ranges, geographical regions, submission deadlines). Only when a tender clears these minimum operational thresholds does the document payload enter the structured extraction agent.
+
+### Typed Extraction with Zod Schemas
+
+To ensure that the agent's output can be safely consumed by the pipeline without runtime crashes, we enforce a strict contract using TypeScript schemas:
+
+```typescript
+import { z } from "zod";
+
+export const TenderQualificationSchema = z.object({
+  tenderId: z.string().describe("Official public procurement tender ID"),
+  title: z.string().describe("Tender title or procurement call"),
+  purchasingEntity: z.string().describe("Public agency or ministry requesting the bid"),
+  estimatedBudgetClp: z.number().nullable().describe("Estimated budget in local currency (CLP)"),
+  submissionDeadline: z.string().describe("Bid submission closing date and time"),
+  queryDeadline: z.string().describe("Deadline to submit clarification questions"),
+  warrantyBondRequired: z.boolean().describe("Whether a bid bond or bank guarantee is required"),
+  warrantyAmountClp: z.number().nullable().describe("Required guarantee bond amount"),
+  mandatoryCertifications: z.array(z.string()).describe("Mandatory exclusions or technical certifications"),
+  minimumExperienceYears: z.number().default(0).describe("Minimum required years of verified corporate experience"),
+  disqualifyingClauses: z.array(z.string()).describe("Disqualifying administrative or technical clauses"),
+  evaluationCriteria: z.array(
+    z.object({
+      criterion: z.string(),
+      weightPercentage: z.number(),
+    })
+  ).describe("Scoring matrix for technical and commercial evaluation"),
+});
+
+export type TenderQualification = z.infer<typeof TenderQualificationSchema>;
+```
+
+By constraining the model to output valid JSON matching this schema, we eliminate conversational filler and produce structured records that immediately populate the commercial pipeline board.
+
+## Engineering Trade-offs: Pre-Filtering Saves Tokens and Reduces False Positives
+
+During early prototyping, the most tempting mistake was sending entire document attachments into multimodal vision models or optical character recognition engines.
+
+Public procurement attachments present nasty real-world edge cases: low-resolution scanned legal deeds, corrupted tables, and dozens of pages of generic municipal decrees that carry zero commercial relevance.
+
+The key breakthrough came not from tweaking model temperatures or swapping foundation models, but from introducing a deterministic **heuristic pre-filtering phase**:
+
+1. **Financial threshold checks:** if the required bid bond amount exceeds the company's designated liquidity parameters, the tender is automatically tagged as discarded with the exact reason logged, avoiding unnecessary inference cost.
+2. **Relevant text slicing:** instead of passing all 80 pages of a specification, we slice sections containing strict admissibility keywords ("minimum criteria", "grounds for rejection", "technical evaluation").
+3. **Timeline cross-checks:** if the official clarification window has already elapsed and the specifications contain ambiguous technical criteria, the system flags the operational risk before engineers commit time to drafting.
+
+Pairing deterministic rules with targeted LLM extraction ensures that computational spend is concentrated exclusively on qualified opportunities.
+
+## Moving from Passive Monitoring to an Actionable Pipeline
+
+Modernizing how B2B teams engage with government procurement requires shifting the underlying mental model. Traditional monitoring is passive and reactive: an analyst sifts through inbox notifications hoping to spot relevant keywords.
+
+An agent-driven pipeline converts that monitoring into a structured workflow with explicit statuses:
+
+- **Discarded (with explicit reason):** tenders that fail core criteria (experience, certifications, or margin thresholds). The team spends zero minutes debating them.
+- **Under Technical Review:** viable tenders with specific ambiguities that require submitting clarification questions to the official public forum before the deadline.
+- **Qualified Candidates:** opportunities with verified admissibility, balanced evaluation criteria, and delivery timelines compatible with current team capacity.
+
+The goal is not to promise guaranteed contract awards—final award decisions ultimately depend on proposal quality, pricing, and government evaluation panels. The true engineering leverage lies in **eliminating operational blindness**: giving commercial and technical teams the visibility to focus their energy entirely where they have a legitimate, defensible path to compete.
+
+## What's Next in the Backlog
+
+In upcoming iterations of this portfolio exploration, we are focusing on two pipeline enhancements:
+
+- **Automated Q&A Forum Tracking:** an event listener that detects when public agencies post official clarifications or modify terms, automatically re-running the qualification check.
+- **Pricing Sheet Normalization:** automated parsing of multi-tab Excel bidding sheets to match requested item catalogs against internal SKU price models.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)

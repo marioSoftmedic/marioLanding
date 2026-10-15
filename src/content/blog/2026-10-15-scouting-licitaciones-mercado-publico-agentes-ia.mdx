@@ -1,0 +1,146 @@
+---
+title: "Scouting de Licitaciones en Mercado Público sin Ceguera Operativa: Agentes de IA para Descarte Rápido"
+description: "Cómo diseñar un pipeline con Next.js y agentes de IA para parsear bases de Mercado Público, extraer cláusulas excluyentes y priorizar licitaciones sin ceguera operativa."
+pubDate: 2026-10-15
+date: 2026-10-15
+author: "Mario Inostroza"
+lang: "es"
+image: "/img/blog/scouting-licitaciones-mercado-publico-agentes-ia.png"
+tags: [ai, agents, b2b, automation, nextjs, typescript]
+canonicalSlug: "2026-10-15-scouting-licitaciones-mercado-publico-agentes-ia"
+draft: false
+audience: "builders"
+funnelStage: "consideration"
+primaryCta: "contact"
+newsletterTopic: "ai-agents-production"
+newsletterPriority: 2
+---
+
+Son las 8:30 de la mañana. Abres el portal de compras públicas del Estado y te encuentras con un listado interminable de nuevas convocatorias: cientos de fichas técnicas, descripciones genéricas y decenas de archivos adjuntos comprimidos en carpetas `.zip` o `.rar`. 
+
+Para cualquier empresa proveedora o PyME B2B en Chile que vende tecnología, insumos o servicios profesionales al sector público, este ritual diario representa una fricción desgastante. El equipo comercial puede destinar cuatro o cinco horas revisando anexos administrativos solo para descubrir, en la página 47 de las bases administrativas especiales, una cláusula insalvable: exigen cinco años de facturación auditada continua en una categoría específica o una boleta de garantía bancaria por un monto desproporcionado respecto al margen del proyecto.
+
+La prospección manual en compras públicas sufre de un problema estructural: no es la falta de oportunidades lo que agota a los equipos, sino la ceguera operativa provocada por el volumen de información no estructurada y el costo de descartar tarde.
+
+## La trampa del descarte tardío en compras públicas
+
+En la venta B2B tradicional hacia el sector privado, calificar un prospecto suele resolverse con un par de preguntas directas sobre presupuesto, autoridad y tiempos de decisión. En el Estado, las reglas son exactamente las opuestas: toda la información es pública y transparente, pero está deliberadamente dispersa en pliegos administrativos de decenas de páginas redactados en jerga jurídica heterogénea.
+
+El verdadero costo de oportunidad para un equipo técnico o comercial no está en preparar la oferta económica; está en las horas invertidas analizando convocatorias en las que nunca debieron participar. Si tu equipo tarda dos horas en detectar que una licitación exige una certificación técnica con la que no cuentan, esas dos horas se restaron del análisis riguroso de una propuesta donde sí existía ventaja competitiva real.
+
+La vigilancia manual pasiva —ingresar a portales mediante palabras clave amplias y descargar documentos a ciegas— genera dos resultados igualmente perjudiciales:
+
+1. **Fatiga de decisión:** el equipo omite licitaciones estratégicas porque quedaron sepultadas bajo códigos de adquisición confusos o categorías mal clasificadas por la entidad compradora.
+2. **Postulaciones inviables:** se avanza en propuestas técnicas complejas sin haber verificado a fondo los requisitos administrativos excluyentes, derivando en descalificaciones tempranas durante la apertura de antecedentes.
+
+Para resolver este cuello de botella, el objetivo no consiste en construir un sistema que intente redactar propuestas automáticas de forma imprudente. El objetivo prioritario de ingeniería es crear un mecanismo de **descarte rápido**: extraer los criterios críticos y calificar la viabilidad técnica en los primeros cinco minutos.
+
+## Anatomía de una convocatoria: qué buscar antes de abrir el editor
+
+Cuando analizamos la estructura documental de las licitaciones en Mercado Público, identificamos que más del 80% de los motivos de descalificación o inviabilidad comercial se concentran en cuatro variables críticas:
+
+- **Requisitos de admisibilidad excluyentes:** certificaciones específicas (ISO, registros sanitarios, acreditaciones de seguridad), años de experiencia mínima de la empresa o títulos profesionales no homologables.
+- **Instrumentos de garantía y liquidez:** exigencia de boletas de garantía de seriedad de la oferta o fiel cumplimiento, pólizas de seguro con glosas específicas y plazos de entrega inmediatos que comprometen el flujo de caja.
+- **Calendario y ventanas de consulta:** plazos acotados para el período de preguntas y respuestas (muchas veces de apenas 48 a 72 horas desde la publicación), donde se define la aclaración de ambigüedades técnicas.
+- **Criterios de ponderación y evaluación:** tablas donde el factor precio puede pesar un 70% frente a un 30% técnico, o viceversa, condicionando si el margen comercial justifica el esfuerzo operativo.
+
+Si un sistema automatizado es capaz de extraer estas cuatro variables de forma determinística y estructurada, el proceso comercial se transforma radicalmente: pasa de la lectura pasiva de cientos de páginas a un tablero de decisiones filtradas.
+
+## Arquitectura de scouting: Next.js, TypeScript y extracción agéntica
+
+Para experimentar con esta aproximación construimos **RadarPyme**, una prueba de concepto funcional y herramienta de portafolio técnico orientada a explorar cómo desacoplar la ingesta de datos públicos y acelerar la calificación de oportunidades.
+
+La arquitectura se diseñó sobre un stack ligero y tipado de punta a punta: Next.js con TypeScript, automatización de scripts de ingesta y agentes especializados con validación estricta de esquemas mediante Zod.
+
+```text
+ARQUITECTURA DEL PIPELINE DE SCOUTING:
+
+  [ Mercado Público API / Portal ]
+                 │
+                 ▼
+  [ Ingesta & Normalización ] ───► Extracción de metadatos base
+                 │
+                 ▼
+  [ Filtro Determinístico ]   ───► Reglas de negocio (monto, región, rubro)
+                 │ (Pasa filtro)
+                 ▼
+  [ Agente de Extracción ]    ───► Parsing de bases con schemas tipados (Zod)
+                 │
+                 ▼
+  [ Pipeline de Decisión ]    ───► Descartadas | En Revisión | Candidatas
+```
+
+El principio fundamental de esta arquitectura es no delegar la lógica de negocio ni el filtrado inicial al modelo de lenguaje. Enviar bases completas de 90 páginas a un LLM sin procesamiento previo es costoso, lento y propenso a alucinaciones en cifras numéricas. 
+
+Primero, el sistema ejecuta filtros determinísticos en TypeScript (rango presupuestario, ubicación geográfica, fechas límite). Solo cuando una convocatoria supera estos umbrales mínimos, el documento ingresa al agente de extracción estructurada.
+
+### Extracción tipada con esquemas Zod
+
+Para garantizar que las salidas del agente sean procesables por el pipeline sin errores de ejecución, definimos un contrato estricto mediante esquemas de TypeScript:
+
+```typescript
+import { z } from "zod";
+
+export const TenderQualificationSchema = z.object({
+  tenderId: z.string().describe("Identificador oficial de la licitación"),
+  title: z.string().describe("Título de la convocatoria"),
+  purchasingEntity: z.string().describe("Organismo público requirente"),
+  estimatedBudgetClp: z.number().nullable().describe("Presupuesto estimado en CLP"),
+  submissionDeadline: z.string().describe("Fecha y hora de cierre de ofertas"),
+  queryDeadline: z.string().describe("Fecha límite para formular preguntas"),
+  warrantyBondRequired: z.boolean().describe("Exige boleta de garantía de seriedad"),
+  warrantyAmountClp: z.number().nullable().describe("Monto exigido en la garantía"),
+  mandatoryCertifications: z.array(z.string()).describe("Certificaciones o acreditaciones excluyentes"),
+  minimumExperienceYears: z.number().default(0).describe("Años de experiencia acreditada exigidos"),
+  disqualifyingClauses: z.array(z.string()).describe("Cláusulas administrativas o técnicas excluyentes"),
+  evaluationCriteria: z.array(
+    z.object({
+      criterion: z.string(),
+      weightPercentage: z.number(),
+    })
+  ).describe("Matriz de ponderación técnica y económica"),
+});
+
+export type TenderQualification = z.infer<typeof TenderQualificationSchema>;
+```
+
+Al obligar al agente a responder contra este esquema, eliminamos el texto conversacional ambiguo y obtenemos un payload estructurado que alimenta de inmediato la vista de tablero comercial.
+
+## El gotcha técnico: el descarte previo ahorra tokens y falsos positivos
+
+Durante el desarrollo de los primeros prototipos, el error más evidente fue intentar procesar cada archivo adjunto directamente mediante reconocimiento óptico de caracteres o lectura completa con modelos de lenguaje.
+
+Los anexos de compras públicas presentan desafíos particulares: documentos escaneados en baja resolución, tablas con formatos rotos, resoluciones exentas que solo contienen fórmulas legales repetitivas y decretos que no aportan valor a la decisión comercial.
+
+Descubrimos que la optimización más crítica no consistió en cambiar de modelo ni en ajustar la temperatura de generación, sino en incorporar una fase intermedia de **heurística de descarte por reglas**:
+
+1. **Revisión de glosas financieras:** si el monto de la garantía de seriedad excede el umbral de liquidez configurado para la PyME, la licitación se marca como descartada automáticamente, registrando la razón exacta sin consumir procesamiento analítico adicional.
+2. **Segmentación de texto relevante:** en lugar de alimentar las 80 páginas del pliego, segmentamos las secciones que contienen las palabras clave de admisibilidad ("requisitos mínimos", "causales de rechazo", "criterios técnicos").
+3. **Validación cruzada de plazos:** si el período de consultas ya expiró y las bases presentan inconsistencias técnicas evidentes en los anexos, el sistema advierte el riesgo operativo antes de que el equipo asigne horas de ingeniería.
+
+Esta combinación entre reglas determinísticas y modelos de lenguaje garantiza que el procesamiento computacional se concentre únicamente en las oportunidades viables.
+
+## De la vigilancia pasiva a un pipeline comercial estructurado
+
+Transformar la prospección en compras públicas significa cambiar el modelo mental de trabajo. La vigilancia tradicional es reactiva: un colaborador revisa alertas por correo electrónico o navega por un portal esperando reconocer una oportunidad entre cientos de líneas.
+
+Un pipeline agéntico estructurado convierte esa vigilancia en un flujo continuo con estados definidos:
+
+- **Descartadas (con motivo explícito):** licitaciones que no cumplen con los requisitos de experiencia, certificaciones o margen comercial mínimo. El equipo no pierde un solo minuto en ellas.
+- **En revisión técnica:** convocatorias viables donde existen dudas específicas sobre requerimientos que ameritan formular consultas en el foro oficial antes de la fecha límite.
+- **Candidatas a postular:** oportunidades con requisitos validados, matriz de evaluación favorable y tiempos de entrega compatibles con la capacidad del equipo.
+
+La ventaja no radica en asegurar adjudicaciones de manera automática, pues la evaluación final siempre dependerá de la calidad técnica de la propuesta y de las decisiones de las comisiones evaluadoras del Estado. La verdadera ventaja está en **eliminar la ceguera operativa**: permitir que los equipos comerciales enfoquen su energía y talento técnico en aquellas propuestas donde realmente tienen la capacidad de competir y ganar.
+
+## Lo que viene en el backlog
+
+En las siguientes iteraciones de esta exploración de portafolio, trabajaremos en dos mejoras para el pipeline de procesamiento:
+
+- **Seguimiento automatizado de aclaraciones y respuestas:** un observador que alerte cuando la entidad pública modifique bases o responda consultas en el foro, actualizando automáticamente el análisis de viabilidad.
+- **Normalización de tablas de oferta económica:** parseo automático de planillas Excel de requerimientos para comparar ítems unitarios contra catálogos internos de precios.
+
+---
+
+📱 [WhatsApp](https://wa.me/56962170366): +56962170366
+🐦 [X.com](https://x.com/mariohealthbits): @mariohealthbits
+🌐 [mariohealthbits.dev](https://mariohealthbits.dev)
