@@ -1,0 +1,38 @@
+---
+import { HUBS, hubPath } from '../lib/hubs';
+import { useTranslations, type Lang } from '../i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<section id="hubs" class="py-16 px-4" aria-labelledby="hubs-title">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-medium tracking-widest uppercase mb-2" style="color: var(--accent-orange);">
+          {t('section.hubs.label')}
+        </p>
+        <h2 id="hubs-title" class="text-2xl sm:text-3xl font-bold tracking-tight">
+          {t('section.hubs.title')}
+        </h2>
+      </div>
+
+      <nav aria-label={t('section.hubs.label')} class="flex flex-wrap gap-2">
+        {HUBS.map((hub) => (
+          <a
+            href={hubPath(hub, lang)}
+            class="px-3 py-1.5 text-xs rounded-lg transition-opacity hover:opacity-80"
+            style="background: var(--accent-orange-glow); color: var(--accent-orange); border: 1px solid color-mix(in srgb, var(--accent-orange) 25%, transparent);"
+          >
+            {hub.title[lang]}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </div>
+</section>

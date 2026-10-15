@@ -61,6 +61,10 @@ export const ui = {
 		"section.videos.more": "Más explainers técnicos",
 		"section.videos.channel-cta": "Canal de YouTube",
 		"section.videos.channel-desc": "Videos técnicos bilingües sobre arquitectura, interoperabilidad y agentes.",
+		"section.videos.shorts-label": "Shorts de la semana",
+		"section.videos.watch-youtube": "Ver en YouTube",
+		"section.hubs.label": "Temas",
+		"section.hubs.title": "Guías técnicas por tema",
 		"badge.video": "Video Explainer",
 		// Blog section (homepage preview)
 		"section.blog.label": "Escritura",
@@ -179,6 +183,10 @@ export const ui = {
 		"section.videos.more": "More technical explainers",
 		"section.videos.channel-cta": "YouTube Channel",
 		"section.videos.channel-desc": "Bilingual technical videos on infrastructure, interoperability, and agents.",
+		"section.videos.shorts-label": "Weekly shorts",
+		"section.videos.watch-youtube": "Watch on YouTube",
+		"section.hubs.label": "Topics",
+		"section.hubs.title": "Technical guides by topic",
 		"badge.video": "Video Explainer",
 		// Blog section (homepage preview)
 		"section.blog.label": "Writing",

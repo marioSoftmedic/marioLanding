@@ -1,8 +1,8 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { getCollection } from 'astro:content';
-import { postUrl } from '../lib/relations';
 import { basePath, useTranslations, type Lang } from '../i18n/utils';
+import { getShowcaseVideos } from '../lib/showcase-videos';
 import YouTubeEmbed from './YouTubeEmbed.astro';
 
 interface Props {
@@ -15,9 +15,7 @@ const t = useTranslations(lang);
 const base = basePath(lang);
 
 const allPosts = passedPosts ?? (await getCollection('blog'));
-const videos = allPosts
-  .filter((p) => !p.data.draft && p.data.lang === lang && Boolean(p.data.youtubeId))
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const videos = await getShowcaseVideos(allPosts, lang, base);
 
 const flagship = videos[0];
 const moreVideos = videos.slice(1, 3);
@@ -56,7 +54,7 @@ const formatDate = (date: Date) =>
           </svg>
           <span>{t('section.videos.channel-cta')}</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
+            <path d="M5 12h14M12 5l7 7-7-7"/>
           </svg>
         </a>
       </div>
@@ -72,32 +70,34 @@ const formatDate = (date: Date) =>
               >
                 {t('section.videos.featured')}
               </span>
-              <time datetime={flagship.data.date.toISOString()} class="text-xs tabular-nums" style="color: var(--text-faint);">
-                {formatDate(flagship.data.date)}
+              <time datetime={flagship.date.toISOString()} class="text-xs tabular-nums" style="color: var(--text-faint);">
+                {formatDate(flagship.date)}
               </time>
             </div>
 
             <div class="overflow-hidden rounded-xl">
               <YouTubeEmbed
-                id={flagship.data.youtubeId!}
-                title={flagship.data.title}
+                id={flagship.youtubeId}
+                title={flagship.title}
                 label="Architecture Whiteboard"
               />
             </div>
 
             <div class="mt-5">
               <h3 class="text-xl sm:text-2xl font-bold tracking-tight mb-2" style="color: var(--text-primary);">
-                {flagship.data.title}
+                {flagship.title}
               </h3>
               <p class="text-sm sm:text-base leading-relaxed mb-4" style="color: var(--text-muted);">
-                {flagship.data.description}
+                {flagship.description}
               </p>
               <a
-                href={postUrl(flagship, base)}
+                href={flagship.href}
+                target={flagship.external ? '_blank' : undefined}
+                rel={flagship.external ? 'noopener noreferrer' : undefined}
                 class="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200 group"
                 style="color: var(--accent-cyan);"
               >
-                <span>{t('section.videos.read-post')}</span>
+                <span>{flagship.external ? t('section.videos.watch-youtube') : t('section.videos.read-post')}</span>
                 <svg
                   width="14"
                   height="14"
@@ -109,10 +109,45 @@ const formatDate = (date: Date) =>
                   stroke-linejoin="round"
                   class="transition-transform duration-200 group-hover:translate-x-1"
                 >
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                  <path d="M5 12h14M12 5l7 7-7-7"/>
                 </svg>
               </a>
             </div>
+
+            {flagship.shorts.length > 0 && (
+              <div class="mt-5 pt-5" style="border-top: 1px solid var(--border-subtle);">
+                <h4 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--text-faint);">
+                  {t('section.videos.shorts-label')}
+                </h4>
+                <div class="flex gap-3">
+                  {flagship.shorts.map((shortId) => (
+                    <a
+                      href={`https://www.youtube.com/shorts/${shortId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="group relative w-20 sm:w-24 shrink-0 rounded-lg overflow-hidden bg-black"
+                      style="aspect-ratio: 9 / 16; border: 1px solid var(--border-subtle);"
+                      aria-label={`${t('section.videos.watch-youtube')} — YouTube Shorts (se abre en nueva pestaña)`}
+                    >
+                      <img
+                        src={`https://i.ytimg.com/vi/${shortId}/hqdefault.jpg`}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 opacity-85 group-hover:opacity-100"
+                      />
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
+                        <div class="w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white">
+                          <svg class="w-3 h-3 fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -127,12 +162,14 @@ const formatDate = (date: Date) =>
               <div class="flex flex-col divide-y" style="divide-color: var(--border-subtle);">
                 {moreVideos.map((video) => (
                   <a
-                    href={postUrl(video, base)}
+                    href={video.href}
+                    target={video.external ? '_blank' : undefined}
+                    rel={video.external ? 'noopener noreferrer' : undefined}
                     class="group flex gap-3.5 py-3.5 items-center hover:opacity-90 transition-opacity"
                   >
                     <div class="relative w-24 aspect-video shrink-0 rounded-lg overflow-hidden bg-black" style="border: 1px solid var(--border-subtle);">
                       <img
-                        src={`https://i.ytimg.com/vi/${video.data.youtubeId}/hqdefault.jpg`}
+                        src={`https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg`}
                         alt=""
                         loading="lazy"
                         decoding="async"
@@ -149,10 +186,10 @@ const formatDate = (date: Date) =>
 
                     <div class="min-w-0 flex-1">
                       <p class="text-xs tabular-nums mb-1" style="color: var(--text-faint);">
-                        {formatDate(video.data.date)}
+                        {formatDate(video.date)}
                       </p>
                       <h5 class="text-xs sm:text-sm font-semibold line-clamp-2 group-hover:text-gradient transition-colors" style="color: var(--text-primary);">
-                        {video.data.title}
+                        {video.title}
                       </h5>
                     </div>
                   </a>

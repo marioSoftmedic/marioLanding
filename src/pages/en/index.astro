@@ -4,9 +4,12 @@ import Base from '../../layouts/Base.astro';
 import Timeline from '../../components/Timeline.astro';
 import ArchitectureShowcase from '../../components/ArchitectureShowcase.astro';
 import BlogShowcase from '../../components/BlogShowcase.astro';
+import HubsStrip from '../../components/HubsStrip.astro';
 import { getCollection } from 'astro:content';
 import { useTranslations, basePath } from '../../i18n/utils';
 import { absoluteUrl, canonicalPath } from '../../lib/routes.mjs';
+import { buildVideoObjectSchema } from '../../lib/schema';
+import { getShowcaseVideos } from '../../lib/showcase-videos';
 import { Picture } from 'astro:assets';
 import heroImage from '../../assets/images/marioHealthBits4.png';
 import cotochaImage from '../../assets/images/projects/cotocha.png';
@@ -24,6 +27,7 @@ const projects = (await getCollection('projects'))
   .filter((p) => p.data.lang === 'es')
   .sort((a, b) => projectRank(a.id) - projectRank(b.id));
 const allPosts = await getCollection('blog');
+const flagshipVideo = (await getShowcaseVideos(allPosts, lang, base))[0];
 
 const siteUrl = 'https://mariohealthbits.dev';
 const rootUrl = absoluteUrl('/', siteUrl);
@@ -49,6 +53,7 @@ const homeSchema = [
     url: rootUrl,
     inLanguage: 'en-US',
   },
+  ...(flagshipVideo ? [buildVideoObjectSchema(flagshipVideo)] : []),
 ];
 ---
 
@@ -227,6 +232,10 @@ const homeSchema = [
 
   <ArchitectureShowcase lang={lang} posts={allPosts} />
 
+  <BlogShowcase lang={lang} posts={allPosts} />
+
+  <HubsStrip lang={lang} />
+
   <section id="trayectoria" class="py-24 px-4" aria-labelledby="trayectoria-title">
     <div class="max-w-6xl mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
@@ -296,8 +305,6 @@ const homeSchema = [
       </div>
     </div>
   </section>
-
-  <BlogShowcase lang={lang} posts={allPosts} />
 
   <section id="contacto" class="py-24 px-4" aria-labelledby="contacto-title">
     <div class="max-w-3xl mx-auto text-center">

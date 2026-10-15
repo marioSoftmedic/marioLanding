@@ -1,0 +1,5 @@
+# Local-only artifacts excluded from Vercel uploads
+.codegraph/
+Proyectos/
+odd/
+index.js

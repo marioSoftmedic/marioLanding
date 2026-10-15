@@ -45,6 +45,23 @@ function extractYouTubeId(input: string): string {
 	return match ? match[1] : input.trim();
 }
 
+export function buildVideoObjectSchema({ title, description, date, youtubeId }: { title: string; description: string; date: Date; youtubeId: string }) {
+	const videoId = extractYouTubeId(youtubeId);
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'VideoObject',
+		name: title,
+		description,
+		thumbnailUrl: [
+			`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+			`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+		],
+		uploadDate: date.toISOString(),
+		embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+		contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
+	};
+}
+
 export function buildArticleSchema({ post, lang, path, breadcrumbs }: { post: any; lang: 'es' | 'en'; path: string; breadcrumbs: BreadcrumbItem[] }) {
 	const modifiedDate = post.data.updatedDate ?? post.data.date;
 	let videoSchema: Record<string, unknown> | undefined;
